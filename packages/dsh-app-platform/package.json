@@ -36,11 +36,44 @@
     "./models": {
       "types": "./dist/models.d.cts",
       "default": "./dist/models.cjs"
+    },
+    "./app-runtime": {
+      "types": "./dist/app-runtime.d.cts",
+      "default": "./dist/app-runtime.cjs"
+    },
+    "./backend-actions": {
+      "types": "./dist/backend-actions.d.cts",
+      "default": "./dist/backend-actions.cjs"
+    },
+    "./backend-contract": {
+      "types": "./dist/backend-contract.d.cts",
+      "default": "./dist/backend-contract.cjs"
+    },
+    "./app-api-contract": {
+      "types": "./dist/app-api-contract.d.cts",
+      "default": "./dist/app-api-contract.cjs"
+    },
+    "./transitions": {
+      "types": "./dist/transitions.d.cts",
+      "default": "./dist/transitions.cjs"
+    },
+    "./record-access": {
+      "types": "./dist/record-access.d.cts",
+      "default": "./dist/record-access.cjs"
+    },
+    "./content-capabilities": {
+      "types": "./dist/content-capabilities.d.cts",
+      "default": "./dist/content-capabilities.cjs"
+    },
+    "./platform-capabilities": {
+      "types": "./dist/platform-capabilities.d.cts",
+      "default": "./dist/platform-capabilities.cjs"
     }
   },
   "scripts": {
     "build": "tsc",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "prebuild": "node ../../scripts/generate-platform-capabilities.mjs"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.5-alpha.1",

@@ -21,11 +21,16 @@ test("packed Node Server initializes and serves Web without repository dependenc
   const repeated = await buildServerPackage({ outputDirectory: repeatedDirectory });
   assert.equal(artifact.bundleDigest, repeated.bundleDigest);
   const manifest = JSON.parse(await fs.readFile(artifact.manifestPath, "utf8"));
+  const serverBundle = await fs.readFile(path.join(outputDirectory, "bin/server-cli.cjs"), "utf8");
+  assert.match(serverBundle, /@localapp\/dsh-app-platform\/app-db/);
   assert.ok(manifest.files["native-client/entry.js"]);
   assert.ok(manifest.files["native-client/entry.css"]);
   assert.ok(manifest.files["node_modules/@localapp/dsh-app-platform/dist/index.mjs"]);
   assert.ok(manifest.files["node_modules/@localapp/dsh-app-platform/dist/access-control.cjs"]);
   for (const entry of ["app-db", "migrations", "runtime-errors", "issue-task-conversion", "notify-permission-sql", "models"]) {
+    assert.ok(manifest.files[`node_modules/@localapp/dsh-app-platform/dist/${entry}.cjs`]);
+  }
+  for (const entry of ["app-runtime", "backend-actions", "backend-contract", "app-api-contract", "transitions", "record-access", "content-capabilities", "platform-capabilities"]) {
     assert.ok(manifest.files[`node_modules/@localapp/dsh-app-platform/dist/${entry}.cjs`]);
   }
   assert.ok(Object.keys(manifest.files).some(file => file.startsWith("native-client/assets/") && file.endsWith(".woff2")));
@@ -55,6 +60,15 @@ test("packed Node Server initializes and serves Web without repository dependenc
       await database.getConnection(dbPath);
       const stored = database.execRawSql(dbPath, "SELECT value FROM probe");
       if (stored.rows?.[0]?.value !== "persisted") throw new Error("Packaged plugin database did not persist");
+      const runtime = ctx.localappApps.appRuntime.createAppNamedSqlRuntime({
+        dbPath,
+        context: () => ({ visitorId: "owner", ownerId: "owner", now: new Date() }),
+        contract: { files: [], resources: {}, mutations: {}, queries: {
+          "probe.read": { kind: "query", sql: "SELECT value FROM probe", access: "owner", params: {}, result: { mode: "bounded", maxRows: 1, maxBytes: 1024 } }
+        } }
+      });
+      const query = await runtime.execute({ kind: "named-query", name: "probe.read" }, { params: {} });
+      if (query.rows?.[0]?.value !== "persisted") throw new Error("Packaged plugin Named SQL failed");
       database.closeAllConnections();
       const modules = await mountNativeClientModules(ctx);
       const graph = modules.graph();

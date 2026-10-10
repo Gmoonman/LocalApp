@@ -74,7 +74,7 @@ export async function generatePlatformCapabilities({ rootDir = defaultRootDir, c
   const sourceHash = createHash("sha256").update(sourceBytes).digest("hex");
   const normalizedJson = `${JSON.stringify(capabilities, null, 2)}\n`;
   await writeOrCheck(
-    resolve(rootDir, "packages/server-core/src/generated/platform-capabilities.ts"),
+    resolve(rootDir, "packages/dsh-app-platform/src/platform-capabilities.cts"),
     generatedTypeScript(capabilities, sourceHash),
     check,
   );
