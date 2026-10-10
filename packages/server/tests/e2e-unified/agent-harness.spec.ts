@@ -114,6 +114,13 @@ describe("unified Server DeepSeek Harness HTTP", () => {
       });
       expect(JSON.stringify(frame)).toContain("echo hello");
       expect(JSON.stringify(frame)).toContain("request/header");
+      const update = new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("Live trajectory update timed out")), 5000);
+        socket.on("message", value => { const text = value.toString(); if (text.includes("live trajectory update")) { clearTimeout(timer); resolve(text); } });
+      });
+      const turn = await fetch(baseUrl + "/api/agent/run", { method: "POST", headers: { "X-API-Key": adminKey, "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: "http-e2e-session", prompt: "live trajectory update", systemPrompt: "", tools: [] }) });
+      expect(turn.status).toBe(200); await turn.text();
+      expect(await update).toContain("agent/inbox/spliced");
       socket.send(JSON.stringify({ type: "cancel", streamId: "history" }));
     } finally { socket.terminate(); }
   });

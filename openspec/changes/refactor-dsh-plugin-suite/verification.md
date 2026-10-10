@@ -41,3 +41,7 @@ EmbeddedWebServer 复用 dsh WebServer 注册接口，将路由交给现有 Serv
 ## 原生历史分页与重启恢复
 
 原生 Gateway 的 page 使用 follow 快照 cursor 读取完整历史，包含用户输入与原始轨迹事件；跨用户 sessionId 读取被拒绝。关闭 Harness 后在同一路径重新创建 Harness，原生 page 返回相同记录。统一 Server 的正式原生 page HTTP 入口返回实际持久化事件和用户输入。上述真实 Harness 与 HTTP Agent 测试共 2 个文件 6 项通过。原生 WebSocket 与完整客户端尚未接入，分页证据不能代替浏览器轨迹验收。
+
+## 统一 Server 原生 WebSocket
+
+原生 Gateway 的 remote.mux 现在通过现有 Server 和 Fastify 认证处理，不新增监听端口。upgrade 观察器只保存升级字节，实际分发在完成认证和应用检查后执行。真实 WebSocket 接收原生 follow 快照，并在现有 Agent 运行新一轮后接收到实时 inbox 轨迹事件；取消逻辑流后关闭连接。未认证返回 401、不可访问应用返回 400、跨来源返回 403。HTTP Agent 与原生流测试 7 项通过，原有消息总线和 WebSocket 元数据相关 3 个文件 29 项测试通过，Server 类型构建通过。完整客户端、浏览器轨迹、开发者身份和写入工具绑定仍未完成。
