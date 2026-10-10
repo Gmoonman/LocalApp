@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { AgentSettingsStore, AGENT_CAPABILITIES } from "../lib/agent-settings.js";
 import { PUBLIC_AGENT_SKILLS } from "../lib/public-agent-skills.js";
 import { systemAgentEnvironment, publicSkillAvailability } from "../lib/system-agent-environment.js";
-import { resolveAgentApp } from "../lib/agent-app.js";
+import { applicationStore } from "../lib/agent-app.js";
 
 export async function agentRoutes(app: FastifyInstance, options: { nativeClientRoot?: string } = {}) {
   const { DeepSeekHarness } = await import("../lib/deepseek-harness.mjs");
@@ -19,12 +19,15 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
   const { Context } = await import("@deepseek-ai/cordis");
   const { default: MultiuserRuntime } = await import("@localapp/dsh-multiuser");
   const context = new Context();
+  const { default: ApplicationPlatform } = await import("@localapp/dsh-app-platform");
+  await context.plugin(ApplicationPlatform, applicationStore(app.config.dataDir));
+  const resolveAgentApp = (userId: string, appId?: string) => context.localappApps.resolveAgentApp(userId, appId);
   await context.plugin(MultiuserRuntime, { capacity: 100 });
   const runtimes = context.localappMultiuser;
   app.addHook("preClose", () => runtimes.close());
   app.addHook("onClose", () => context.fiber.dispose());
   const runtime = async (userId: string, appId?: string, providerId?: string) => {
-    const application = resolveAgentApp(app.config.dataDir, userId, appId);
+    const application = resolveAgentApp(userId, appId);
     const saved = settings.read(userId);
     const provider = saved.providers.find((p) => p.id === (providerId || saved.defaultProviderId));
     if (!provider) throw new Error("请先在模型与 Agent 设置中配置供应商和默认模型");
@@ -157,7 +160,7 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
     } catch (error) { return reply.status(400).send({ success: false, error: error instanceof Error ? error.message : "Invalid settings" }); }
   });
   const appPreferences = async (userId: string, appId: string) => {
-    const application = resolveAgentApp(app.config.dataDir, userId, appId);
+    const application = resolveAgentApp(userId, appId);
     if (application.id === "platform") throw new Error("请选择应用");
     const saved = settings.read(userId);
     const preferences = saved.applications[application.id] ?? { skills: [], disabledTools: [], tools: [] };
@@ -172,7 +175,7 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
   };
   app.post<{ Body: { appId: string; tools: Array<{ name: string; description: string }> } }>("/api/agent/app-tools", async (req, reply) => {
     try {
-      const application = resolveAgentApp(app.config.dataDir, req.userId, req.body?.appId);
+      const application = resolveAgentApp(req.userId, req.body?.appId);
       if (application.id === "platform" || !Array.isArray(req.body.tools)) throw new Error("Invalid application tools");
       const saved = settings.read(req.userId);
       const preferences = saved.applications[application.id] ?? { skills: [], disabledTools: [], tools: [] };
@@ -187,7 +190,7 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
   app.put<{ Body: { appId: string; enabledCapabilities: string[]; enabledSkills: string[]; disabledTools: string[] } }>("/api/agent/app-settings", async (req, reply) => {
     try {
       const input = req.body;
-      const application = resolveAgentApp(app.config.dataDir, req.userId, input?.appId);
+      const application = resolveAgentApp(req.userId, input?.appId);
       if (application.id === "platform" || !Array.isArray(input.enabledCapabilities) || input.enabledCapabilities.some((capability) => !application.capabilities.some((declared) => declared === capability))) throw new Error("Invalid application capabilities");
       if (!Array.isArray(input.enabledSkills) || input.enabledSkills.some(id => !PUBLIC_AGENT_SKILLS.some(s => s.id === id))) throw new Error("Invalid public skills");
       const catalog = publicSkillAvailability(await systemAgentEnvironment(app.config.dataDir));
@@ -238,7 +241,7 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
     try { harness = await runtime(req.userId, input.appId, input.providerId); }
     catch (error) { return reply.status(400).send({ success: false, error: (error as Error).message }); }
     if (input.appId && input.appId !== "platform") {
-      const application = resolveAgentApp(app.config.dataDir, req.userId, input.appId);
+      const application = resolveAgentApp(req.userId, input.appId);
       const saved = settings.read(req.userId);
       const preferences = saved.applications[application.id] ?? { skills: [], disabledTools: [], tools: [] };
       settings.write(req.userId, { ...saved, applications: { ...saved.applications, [application.id]: { ...preferences, tools: input.tools.map(({ name, description }) => ({ name, description })) } } });

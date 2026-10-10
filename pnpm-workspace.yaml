@@ -2,6 +2,7 @@ packages:
   - "packages/localapp"
   - "packages/server"
   - "packages/dsh-multiuser"
+  - "packages/dsh-app-platform"
   - "packages/server-core"
   - "packages/backend"
   - "packages/sdk-core"

@@ -44,8 +44,8 @@
     }
   },
   "scripts": {
-    "dev": "pnpm -C ../dsh-multiuser build && node scripts/build-native-client.mjs && node --import ./scripts/dev-env.mjs ./node_modules/tsx/dist/cli.mjs watch --include ../server-core/dist --include ../dsh-multiuser/dist src/cli.ts start",
-    "build": "pnpm -C ../dsh-multiuser build && tsc",
+    "dev": "pnpm -C ../dsh-multiuser build && pnpm -C ../dsh-app-platform build && node scripts/build-native-client.mjs && node --import ./scripts/dev-env.mjs ./node_modules/tsx/dist/cli.mjs watch --include ../server-core/dist --include ../dsh-multiuser/dist --include ../dsh-app-platform/dist src/cli.ts start",
+    "build": "pnpm -C ../dsh-multiuser build && pnpm -C ../dsh-app-platform build && tsc",
     "start": "node dist/cli.js start",
     "package": "pnpm -C ../server-core build && pnpm -C ../web build && node scripts/build-server-package.mjs",
     "test:package": "node --test scripts/build-server-package.node-test.mjs",
@@ -135,7 +135,8 @@
     "unified": "^11.0.5",
     "yauzl": "3.4.0",
     "yjs": "^13.6.32",
-    "@localapp/dsh-multiuser": "workspace:*"
+    "@localapp/dsh-multiuser": "workspace:*",
+    "@localapp/dsh-app-platform": "workspace:*"
   },
   "devDependencies": {
     "@types/archiver": "8.0.0",

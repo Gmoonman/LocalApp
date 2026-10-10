@@ -7,7 +7,8 @@ import { build } from "esbuild";
 // those plugins into a CJS file loses import.meta.url and their worker paths.
 export async function copyHarnessDependencies(serverDirectory, outputDirectory) {
   const source = JSON.parse(await fs.readFile(path.join(serverDirectory, "package.json"), "utf8"));
-  const roots = Object.keys(source.dependencies).filter((name) => name.startsWith("@deepseek-ai/") || name === "@localapp/dsh-multiuser");
+  const internalPlugins = new Set(["@localapp/dsh-multiuser", "@localapp/dsh-app-platform"]);
+  const roots = Object.keys(source.dependencies).filter((name) => name.startsWith("@deepseek-ai/") || internalPlugins.has(name));
   const canonical = new Map();
   const copies = new Set();
   const outputModules = path.join(outputDirectory, "node_modules");
@@ -30,7 +31,7 @@ export async function copyHarnessDependencies(serverDirectory, outputDirectory) 
     copies.add(destination);
     await fs.mkdir(path.dirname(destination), { recursive: true });
     const metadata = JSON.parse(await fs.readFile(path.join(sourceDirectory, "package.json"), "utf8"));
-    if (name === "@localapp/dsh-multiuser") {
+    if (internalPlugins.has(name)) {
       await fs.mkdir(destination, { recursive: true });
       await fs.copyFile(path.join(sourceDirectory, "package.json"), path.join(destination, "package.json"));
       // Build each internal library entry from source; release assembly must
