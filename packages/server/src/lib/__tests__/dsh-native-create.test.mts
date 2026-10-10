@@ -10,6 +10,9 @@ it("creates native sessions only in the application workspace", async () => {
   const harness = new DeepSeekHarness({ ownerId: "owner", root, llmApiKey: "test-key", llmBaseUrl: "http://model.test/v1", llmModel: "test-model", capabilities: [] });
   try {
     const native = await harness.nativeApi();
+    const settings = await native.gateway.invoke({ namespace: "settings", method: "describe", args: {} });
+    expect(settings).toMatchObject({ writable: false, hasDocument: false, namespaces: [{ ns: "localapp-model", value: { provider: "localapp", model: "test-model" } }] });
+    expect(JSON.stringify(settings)).not.toContain("test-key");
     const created = await native.gateway.invoke({ namespace: "session", method: "create", args: { request: {} } }) as { sessionId: string };
     expect(created.sessionId).toMatch(/^session-/);
     expect(JSON.stringify(await native.gateway.invoke({ namespace: "session", method: "list", args: { _request: {} } }))).toContain(created.sessionId);

@@ -62,7 +62,7 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
       const scope = (req.params as { scope: string }).scope;
       const base = "/api/agent/native/" + scope + "/";
       if (!new URL(req.raw.url ?? "/", "http://localapp.invalid").pathname.endsWith("/")) return reply.redirect(base);
-      const html = '<!doctype html><html><head><meta charset="utf-8"><base href="' + base + '"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="client/entry.css"></head><body><div id="root"></div><script type="module" src="client/entry.js"></script></body></html>';
+      const html = '<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22/%3E"><base href="' + base + '"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="client/entry.css"></head><body><div id="root"></div><script type="module" src="client/entry.js"></script></body></html>';
       reply.header("Cache-Control", "no-store");
       return reply.type("text/html; charset=utf-8").send(await (await clientAssets()).renderIndex(html));
     });
@@ -128,6 +128,7 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
     for (const prefix of ["/api/agent/native", "/api/agent/native/:scope"]) {
       nativeScope.get(prefix + "/api/remote.mux", async () => {});
       nativeScope.post(prefix + "/api/workspace/initializeDefault", async () => {});
+      nativeScope.post(prefix + "/api/settings/describe", async () => {});
       for (const method of ["list", "page", "create", "prompt", "modelCatalog", "selectModel"]) nativeScope.post(prefix + "/api/session/" + method, async () => {});
     }
   });

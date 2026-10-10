@@ -11,6 +11,9 @@ import SessionQuery from "@deepseek-ai/dsh-session-query-sqlite";
 import WorkspaceRegistry from "@deepseek-ai/dsh-workspace";
 import WorkspaceController, { type WorkspaceCreateRequest } from "@deepseek-ai/dsh-api-workspace-controller";
 import { TYPERT as WORKSPACE_TYPERT } from "@deepseek-ai/dsh-api-workspace-controller/typert";
+import SettingsController from "@deepseek-ai/dsh-api-settings-controller";
+import { TYPERT as SETTINGS_TYPERT } from "@deepseek-ai/dsh-api-settings-controller/typert";
+import type { SettingsDescribeValue } from "@deepseek-ai/dsh-settings/types";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -31,6 +34,18 @@ export async function mountNativeSessions(ctx: Context, config: NativeSessionCon
   await nativeContext.plugin(TypertRegistry);
   nativeContext.typert.register(TYPERT as Parameters<typeof nativeContext.typert.register>[0]);
   nativeContext.typert.register(WORKSPACE_TYPERT as Parameters<typeof nativeContext.typert.register>[0]);
+  nativeContext.typert.register(SETTINGS_TYPERT as Parameters<typeof nativeContext.typert.register>[0]);
+  // Model changes remain owned by LocalApp's per-user settings API. The native
+  // client reads the effective configuration without receiving credentials.
+  class ApplicationSettingsController extends SettingsController {
+    override describe(): SettingsDescribeValue {
+      return { writable: false, hasDocument: false, namespaces: [{
+        ns: "localapp-model", autoGenerate: false, schema: { type: "object", dict: {} },
+        value: { provider: "localapp", model: config.model }, applies: "live", secrets: [], revision: 0,
+      }] };
+    }
+  }
+  await nativeContext.plugin(ApplicationSettingsController);
   await nativeContext.plugin(DefaultModel, { provider: "localapp", model: config.model });
   await nativeContext.plugin(Attachments, { dshHome: config.root });
   await nativeContext.plugin(WorkspaceRegistry);
