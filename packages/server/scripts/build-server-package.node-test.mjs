@@ -20,6 +20,9 @@ test("packed Node Server initializes and serves Web without repository dependenc
   const repeated = await buildServerPackage({ outputDirectory: repeatedDirectory });
   assert.equal(artifact.bundleDigest, repeated.bundleDigest);
   const manifest = JSON.parse(await fs.readFile(artifact.manifestPath, "utf8"));
+  assert.ok(manifest.files["native-client/entry.js"]);
+  assert.ok(manifest.files["native-client/entry.css"]);
+  assert.ok(Object.keys(manifest.files).some(file => file.startsWith("native-client/assets/") && file.endsWith(".woff2")));
   for (const skill of ["markitdown", "pdf", "docx", "xlsx"]) {
     assert.ok(manifest.files[`skills/${skill}/SKILL.md`]);
     assert.ok(manifest.files[`skills/${skill}/LICENSE`]);

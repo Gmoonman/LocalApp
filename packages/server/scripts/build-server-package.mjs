@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { harnessBundlePlugin } from "./harness-bundle-plugin.mjs";
 import { copyHarnessDependencies } from "./harness-package-dependencies.mjs";
+import { buildNativeClient } from "./build-native-client.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectDirectory = path.resolve(scriptDirectory, "../../..");
@@ -31,6 +32,7 @@ export async function buildServerPackage(options = {}) {
   await fs.mkdir(binDirectory, { recursive: true, mode: 0o755 });
   await fs.copyFile(path.join(serverDirectory, "THIRD_PARTY_NOTICES.txt"), path.join(outputDirectory, "THIRD_PARTY_NOTICES.txt"));
   await fs.cp(webOutput, webDirectory, { recursive: true });
+  await buildNativeClient(path.join(outputDirectory, "native-client"));
   await fs.cp(path.join(serverDirectory, "skills"), path.join(outputDirectory, "skills"), { recursive: true });
   await fs.mkdir(runnerDirectory, { recursive: true, mode: 0o755 });
   await fs.cp(path.join(serverDirectory, "runner/localapp-runner.mjs"), path.join(runnerDirectory, "localapp-runner.mjs"));
