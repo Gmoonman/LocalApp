@@ -36,7 +36,11 @@ export async function buildServerPackage(options = {}) {
   await fs.cp(path.join(serverDirectory, "runner/localapp-runner.mjs"), path.join(runnerDirectory, "localapp-runner.mjs"));
 
   const bundleOptions = {
-    alias: { "@localapp/dsh-multiuser": path.join(projectDirectory, "packages/dsh-multiuser/src/index.mts") },
+    alias: {
+      "@localapp/dsh-multiuser": path.join(projectDirectory, "packages/dsh-multiuser/src/index.mts"),
+      "@localapp/dsh-multiuser/python-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/python-environment.cts"),
+      "@localapp/dsh-multiuser/agent-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/agent-environment.cts"),
+    },
     bundle: true,
     plugins: [harnessBundlePlugin()],
     platform: "node",
