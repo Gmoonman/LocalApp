@@ -43,6 +43,7 @@ export async function buildServerPackage(options = {}) {
       "@localapp/dsh-multiuser/native-session": path.join(projectDirectory, "packages/dsh-multiuser/src/native-session.mts"),
       "@localapp/dsh-multiuser": path.join(projectDirectory, "packages/dsh-multiuser/src/index.mts"),
       "@localapp/dsh-app-platform": path.join(projectDirectory, "packages/dsh-app-platform/src/index.mts"),
+      "@localapp/dsh-app-platform/access-control": path.join(projectDirectory, "packages/dsh-app-platform/src/access-control.cts"),
       "@localapp/dsh-multiuser/settings": path.join(projectDirectory, "packages/dsh-multiuser/src/settings.cts"),
       "@localapp/dsh-multiuser/python-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/python-environment.cts"),
       "@localapp/dsh-multiuser/agent-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/agent-environment.cts"),

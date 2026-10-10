@@ -729,6 +729,9 @@ importers:
 
   packages/server-core:
     dependencies:
+      '@localapp/dsh-app-platform':
+        specifier: workspace:*
+        version: link:../dsh-app-platform
       sql.js:
         specifier: ^1.14.1
         version: 1.14.1

@@ -24,6 +24,7 @@ test("packed Node Server initializes and serves Web without repository dependenc
   assert.ok(manifest.files["native-client/entry.js"]);
   assert.ok(manifest.files["native-client/entry.css"]);
   assert.ok(manifest.files["node_modules/@localapp/dsh-app-platform/dist/index.mjs"]);
+  assert.ok(manifest.files["node_modules/@localapp/dsh-app-platform/dist/access-control.cjs"]);
   assert.ok(Object.keys(manifest.files).some(file => file.startsWith("native-client/assets/") && file.endsWith(".woff2")));
   for (const skill of ["markitdown", "pdf", "docx", "xlsx"]) {
     assert.ok(manifest.files[`skills/${skill}/SKILL.md`]);
