@@ -25,6 +25,10 @@ test("packed Node Server initializes and serves Web without repository dependenc
     assert.ok(manifest.files[`skills/${skill}/SOURCE.json`]);
     assert.ok(Object.keys(manifest.files).some((file) => file.startsWith(`skills/${skill}/scripts/`) && file.endsWith(".py")));
   }
+  for (const plugin of ["dsh-client-modules", "dsh-client-ui-chat", "dsh-client-ui-trajectory", "dsh-client-ui-renderer"]) {
+    assert.ok(manifest.files["node_modules/@deepseek-ai/" + plugin + "/lib/client.js"], plugin + " client artifact must be packaged");
+  }
+  assert.ok(manifest.files["node_modules/@localapp/dsh-multiuser/dist/native-client.mjs"]);
   assert.match(await fs.readFile(artifact.bin, "utf8"), /LOCALAPP_PUBLIC_SKILLS_ROOT/);
   assert.equal((await fs.readFile(artifact.bin, "utf8")).startsWith("#!/usr/bin/env node\n"), true);
 
