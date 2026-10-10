@@ -19,7 +19,7 @@ export default class NativeClientAssets extends Service {
     })();
     ctx.effect(() => async () => { await this.ready.catch(() => {}); await this.assets.fiber.dispose(); });
   }
-  override [Service.init](): Promise<void> { return this.ready; }
+  [Service.init](): Promise<void> { return this.ready; }
   async renderIndex(html: string): Promise<string> {
     await this.ready;
     return this.assets.webServer.renderIndex(html);
