@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Context } from "@deepseek-ai/cordis";
@@ -15,6 +16,8 @@ it("dispatches real dsh RPC through one Server using authenticated user contexts
   const app = Fastify(); const contexts: Context[] = [];
   const connections = new Map<string, Awaited<ReturnType<typeof mountNativeConnection>>>();
   const keys = new Map<string, string>();
+  let lastRequest: IncomingMessage | undefined;
+  let lastResponse: ServerResponse | undefined;
   try {
     for (const userId of ["alice", "bob"]) {
       createUser(userId, userId, "unused-test-password-hash"); keys.set(userId, createApiKey(userId).key);
@@ -30,6 +33,7 @@ it("dispatches real dsh RPC through one Server using authenticated user contexts
     app.addHook("onRequest", async (req, reply) => {
       const userId = requireRequestUser(req, reply); if (!userId) return;
       const native = connections.get(userId); if (!native) return reply.status(403).send();
+      lastRequest = req.raw; lastResponse = reply.raw;
       reply.hijack(); if (!await native.http(userId, req.raw, reply.raw)) { reply.raw.writeHead(404); reply.raw.end(); }
     });
     await app.listen({ host: "127.0.0.1", port: 0 });
@@ -46,5 +50,8 @@ it("dispatches real dsh RPC through one Server using authenticated user contexts
       expect((await response.json()).result.value.owner).toBe(userId);
     }
     expect((await send(keys.get("alice"), "https://untrusted.test")).status).toBe(403);
+    await expect(connections.get("alice")!.http("bob", lastRequest!, lastResponse!)).rejects.toThrow("another user");
+    await contexts[0].fiber.dispose();
+    await expect(connections.get("alice")!.http("alice", lastRequest!, lastResponse!)).rejects.toThrow("closed");
   } finally { await app.close(); await Promise.all(contexts.map(ctx => ctx.fiber.dispose())); closeMetaDb(); await fs.rm(root, { recursive: true, force: true }); }
 });

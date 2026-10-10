@@ -20,6 +20,11 @@ it("runs dsh registered routes through the existing Server without opening anoth
     expect((await fetch(`${base}/api-other`)).status).toBe(404);
     removeExact(); expect(await (await fetch(`${base}/api/exact`)).text()).toBe("native /api/exact");
     removePrefix(); expect((await fetch(`${base}/api/nested`)).status).toBe(404);
+    const removeFallback = native.registerFallback((_req, res) => { res.end("fallback"); });
+    expect(await (await fetch(`${base}/page`)).text()).toBe("fallback");
+    expect(() => native.registerFallback(() => {})).toThrow("already registered");
+    removeFallback(); expect((await fetch(`${base}/page`)).status).toBe(404);
+    expect(native.port).toBe(0);
     expect(ctx.webServer).toBeInstanceOf(EmbeddedWebServer);
   } finally { await app.close(); await ctx.fiber.dispose(); }
 });

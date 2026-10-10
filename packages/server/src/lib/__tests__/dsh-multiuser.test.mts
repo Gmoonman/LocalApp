@@ -47,6 +47,12 @@ describe("dsh multiuser runtime plugin", () => {
     expect(service.forUser("alice")).toHaveLength(0);
     await ctx.fiber.dispose();
   });
+  it("refuses work through a fresh service view after explicit Server shutdown", async () => {
+    const { ctx, service } = await mount();
+    await service.close();
+    await expect(ctx.localappMultiuser.acquire(identity, "v1", async () => runtime())).rejects.toThrow("closed");
+    await ctx.fiber.dispose();
+  });
   it("disposes late creation and refuses new work after Cordis stops", async () => {
     const { ctx, service } = await mount(); const pending = deferred<ReturnType<typeof runtime>>();
     const opening = service.acquire(identity, "v1", () => pending.promise); const rejected = expect(opening).rejects.toThrow("invalidated");

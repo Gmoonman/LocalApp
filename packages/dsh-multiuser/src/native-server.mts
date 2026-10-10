@@ -1,5 +1,5 @@
-import { Service } from "@deepseek-ai/cordis";
-import WebServer, { type WebRoute, type WebUpgradeRoute } from "@deepseek-ai/dsh-host-webserver";
+import { Context, Service } from "@deepseek-ai/cordis";
+import WebServer, { type WebRoute, type WebUpgradeRoute, type Config } from "@deepseek-ai/dsh-host-webserver";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Duplex } from "node:stream";
 
@@ -11,9 +11,19 @@ import type { Duplex } from "node:stream";
 export default class EmbeddedWebServer extends WebServer {
   private readonly httpRoutes = new Map<string, WebRoute>();
   private readonly upgradeRoutes = new Map<string, WebUpgradeRoute>();
+  private readonly fallbackRoutes = new Map<string, WebRoute["handler"]>();
+  private readonly embeddedPort: number;
+
+  constructor(ctx: Context, config: Config) {
+    super(ctx, config);
+    this.embeddedPort = config.port;
+  }
+
+  override get port(): number { return this.embeddedPort; }
 
   override async [Service.init](): Promise<void> {
     // The composing Server already owns node:http and its listening socket.
+    this.ctx.effect(() => () => { this.httpRoutes.clear(); this.upgradeRoutes.clear(); this.fallbackRoutes.clear(); });
   }
 
   override register(route: WebRoute): () => void {
@@ -29,6 +39,12 @@ export default class EmbeddedWebServer extends WebServer {
     return () => { if (this.upgradeRoutes.get(route.path) === route) this.upgradeRoutes.delete(route.path); };
   }
 
+  override registerFallback(handler: WebRoute["handler"]): () => void {
+    if (this.fallbackRoutes.has("fallback")) throw new Error("dsh fallback already registered");
+    this.fallbackRoutes.set("fallback", handler);
+    return () => { if (this.fallbackRoutes.get("fallback") === handler) this.fallbackRoutes.delete("fallback"); };
+  }
+
   private pathname(url: string): string {
     return new URL(url, "http://localapp.invalid").pathname;
   }
@@ -42,13 +58,14 @@ export default class EmbeddedWebServer extends WebServer {
       .sort((a, b) => b.path.length - a.path.length)[0];
   }
 
-  hasHttpRoute(url: string): boolean { return this.httpRoute(url) !== undefined; }
+  hasHttpRoute(url: string): boolean { return this.httpRoute(url) !== undefined || this.fallbackRoutes.has("fallback"); }
   hasUpgradeRoute(url: string): boolean { return this.upgradeRoutes.has(this.pathname(url)); }
 
   async dispatchHttp(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
     const route = this.httpRoute(request.url ?? "/");
-    if (!route) return false;
-    await route.handler(request, response);
+    const handler = route?.handler ?? this.fallbackRoutes.get("fallback");
+    if (!handler) return false;
+    await handler(request, response);
     return true;
   }
 
