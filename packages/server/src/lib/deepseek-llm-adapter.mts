@@ -15,7 +15,11 @@ export function toWireMessages(messages: RequestMessage[]): Record<string, unkno
 
 /** Uses the existing Server model configuration; the harness owns the loop. */
 export class LocalAppLlmAdapter extends LlmAdapter {
-  constructor(private readonly config: Pick<ServerConfig, "llmApiKey" | "llmBaseUrl">, private readonly emit: (sessionId: string | undefined, event: unknown) => void) { super(); }
+  constructor(private readonly config: Pick<ServerConfig, "llmApiKey" | "llmBaseUrl"> & Partial<Pick<ServerConfig, "llmModel">>, private readonly emit: (sessionId: string | undefined, event: unknown) => void) { super(); }
+
+  override async listModels(provider: string) {
+    return provider === "localapp" && this.config.llmModel ? [{ provider, id: this.config.llmModel, name: this.config.llmModel }] : [];
+  }
 
   async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     const res = await fetch(`${this.config.llmBaseUrl.replace(/\/$/, "")}/chat/completions`, {
