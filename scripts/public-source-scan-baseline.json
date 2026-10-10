@@ -141,7 +141,7 @@
     {
       "path": "packages/server/src/lib/deepseek-harness.mts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "fdf7a440586561398dcb4ca870f8357e09df6912012885a4aa32bacaf373adaf",
+      "sha256": "458fa1f96ba54ff2bef8c0d72b298cf4f179c28d7763be755d6cf8321719aef8",
       "reason": "apiKeyEnv names the LOCALAPP_USER_MODEL_KEY environment variable; it contains no credential value."
     }
   ]
