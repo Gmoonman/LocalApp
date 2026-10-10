@@ -1,12 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
+import { build } from "esbuild";
 
 // Preserve upstream module paths, native helpers and package assets. Bundling
 // those plugins into a CJS file loses import.meta.url and their worker paths.
 export async function copyHarnessDependencies(serverDirectory, outputDirectory) {
   const source = JSON.parse(await fs.readFile(path.join(serverDirectory, "package.json"), "utf8"));
-  const roots = Object.keys(source.dependencies).filter((name) => name.startsWith("@deepseek-ai/"));
+  const roots = Object.keys(source.dependencies).filter((name) => name.startsWith("@deepseek-ai/") || name === "@localapp/dsh-multiuser");
   const canonical = new Map();
   const copies = new Set();
   const outputModules = path.join(outputDirectory, "node_modules");
@@ -28,7 +29,19 @@ export async function copyHarnessDependencies(serverDirectory, outputDirectory) 
     if (copies.has(destination)) return;
     copies.add(destination);
     await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.cp(sourceDirectory, destination, { recursive: true, filter: (file) => {
+    const metadata = JSON.parse(await fs.readFile(path.join(sourceDirectory, "package.json"), "utf8"));
+    if (name === "@localapp/dsh-multiuser") {
+      await fs.mkdir(destination, { recursive: true });
+      await fs.copyFile(path.join(sourceDirectory, "package.json"), path.join(destination, "package.json"));
+      // Build each internal library entry from source; release assembly must
+      // not pick up stale or missing workspace dist files.
+      for (const entry of Object.values(metadata.exports)) {
+        const target = entry.default;
+        const commonjs = target.endsWith(".cjs");
+        const source = target.replace(/^\.\/dist\//, "src/").replace(/\.(?:mjs|cjs)$/, commonjs ? ".cts" : ".mts");
+        await build({ entryPoints: [path.join(sourceDirectory, source)], outfile: path.join(destination, target), platform: "node", format: commonjs ? "cjs" : "esm", target: "node24", bundle: false, logLevel: "silent" });
+      }
+    } else await fs.cp(sourceDirectory, destination, { recursive: true, filter: (file) => {
       const relative = path.relative(sourceDirectory, file);
       // Source maps and type declarations are not used by Node. Keep the
       // compiler's declarations and all runtime/native assets intact.
@@ -37,7 +50,6 @@ export async function copyHarnessDependencies(serverDirectory, outputDirectory) 
         && !relative.endsWith(".map")
         && (name === "typescript" || !/\.d\.(?:ts|mts|cts)$/.test(relative));
     } });
-    const metadata = JSON.parse(await fs.readFile(path.join(sourceDirectory, "package.json"), "utf8"));
     for (const dependency of new Set([...Object.keys(metadata.dependencies ?? {}), ...Object.keys(metadata.peerDependencies ?? {}), ...Object.keys(metadata.optionalDependencies ?? {})])) {
       let resolved;
       try { resolved = await locate(dependency, sourceDirectory); }

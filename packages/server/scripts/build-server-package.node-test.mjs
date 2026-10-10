@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { buildServerPackage } from "./build-server-package.mjs";
@@ -29,6 +30,22 @@ test("packed Node Server initializes and serves Web without repository dependenc
     assert.ok(manifest.files["node_modules/@deepseek-ai/" + plugin + "/lib/client.js"], plugin + " client artifact must be packaged");
   }
   assert.ok(manifest.files["node_modules/@localapp/dsh-multiuser/dist/native-client.mjs"]);
+  const clientBoot = await promisify(execFile)(process.execPath, ["--input-type=module", "-e", `
+    import { Context } from "@deepseek-ai/cordis";
+    import { mountNativeClientModules } from "@localapp/dsh-multiuser/native-client";
+    const ctx = new Context();
+    try {
+      const modules = await mountNativeClientModules(ctx);
+      const graph = modules.graph();
+      for (const entry of graph.entries) {
+        if (!modules.clientPath(entry.id)?.startsWith(process.cwd())) throw new Error("Client artifact escaped package: " + entry.id);
+        const response = await modules.fetchBundle(new Request("http://package.test/" + entry.url));
+        if (response.status !== 200) throw new Error("Client artifact missing: " + entry.id);
+      }
+      console.log(JSON.stringify({ entries: graph.entries.length }));
+    } finally { await ctx.fiber.dispose(); }
+  `], { cwd: outputDirectory, env: { ...process.env, NODE_PATH: "" }, timeout: 15000 });
+  assert.ok(JSON.parse(clientBoot.stdout.trim()).entries >= 23);
   assert.match(await fs.readFile(artifact.bin, "utf8"), /LOCALAPP_PUBLIC_SKILLS_ROOT/);
   assert.equal((await fs.readFile(artifact.bin, "utf8")).startsWith("#!/usr/bin/env node\n"), true);
 
