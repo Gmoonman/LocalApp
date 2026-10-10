@@ -76,6 +76,7 @@ export async function agentRoutes(app: FastifyInstance) {
       } finally { req.raw.url = originalUrl; }
     });
     nativeScope.get("/api/agent/native/api/remote.mux", async () => {});
+    nativeScope.post("/api/agent/native/api/workspace/initializeDefault", async () => {});
     for (const method of ["list", "page"]) nativeScope.post("/api/agent/native/api/session/" + method, async () => {});
   });
   const restoreSchedules = async (onlyUser?: string) => {

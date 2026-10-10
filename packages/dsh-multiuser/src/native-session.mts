@@ -9,6 +9,9 @@ import Attachments from "@deepseek-ai/dsh-attachment-local";
 import FileUploads from "@deepseek-ai/dsh-client-file-upload";
 import SessionQuery from "@deepseek-ai/dsh-session-query-sqlite";
 import WorkspaceRegistry from "@deepseek-ai/dsh-workspace";
+import WorkspaceController, { type WorkspaceCreateRequest } from "@deepseek-ai/dsh-api-workspace-controller";
+import { TYPERT as WORKSPACE_TYPERT } from "@deepseek-ai/dsh-api-workspace-controller/typert";
+import fs from "node:fs/promises";
 import path from "node:path";
 import EmbeddedWebServer from "./native-server.mjs";
 import { mountNativeConnection, type NativeConnectionConfig } from "./native-connection.mjs";
@@ -26,9 +29,24 @@ export async function mountNativeSessions(ctx: Context, config: NativeSessionCon
   const transport = await mountNativeConnection(nativeContext, config);
   await nativeContext.plugin(TypertRegistry);
   nativeContext.typert.register(TYPERT as Parameters<typeof nativeContext.typert.register>[0]);
+  nativeContext.typert.register(WORKSPACE_TYPERT as Parameters<typeof nativeContext.typert.register>[0]);
   await nativeContext.plugin(DefaultModel, { provider: "localapp", model: config.model });
   await nativeContext.plugin(Attachments, { dshHome: config.root });
   await nativeContext.plugin(WorkspaceRegistry);
+  class ApplicationWorkspaceController extends WorkspaceController {
+    override create(request: WorkspaceCreateRequest) {
+      if (path.resolve(request.path) !== workspaceRoot) throw new Error("Workspace is outside the application workspace");
+      return super.create({ path: workspaceRoot });
+    }
+    override async initializeDefault(signal: AbortSignal) {
+      signal.throwIfAborted();
+      await fs.mkdir(workspaceRoot, { recursive: true, mode: 0o700 });
+      signal.throwIfAborted();
+      const value = await this.create({ path: workspaceRoot });
+      return { workspace: value.workspace };
+    }
+  }
+  await nativeContext.plugin(ApplicationWorkspaceController);
   await nativeContext.plugin(SessionQuery, { path: path.join(config.root, "session-search.sqlite") });
   await nativeContext.plugin(FileUploads);
 

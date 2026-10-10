@@ -87,6 +87,12 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     });
     expect(page.status).toBe(200);
     expect(await page.text()).toContain("echo hello");
+    const workspace = await fetch(baseUrl + "/api/agent/native/api/workspace/initializeDefault", {
+      method: "POST", headers: { "X-API-Key": adminKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId: "native-workspace", method: "workspace/initializeDefault", payload: { args: {} } }),
+    });
+    expect(workspace.status).toBe(200);
+    expect((await workspace.json()).result.value.workspace.path.startsWith(path.join(dataDir, "agent"))).toBe(true);
     expect((await send(adminKey, "missing/application")).status).toBe(400);
     expect((await send(adminKey, "platform", "https://untrusted.test")).status).toBe(403);
     expect((await send(outsiderKey)).status).toBe(400);
