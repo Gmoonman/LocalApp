@@ -108,6 +108,21 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect((await send(adminKey, "invalid")).status).toBe(400);
     expect((await send(outsiderKey)).status).toBe(400);
   });
+  it("serves the original native boot page and scoped plugin bundles", async () => {
+    const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
+    const url = baseUrl + "/api/agent/native/" + scope + "/";
+    expect((await fetch(url)).status).toBe(401);
+    const page = await fetch(url, { headers: { "X-API-Key": adminKey } });
+    expect(page.status).toBe(200);
+    const html = await page.text();
+    expect(html).toContain("__DSH_BOOT__");
+    expect(html).toContain("__ModuleLoader__");
+    expect(html).toContain("dsh-client-ui-trajectory");
+    expect(html).toContain(url.replace(baseUrl, ""));
+    const plugin = await fetch(url + "plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js", { headers: { "X-API-Key": adminKey } });
+    expect(plugin.status).toBe(200);
+    expect((await plugin.text()).length).toBeGreaterThan(100);
+  });
   it("rejects unauthenticated, inaccessible and foreign-origin native sockets", async () => {
     const status = (headers: Record<string, string>, query = "") => new Promise<number>((resolve, reject) => {
       const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux" + query, { headers });
