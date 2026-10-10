@@ -23,5 +23,10 @@ it("creates native sessions only in the application workspace", async () => {
     const selected = await native.gateway.invoke({ namespace: "session", method: "selectModel", args: { request: { sessionId: created.sessionId, provider: "localapp", model: "test-model" } } });
     expect(selected).toMatchObject({ selected: { provider: "localapp", model: "test-model" } });
     await expect(native.gateway.invoke({ namespace: "session", method: "selectModel", args: { request: { sessionId: created.sessionId, provider: "other", model: "test-model" } } })).rejects.toThrow();
+    for (let index = 0; index < 8; index++) {
+      await native.gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId: `capacity-${index}` } } });
+    }
+    await expect(native.gateway.invoke({ namespace: "session", method: "create", args: { request: {} } })).rejects.toThrow("Too many agent sessions");
+    expect(await native.gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId: "existing-session_1" } } })).toEqual({ sessionId: "existing-session_1" });
   } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
 });
