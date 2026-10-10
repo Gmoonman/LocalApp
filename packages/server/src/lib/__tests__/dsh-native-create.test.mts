@@ -18,5 +18,10 @@ it("creates native sessions only in the application workspace", async () => {
     }
     const named = await native.gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId: "existing-session_1" } } });
     expect(named).toEqual({ sessionId: "existing-session_1" });
+    const catalog = await native.gateway.invoke({ namespace: "session", method: "modelCatalog", args: {} });
+    expect(JSON.stringify(catalog)).toContain("test-model");
+    const selected = await native.gateway.invoke({ namespace: "session", method: "selectModel", args: { request: { sessionId: created.sessionId, provider: "localapp", model: "test-model" } } });
+    expect(selected).toMatchObject({ selected: { provider: "localapp", model: "test-model" } });
+    await expect(native.gateway.invoke({ namespace: "session", method: "selectModel", args: { request: { sessionId: created.sessionId, provider: "other", model: "test-model" } } })).rejects.toThrow();
   } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
 });
