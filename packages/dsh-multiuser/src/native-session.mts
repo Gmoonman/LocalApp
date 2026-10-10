@@ -13,6 +13,7 @@ import WorkspaceController, { type WorkspaceCreateRequest } from "@deepseek-ai/d
 import { TYPERT as WORKSPACE_TYPERT } from "@deepseek-ai/dsh-api-workspace-controller/typert";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import EmbeddedWebServer from "./native-server.mjs";
 import { mountNativeConnection, type NativeConnectionConfig } from "./native-connection.mjs";
 
@@ -53,6 +54,7 @@ export async function mountNativeSessions(ctx: Context, config: NativeSessionCon
   // Upstream creation uses node:fs mkdir, so validate the workspace before it
   // reaches that operation. The application decides the directory, not a client.
   class ApplicationSessionController extends SessionController {
+    private readonly creating = new Set<string>();
     override async create(request: SessionCreateRequest) {
       if (request.sessionId !== undefined && !/^[a-zA-Z0-9_-]{1,128}$/.test(request.sessionId)) {
         throw new Error("Invalid session ID");
@@ -60,7 +62,14 @@ export async function mountNativeSessions(ctx: Context, config: NativeSessionCon
       const selected = request.workspaceId === undefined ? undefined : this.ctx.workspaceRegistry.get(request.workspaceId);
       const cwd = selected?.path ?? request.cwd ?? workspaceRoot;
       if (path.resolve(cwd) !== workspaceRoot) throw new Error("Session workspace is outside the application workspace");
-      return super.create(request.workspaceId === undefined ? { ...request, cwd: workspaceRoot } : request);
+      const existing = request.sessionId !== undefined && this.ctx.agents.list().some(agent => agent.id === request.sessionId);
+      if (!existing && this.ctx.agents.list().length + this.creating.size >= 10) throw new Error("Too many agent sessions");
+      // Distinct reservations count concurrent requests with generated IDs too.
+      const reservation = request.sessionId ?? `pending-${randomUUID()}`;
+      if (this.creating.has(reservation)) throw new Error("Agent session is already being created");
+      this.creating.add(reservation);
+      try { return await super.create(request.workspaceId === undefined ? { ...request, cwd: workspaceRoot } : request); }
+      finally { this.creating.delete(reservation); }
     }
   }
   await nativeContext.plugin(ApplicationSessionController, { nativeOpen: false });

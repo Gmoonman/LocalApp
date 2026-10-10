@@ -30,3 +30,16 @@ it("creates native sessions only in the application workspace", async () => {
     expect(await native.gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId: "existing-session_1" } } })).toEqual({ sessionId: "existing-session_1" });
   } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
 });
+
+it("counts concurrent native creation before agents become available", async () => {
+  const parent = path.resolve(import.meta.dirname, "../../../../../tmp/dsh-native-create");
+  await fs.mkdir(parent, { recursive: true });
+  const root = await fs.mkdtemp(path.join(parent, "concurrent-"));
+  const harness = new DeepSeekHarness({ ownerId: "owner", root, llmApiKey: "test-key", llmBaseUrl: "http://model.test/v1", llmModel: "test-model", capabilities: [] });
+  try {
+    const native = await harness.nativeApi();
+    const results = await Promise.allSettled(Array.from({ length: 15 }, () => native.gateway.invoke({ namespace: "session", method: "create", args: { request: {} } })));
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(10);
+    expect(results.filter(result => result.status === "rejected")).toHaveLength(5);
+  } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
+});
