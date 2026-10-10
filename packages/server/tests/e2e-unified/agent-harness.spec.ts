@@ -91,6 +91,18 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect((await send(adminKey, "platform", "https://untrusted.test")).status).toBe(403);
     expect((await send(outsiderKey)).status).toBe(400);
   });
+  it("rejects unauthenticated, inaccessible and foreign-origin native sockets", async () => {
+    const status = (headers: Record<string, string>, query = "") => new Promise<number>((resolve, reject) => {
+      const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux" + query, { headers });
+      const timer = setTimeout(() => { socket.terminate(); reject(new Error("Socket rejection timed out")); }, 5000);
+      socket.once("unexpected-response", (_request, response) => { clearTimeout(timer); response.resume(); socket.terminate(); resolve(response.statusCode!); });
+      socket.once("error", () => {});
+      socket.once("open", () => { clearTimeout(timer); socket.terminate(); reject(new Error("Unauthorized socket opened")); });
+    });
+    expect(await status({})).toBe(401);
+    expect(await status({ "X-API-Key": adminKey }, "?appId=missing/application")).toBe(400);
+    expect(await status({ "X-API-Key": adminKey, Origin: "https://untrusted.test" })).toBe(403);
+  });
   it("follows native trajectory through the unified Server WebSocket", async () => {
     const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux", { headers: { "X-API-Key": adminKey } });
     try {
