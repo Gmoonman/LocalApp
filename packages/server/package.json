@@ -134,7 +134,8 @@
     "sql.js": "^1.14.1",
     "unified": "^11.0.5",
     "yauzl": "3.4.0",
-    "yjs": "^13.6.32"
+    "yjs": "^13.6.32",
+    "@localapp/dsh-multiuser": "workspace:*"
   },
   "devDependencies": {
     "@types/archiver": "8.0.0",

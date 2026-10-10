@@ -1,6 +1,7 @@
 packages:
   - "packages/localapp"
   - "packages/server"
+  - "packages/dsh-multiuser"
   - "packages/server-core"
   - "packages/backend"
   - "packages/sdk-core"

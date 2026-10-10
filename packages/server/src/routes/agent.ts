@@ -11,10 +11,13 @@ import { resolveAgentApp } from "../lib/agent-app.js";
 export async function agentRoutes(app: FastifyInstance) {
   const { DeepSeekHarness } = await import("../lib/deepseek-harness.mjs");
   const settings = new AgentSettingsStore(app.config.dataDir);
-  const runtimes = new Map<string, { userId: string; fingerprint: string; harness: InstanceType<typeof DeepSeekHarness> }>();
-  const opening = new Map<string, Promise<InstanceType<typeof DeepSeekHarness>>>();
-  app.addHook("preClose", async () => { await Promise.all([...runtimes.values()].map((r) => r.harness.close())); });
-  app.addHook("onClose", async () => { await Promise.all([...opening.values()].map((p) => p.catch(() => undefined))); await Promise.all([...runtimes.values()].map((r) => r.harness.close())); });
+  const { Context } = await import("@deepseek-ai/cordis");
+  const { default: MultiuserRuntime } = await import("@localapp/dsh-multiuser");
+  const context = new Context();
+  await context.plugin(MultiuserRuntime, { capacity: 100 });
+  const runtimes = context.localappMultiuser;
+  app.addHook("preClose", () => runtimes.close());
+  app.addHook("onClose", () => context.fiber.dispose());
   const runtime = async (userId: string, appId?: string, providerId?: string) => {
     const application = resolveAgentApp(app.config.dataDir, userId, appId);
     const saved = settings.read(userId);
@@ -26,23 +29,15 @@ export async function agentRoutes(app: FastifyInstance) {
     const skills = capabilities.includes("skills") ? (preferences?.skills ?? []).filter(id => availableSkills.some(s => s.id === id && s.available)) : [];
     const disabledTools = preferences?.disabledTools ?? [];
     const key = JSON.stringify([userId, application.id, provider.id]);
-    if (opening.has(key)) { await opening.get(key); return runtime(userId, appId, providerId); }
     const pythonEnvironment = readPythonEnvironment(app.config.dataDir);
     const fingerprint = createHash("sha256").update(JSON.stringify([provider, capabilities, saved.mcpServers, skills, disabledTools, pythonEnvironment])).digest("hex");
-    const old = runtimes.get(key);
-    if (old?.fingerprint === fingerprint) return old.harness;
-    if (!old && runtimes.size >= 100) throw new Error("Agent capacity reached");
-    const pending = (async () => {
-      if (old) { runtimes.delete(key); await old.harness.close(); }
+    return runtimes.acquire({ userId, applicationId: application.id, role: "user", providerId: provider.id }, fingerprint, async () => {
       const root = path.join(app.config.dataDir, "agent", createHash("sha256").update(key).digest("hex"));
       const harness = new DeepSeekHarness({ llmApiKey: provider.apiKey, llmBaseUrl: provider.baseUrl, llmModel: provider.model, protocol: provider.protocol, autoSessionTitles: true, ownerId: userId, root, capabilities, mcpServers: saved.mcpServers, skills, disabledTools, pythonEnvironment });
       try { await harness.initialize(); }
       catch (error) { await harness.close().catch(() => {}); throw error; }
-      runtimes.set(key, { userId, fingerprint, harness });
       return harness;
-    })();
-    opening.set(key, pending);
-    try { return await pending; } finally { opening.delete(key); }
+    });
   };
   const restoreSchedules = async (onlyUser?: string) => {
     for (const userId of onlyUser ? [onlyUser] : settings.users()) {
@@ -63,8 +58,7 @@ export async function agentRoutes(app: FastifyInstance) {
   app.put("/api/agent/settings", async (req, reply) => {
     try {
       const data = settings.write(req.userId, req.body);
-      await Promise.all([...opening.values()].map((p) => p.catch(() => undefined)));
-      for (const [key, value] of runtimes) if (value.userId === req.userId) { runtimes.delete(key); await value.harness.close(); }
+      await runtimes.invalidate(req.userId);
       await restoreSchedules(req.userId);
       return { success: true, data };
     } catch (error) { return reply.status(400).send({ success: false, error: error instanceof Error ? error.message : "Invalid settings" }); }
@@ -107,8 +101,7 @@ export async function agentRoutes(app: FastifyInstance) {
       if (input.enabledSkills.some(id => !catalog.some(s => s.id === id && s.available))) throw new Error("系统文档处理依赖未就绪，无法启用此 Skill；请联系管理员。");
       const saved = settings.read(req.userId);
       settings.write(req.userId, { ...saved, grants: { ...saved.grants, [application.id]: input.enabledCapabilities }, applications: { ...saved.applications, [application.id]: { skills: input.enabledSkills, disabledTools: input.disabledTools, tools: saved.applications[application.id]?.tools ?? [] } } });
-      await Promise.all([...opening.values()].map((promise) => promise.catch(() => undefined)));
-      for (const [key, value] of runtimes) if (value.userId === req.userId && JSON.parse(key)[1] === application.id) { runtimes.delete(key); await value.harness.close(); }
+      await runtimes.invalidate(req.userId, application.id);
       await restoreSchedules(req.userId);
       return { success: true, data: await appPreferences(req.userId, application.id) };
     } catch (error) { return reply.status(400).send({ success: false, error: (error as Error).message }); }
@@ -142,7 +135,7 @@ export async function agentRoutes(app: FastifyInstance) {
     reply.raw.on("close", () => { clearInterval(heartbeat); dispose(); });
   });
   app.post<{ Body: { token: string; result: unknown } }>("/api/agent/tool-result", async (req, reply) => {
-    if (!req.body || typeof req.body.token !== "string" || ![...runtimes.values()].some((r) => r.userId === req.userId && r.harness.result(req.userId, req.body.token, req.body.result))) return reply.status(404).send({ success: false, error: "Unknown tool call" });
+    if (!req.body || typeof req.body.token !== "string" || !runtimes.forUser<InstanceType<typeof DeepSeekHarness>>(req.userId).some((harness) => harness.result(req.userId, req.body.token, req.body.result))) return reply.status(404).send({ success: false, error: "Unknown tool call" });
     return { success: true };
   });
   app.post<{ Body: import("../lib/deepseek-harness.mjs", { with: { "resolution-mode": "import" } }).HarnessInput }>("/api/agent/run", async (req, reply) => {
