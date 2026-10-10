@@ -87,8 +87,8 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
     });
   });
   // dsh owns RPC parsing; dispatch before Fastify consumes the raw body.
-  // History RPC and native streams are enabled first; mutation is wired with
-  // application tools and developer permissions in the following migration.
+  // Enable reviewed session operations explicitly; application tools and
+  // developer permissions are wired in the following migration.
   // Preserve upgrade bytes before @fastify/websocket routes the same request
   // through authentication hooks. This observer never consumes the socket.
   const nativeUpgrades = new WeakMap<IncomingMessage, { socket: Duplex; head: Buffer }>();
@@ -128,7 +128,7 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
     for (const prefix of ["/api/agent/native", "/api/agent/native/:scope"]) {
       nativeScope.get(prefix + "/api/remote.mux", async () => {});
       nativeScope.post(prefix + "/api/workspace/initializeDefault", async () => {});
-      for (const method of ["list", "page", "modelCatalog", "selectModel"]) nativeScope.post(prefix + "/api/session/" + method, async () => {});
+      for (const method of ["list", "page", "create", "modelCatalog", "selectModel"]) nativeScope.post(prefix + "/api/session/" + method, async () => {});
     }
   });
   const restoreSchedules = async (onlyUser?: string) => {
