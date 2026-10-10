@@ -1,5 +1,6 @@
 import { Context, Service } from "@deepseek-ai/cordis";
 import { AGENT_CAPABILITIES, type AgentCapability } from "@localapp/dsh-multiuser/settings";
+import * as database from "./app-db.cjs";
 
 export interface ApplicationRecord {
   ownerId: string;
@@ -16,6 +17,7 @@ export interface ApplicationStore {
 }
 
 export class ApplicationPlatform extends Service {
+  readonly database = database;
   constructor(ctx: Context, private readonly store: ApplicationStore) {
     super(ctx, "localappApps");
   }

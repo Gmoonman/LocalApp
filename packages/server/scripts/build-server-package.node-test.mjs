@@ -25,6 +25,9 @@ test("packed Node Server initializes and serves Web without repository dependenc
   assert.ok(manifest.files["native-client/entry.css"]);
   assert.ok(manifest.files["node_modules/@localapp/dsh-app-platform/dist/index.mjs"]);
   assert.ok(manifest.files["node_modules/@localapp/dsh-app-platform/dist/access-control.cjs"]);
+  for (const entry of ["app-db", "migrations", "runtime-errors", "issue-task-conversion", "notify-permission-sql", "models"]) {
+    assert.ok(manifest.files[`node_modules/@localapp/dsh-app-platform/dist/${entry}.cjs`]);
+  }
   assert.ok(Object.keys(manifest.files).some(file => file.startsWith("native-client/assets/") && file.endsWith(".woff2")));
   for (const skill of ["markitdown", "pdf", "docx", "xlsx"]) {
     assert.ok(manifest.files[`skills/${skill}/SKILL.md`]);
@@ -38,9 +41,21 @@ test("packed Node Server initializes and serves Web without repository dependenc
   assert.ok(manifest.files["node_modules/@localapp/dsh-multiuser/dist/native-client.mjs"]);
   const clientBoot = await promisify(execFile)(process.execPath, ["--input-type=module", "-e", `
     import { Context } from "@deepseek-ai/cordis";
+    import ApplicationPlatform from "@localapp/dsh-app-platform";
     import { mountNativeClientModules } from "@localapp/dsh-multiuser/native-client";
     const ctx = new Context();
     try {
+      await ctx.plugin(ApplicationPlatform, { owner: () => undefined, application: () => undefined, canAccess: () => false });
+      const database = ctx.localappApps.database;
+      const dbPath = process.cwd() + "/plugin-probe.sqlite";
+      await database.getConnection(dbPath);
+      database.execRawSql(dbPath, "CREATE TABLE probe (value TEXT)");
+      database.execRawSql(dbPath, "INSERT INTO probe VALUES (?)", ["persisted"]);
+      database.closeAllConnections();
+      await database.getConnection(dbPath);
+      const stored = database.execRawSql(dbPath, "SELECT value FROM probe");
+      if (stored.rows?.[0]?.value !== "persisted") throw new Error("Packaged plugin database did not persist");
+      database.closeAllConnections();
       const modules = await mountNativeClientModules(ctx);
       const graph = modules.graph();
       for (const entry of graph.entries) {

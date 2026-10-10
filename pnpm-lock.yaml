@@ -192,10 +192,16 @@ importers:
       '@localapp/dsh-multiuser':
         specifier: workspace:*
         version: link:../dsh-multiuser
+      sql.js:
+        specifier: ^1.14.1
+        version: 1.14.1
     devDependencies:
       '@types/node':
         specifier: ^25.9.1
         version: 25.9.1
+      '@types/sql.js':
+        specifier: ^1.4.11
+        version: 1.4.11
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10

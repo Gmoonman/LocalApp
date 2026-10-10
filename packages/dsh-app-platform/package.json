@@ -12,6 +12,30 @@
     "./access-control": {
       "types": "./dist/access-control.d.cts",
       "default": "./dist/access-control.cjs"
+    },
+    "./app-db": {
+      "types": "./dist/app-db.d.cts",
+      "default": "./dist/app-db.cjs"
+    },
+    "./migrations": {
+      "types": "./dist/migrations.d.cts",
+      "default": "./dist/migrations.cjs"
+    },
+    "./runtime-errors": {
+      "types": "./dist/runtime-errors.d.cts",
+      "default": "./dist/runtime-errors.cjs"
+    },
+    "./issue-task-conversion": {
+      "types": "./dist/issue-task-conversion.d.cts",
+      "default": "./dist/issue-task-conversion.cjs"
+    },
+    "./notify-permission-sql": {
+      "types": "./dist/notify-permission-sql.d.cts",
+      "default": "./dist/notify-permission-sql.cjs"
+    },
+    "./models": {
+      "types": "./dist/models.d.cts",
+      "default": "./dist/models.cjs"
     }
   },
   "scripts": {
@@ -20,11 +44,13 @@
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.5-alpha.1",
-    "@localapp/dsh-multiuser": "workspace:*"
+    "@localapp/dsh-multiuser": "workspace:*",
+    "sql.js": "^1.14.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
     "rimraf": "^5.0.0",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "@types/sql.js": "^1.4.11"
   }
 }
