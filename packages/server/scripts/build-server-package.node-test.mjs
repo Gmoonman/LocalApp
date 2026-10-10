@@ -33,6 +33,9 @@ test("packed Node Server initializes and serves Web without repository dependenc
   for (const entry of ["app-runtime", "backend-actions", "backend-contract", "app-api-contract", "transitions", "record-access", "content-capabilities", "platform-capabilities"]) {
     assert.ok(manifest.files[`node_modules/@localapp/dsh-app-platform/dist/${entry}.cjs`]);
   }
+  for (const entry of ["issue-templates", "issue-saved-views", "issue-saved-replies"]) {
+    assert.ok(manifest.files[`node_modules/@localapp/dsh-app-platform/dist/${entry}.cjs`]);
+  }
   assert.ok(Object.keys(manifest.files).some(file => file.startsWith("native-client/assets/") && file.endsWith(".woff2")));
   for (const skill of ["markitdown", "pdf", "docx", "xlsx"]) {
     assert.ok(manifest.files[`skills/${skill}/SKILL.md`]);
@@ -69,6 +72,11 @@ test("packed Node Server initializes and serves Web without repository dependenc
       });
       const query = await runtime.execute({ kind: "named-query", name: "probe.read" }, { params: {} });
       if (query.rows?.[0]?.value !== "persisted") throw new Error("Packaged plugin Named SQL failed");
+      await ctx.localappApps.issues.savedViews.createIssueSavedView(dbPath, "owner", { name: "Open work", query: { status: "open" } });
+      database.closeAllConnections();
+      const ownerViews = await ctx.localappApps.issues.savedViews.listIssueSavedViews(dbPath, "owner");
+      const otherViews = await ctx.localappApps.issues.savedViews.listIssueSavedViews(dbPath, "other");
+      if (ownerViews[0]?.name !== "Open work" || otherViews.length !== 0) throw new Error("Packaged Issue views failed persistence or user isolation");
       database.closeAllConnections();
       const modules = await mountNativeClientModules(ctx);
       const graph = modules.graph();

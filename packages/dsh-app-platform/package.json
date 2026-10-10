@@ -68,6 +68,18 @@
     "./platform-capabilities": {
       "types": "./dist/platform-capabilities.d.cts",
       "default": "./dist/platform-capabilities.cjs"
+    },
+    "./issue-templates": {
+      "types": "./dist/issue-templates.d.cts",
+      "default": "./dist/issue-templates.cjs"
+    },
+    "./issue-saved-views": {
+      "types": "./dist/issue-saved-views.d.cts",
+      "default": "./dist/issue-saved-views.cjs"
+    },
+    "./issue-saved-replies": {
+      "types": "./dist/issue-saved-replies.d.cts",
+      "default": "./dist/issue-saved-replies.cjs"
     }
   },
   "scripts": {

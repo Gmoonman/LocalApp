@@ -4,6 +4,9 @@ import * as database from "./app-db.cjs";
 import * as backend from "./backend-contract.cjs";
 import * as appRuntime from "./app-runtime.cjs";
 import * as recordAccess from "./record-access.cjs";
+import * as issueTemplates from "./issue-templates.cjs";
+import * as issueSavedViews from "./issue-saved-views.cjs";
+import * as issueSavedReplies from "./issue-saved-replies.cjs";
 
 export interface ApplicationRecord {
   ownerId: string;
@@ -24,6 +27,7 @@ export class ApplicationPlatform extends Service {
   readonly backend = backend;
   readonly appRuntime = appRuntime;
   readonly recordAccess = recordAccess;
+  readonly issues = { templates: issueTemplates, savedViews: issueSavedViews, savedReplies: issueSavedReplies };
   constructor(ctx: Context, private readonly store: ApplicationStore) {
     super(ctx, "localappApps");
   }
