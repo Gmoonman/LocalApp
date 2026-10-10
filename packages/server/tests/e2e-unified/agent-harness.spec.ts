@@ -195,6 +195,29 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect(plugin.status).toBe(200);
     expect((await plugin.text()).length).toBeGreaterThan(100);
   });
+  it.runIf(process.env.LOCALAPP_NATIVE_BROWSER_VERIFY === "1")("boots the original native client in a real browser", async () => {
+    const { chromium } = await import("@playwright/test");
+    const browser = await chromium.launch({ channel: "chrome", headless: true });
+    const page = await browser.newPage({ extraHTTPHeaders: { "X-API-Key": adminKey } });
+    const errors: string[] = [];
+    const failures: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+    page.on("response", response => { if (response.status() >= 400) failures.push(`${response.status()} ${new URL(response.url()).pathname}`); });
+    const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
+    try {
+      await page.goto(`${baseUrl}/api/agent/native/${scope}/`);
+      await page.locator("textarea, [contenteditable=true]").first().waitFor({ timeout: 15000 });
+      expect(errors).toEqual([]);
+      expect(failures).toEqual([]);
+    } finally {
+      const artifacts = path.resolve(dataDir, "..", "browser-evidence");
+      await fs.mkdir(artifacts, { recursive: true });
+      await page.screenshot({ path: path.join(artifacts, "native-boot.png"), fullPage: true });
+      await fs.writeFile(path.join(artifacts, "native-boot.json"), JSON.stringify({ errors, failures, text: await page.locator("body").innerText() }, null, 2));
+      await browser.close();
+    }
+  }, 25000);
   it("rejects unauthenticated, inaccessible and foreign-origin native sockets", async () => {
     const status = (headers: Record<string, string>, query = "") => new Promise<number>((resolve, reject) => {
       const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux" + query, { headers });
