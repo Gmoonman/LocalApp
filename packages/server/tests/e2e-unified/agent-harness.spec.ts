@@ -1,4 +1,5 @@
 import http from "node:http";
+import WebSocket from "ws";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -89,6 +90,20 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect((await send(adminKey, "missing/application")).status).toBe(400);
     expect((await send(adminKey, "platform", "https://untrusted.test")).status).toBe(403);
     expect((await send(outsiderKey)).status).toBe(400);
+  });
+  it("follows native trajectory through the unified Server WebSocket", async () => {
+    const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux", { headers: { "X-API-Key": adminKey } });
+    try {
+      const frame = await new Promise<any>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("Native trajectory socket timed out")), 5000);
+        socket.once("error", error => { clearTimeout(timer); reject(error); });
+        socket.on("message", value => { clearTimeout(timer); resolve(JSON.parse(value.toString())); });
+        socket.once("open", () => socket.send(JSON.stringify({ type: "open", streamId: "history", endpoint: "session/follow", payload: { args: { request: { address: { kind: "session", sessionId: "http-e2e-session" } } } } })));
+      });
+      expect(JSON.stringify(frame)).toContain("echo hello");
+      expect(JSON.stringify(frame)).toContain("request/header");
+      socket.send(JSON.stringify({ type: "cancel", streamId: "history" }));
+    } finally { socket.terminate(); }
   });
   it("keeps provider credentials and settings separate for each user", async () => {
     const get = (key: string) => app.inject({ method: "GET", url: "/api/agent/settings", headers: { "X-API-Key": key } });
