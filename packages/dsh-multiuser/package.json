@@ -40,6 +40,10 @@
     "./native-scope": {
       "types": "./dist/native-scope.d.cts",
       "default": "./dist/native-scope.cjs"
+    },
+    "./native-client-assets": {
+      "types": "./dist/native-client-assets.d.mts",
+      "default": "./dist/native-client-assets.mjs"
     }
   },
   "scripts": {
