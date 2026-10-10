@@ -118,6 +118,19 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect(await foreign.text()).toContain("session/model-unavailable");
     expect((await send("modelCatalog", {}, outsiderKey)).status).toBe(400);
   });
+  it("creates native sessions over authenticated scoped HTTP", async () => {
+    const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
+    const send = (request: unknown, key = adminKey) => fetch(`${baseUrl}/api/agent/native/${scope}/api/session/create`, {
+      method: "POST", headers: { "X-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId: "native-create", method: "session/create", payload: { args: { request } } }),
+    });
+    const created = await send({});
+    expect(created.status).toBe(200);
+    expect((await created.json()).result.value.sessionId).toMatch(/^session-/);
+    expect(await (await send({ sessionId: "../escape" })).text()).toContain("Invalid session ID");
+    expect(await (await send({ cwd: dataDir })).text()).toContain("outside the application workspace");
+    expect((await send({}, outsiderKey)).status).toBe(400);
+  });
   it("pins native client transport paths to the selected provider and application", async () => {
     const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
     const send = (key: string, token = scope) => fetch(baseUrl + "/api/agent/native/" + token + "/api/session/list?appId=missing/application&providerId=missing", {
