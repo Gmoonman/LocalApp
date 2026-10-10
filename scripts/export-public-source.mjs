@@ -203,6 +203,7 @@ export function snapshotVerificationCommands() {
     ["pnpm", ["-C", "packages/web", "test"]],
     // Exercise release packaging before Server/dist can hide missing source aliases.
     ["pnpm", ["package:localapp"]],
+    ["pnpm", ["-C", "packages/dsh-multiuser", "build"]],
     ["pnpm", ["-C", "packages/server", "build"]],
     ["pnpm", ["-C", "packages/server", "test"]],
     ["pnpm", ["-C", "packages/crdt", "build"]],

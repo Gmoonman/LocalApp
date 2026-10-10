@@ -44,8 +44,8 @@
     }
   },
   "scripts": {
-    "dev": "node --import ./scripts/dev-env.mjs ./node_modules/tsx/dist/cli.mjs watch --include ../server-core/dist src/cli.ts start",
-    "build": "tsc",
+    "dev": "pnpm -C ../dsh-multiuser build && node --import ./scripts/dev-env.mjs ./node_modules/tsx/dist/cli.mjs watch --include ../server-core/dist --include ../dsh-multiuser/dist src/cli.ts start",
+    "build": "pnpm -C ../dsh-multiuser build && tsc",
     "start": "node dist/cli.js start",
     "package": "pnpm -C ../server-core build && pnpm -C ../web build && node scripts/build-server-package.mjs",
     "test:package": "node --test scripts/build-server-package.node-test.mjs",

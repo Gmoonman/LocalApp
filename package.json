@@ -3,10 +3,10 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "pnpm -C packages/server-core build && concurrently -k \"pnpm -C packages/server-core build --watch --preserveWatchOutput\" \"pnpm -C packages/server dev\" \"pnpm -C packages/web dev\"",
+    "dev": "pnpm -C packages/server-core build && pnpm -C packages/dsh-multiuser build && concurrently -k \"pnpm -C packages/dsh-multiuser build --watch --preserveWatchOutput\" \"pnpm -C packages/server-core build --watch --preserveWatchOutput\" \"pnpm -C packages/server dev\" \"pnpm -C packages/web dev\"",
     "dev:build": "pnpm -C packages/web build && pnpm -C packages/server dev",
     "dev:web": "pnpm -C packages/web build",
-    "dev:server": "pnpm -C packages/server-core build && concurrently -k \"pnpm -C packages/server-core build --watch --preserveWatchOutput\" \"pnpm -C packages/server dev\"",
+    "dev:server": "pnpm -C packages/server-core build && pnpm -C packages/dsh-multiuser build && concurrently -k \"pnpm -C packages/dsh-multiuser build --watch --preserveWatchOutput\" \"pnpm -C packages/server-core build --watch --preserveWatchOutput\" \"pnpm -C packages/server dev\"",
     "package:localapp": "node scripts/package-localapp.mjs",
     "release:npm:check": "node scripts/check-npm-release.mjs",
     "test:localapp-package": "node --test --test-concurrency=1 packages/localapp/scripts/pack-package.node-test.mjs packages/localapp/scripts/build-package.node-test.mjs packages/localapp/scripts/merge-native-adapters.node-test.mjs scripts/single-package-cutover.node-test.mjs",
