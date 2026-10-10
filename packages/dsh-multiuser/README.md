@@ -6,4 +6,6 @@
 
 服务只在 Server 内使用，调用方负责认证和创建真正的 dsh Harness。它没有远程 RPC 装饰，也不把运行时或模型密钥交给浏览器。已有 Harness 的磁盘目录继续使用原来的键。
 
-账号、模型设置、管理员 Python 环境和完整 dsh 客户端将在后续迁入。完整方案见 `docs/dsh-plugin-suite.md`；实现进度见 `openspec/changes/refactor-dsh-plugin-suite/tasks.md`。
+管理员 Python 环境管理和依赖检查已迁入本插件，可通过 `python-environment` 与 `agent-environment` 子入口独立使用。现有 Server 入口继续转发，配置文件保持兼容。
+
+账号、模型设置和完整 dsh 客户端将在后续迁入。完整方案见 `docs/dsh-plugin-suite.md`；实现进度见 `openspec/changes/refactor-dsh-plugin-suite/tasks.md`。

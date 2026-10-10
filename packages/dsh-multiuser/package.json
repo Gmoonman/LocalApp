@@ -8,6 +8,14 @@
     ".": {
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
+    },
+    "./python-environment": {
+      "types": "./dist/python-environment.d.cts",
+      "default": "./dist/python-environment.cjs"
+    },
+    "./agent-environment": {
+      "types": "./dist/agent-environment.d.cts",
+      "default": "./dist/agent-environment.cjs"
     }
   },
   "scripts": {
@@ -19,6 +27,7 @@
   },
   "devDependencies": {
     "typescript": "5.6.3",
-    "rimraf": "^5.0.0"
+    "rimraf": "^5.0.0",
+    "@types/node": "^25.9.1"
   }
 }
