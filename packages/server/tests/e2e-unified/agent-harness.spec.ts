@@ -80,6 +80,12 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect((await send()).status).toBe(401);
     const own = await send(adminKey); expect(own.status).toBe(200);
     expect(await own.text()).toContain("http-e2e-session");
+    const page = await fetch(baseUrl + "/api/agent/native/api/session/page", {
+      method: "POST", headers: { "X-API-Key": adminKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId: "native-page", method: "session/page", payload: { args: { request: { address: { kind: "session", sessionId: "http-e2e-session" }, throughSeq: 0 } } } }),
+    });
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain("echo hello");
     expect((await send(adminKey, "missing/application")).status).toBe(400);
     expect((await send(adminKey, "platform", "https://untrusted.test")).status).toBe(403);
     expect((await send(outsiderKey)).status).toBe(400);

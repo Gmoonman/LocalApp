@@ -21,9 +21,19 @@ it("exposes real Harness sessions and native trajectory records through the dsh 
       const stream = await native.gateway.stream({ namespace: "session", method: "follow", args: { request: { address: { kind: "session", sessionId: `${userId}-session` } } }, signal: controller.signal });
       const iterator = stream[Symbol.asyncIterator](); const opening = await iterator.next();
       controller.abort(); await iterator.return?.();
+      const snapshot = opening.value as { cursor: number };
+      const page = await native.gateway.invoke({ namespace: "session", method: "page", args: { request: { address: { kind: "session", sessionId: userId + "-session" }, throughSeq: snapshot.cursor } } });
+      expect(JSON.stringify(page)).toContain(userId + " private message");
+      await expect(native.gateway.invoke({ namespace: "session", method: "page", args: { request: { address: { kind: "session", sessionId: (userId === "alice" ? "bob" : "alice") + "-session" }, throughSeq: -1 } } })).rejects.toThrow();
       expect(JSON.stringify(opening.value)).toContain("request/header");
       expect(JSON.stringify(opening.value)).toContain(`${userId} private message`);
-      await expect(native.gateway.invoke({ namespace: "session", method: "create", args: { request: { cwd: path.dirname(root) } } })).rejects.toThrow("workspace");
+      await harness.close();
+      const restored = new DeepSeekHarness({ ownerId: userId, root: path.join(root, userId), llmApiKey: "test-key", llmBaseUrl: "http://model.test/v1", llmModel: "test-model", capabilities: [] });
+      harnesses[harnesses.length - 1] = restored;
+      const restoredNative = await restored.nativeApi();
+      const restoredPage = await restoredNative.gateway.invoke({ namespace: "session", method: "page", args: { request: { address: { kind: "session", sessionId: userId + "-session" }, throughSeq: snapshot.cursor } } });
+      expect(restoredPage).toEqual(page);
+      await expect(restoredNative.gateway.invoke({ namespace: "session", method: "create", args: { request: { cwd: path.dirname(root) } } })).rejects.toThrow("workspace");
     }
   } finally { await Promise.all(harnesses.map(harness => harness.close())); vi.unstubAllGlobals(); await fs.rm(root, { recursive: true, force: true }); }
 });

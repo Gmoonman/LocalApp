@@ -37,3 +37,7 @@ EmbeddedWebServer 复用 dsh WebServer 注册接口，将路由交给现有 Serv
 真实 Harness 已加载 dsh SessionController、SQLite SessionQuery、附件和上传服务，并通过官方 Typert 描述注册 Gateway。会话创建的目录校验在调用上游直接创建目录前执行。两个用户的会话列表与原始轨迹快照隔离测试通过；相关 4 个文件 10 项测试通过，插件与 Server 类型构建通过。
 
 统一 Server 已开放原生 session/list 与 session/page HTTP 路径，沿用现有认证、应用访问检查和模型设置。真实 HTTP Agent 测试 5 项通过，覆盖未认证、不可访问应用和跨来源拒绝。page 路径尚未完成真实 HTTP 分页验收。写入、WebSocket、应用工具绑定、开发者身份和完整客户端仍在迁移中，不能据此声称原生客户端整体完成。
+
+## 原生历史分页与重启恢复
+
+原生 Gateway 的 page 使用 follow 快照 cursor 读取完整历史，包含用户输入与原始轨迹事件；跨用户 sessionId 读取被拒绝。关闭 Harness 后在同一路径重新创建 Harness，原生 page 返回相同记录。统一 Server 的正式原生 page HTTP 入口返回实际持久化事件和用户输入。上述真实 Harness 与 HTTP Agent 测试共 2 个文件 6 项通过。原生 WebSocket 与完整客户端尚未接入，分页证据不能代替浏览器轨迹验收。
