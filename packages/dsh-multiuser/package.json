@@ -16,6 +16,10 @@
     "./agent-environment": {
       "types": "./dist/agent-environment.d.cts",
       "default": "./dist/agent-environment.cjs"
+    },
+    "./settings": {
+      "types": "./dist/settings.d.cts",
+      "default": "./dist/settings.cjs"
     }
   },
   "scripts": {

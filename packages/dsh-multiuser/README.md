@@ -8,4 +8,6 @@
 
 管理员 Python 环境管理和依赖检查已迁入本插件，可通过 `python-environment` 与 `agent-environment` 子入口独立使用。现有 Server 入口继续转发，配置文件保持兼容。
 
-账号、模型设置和完整 dsh 客户端将在后续迁入。完整方案见 `docs/dsh-plugin-suite.md`；实现进度见 `openspec/changes/refactor-dsh-plugin-suite/tasks.md`。
+用户模型设置、MCP 凭据和应用能力偏好由 `settings` 子入口提供，使用注入的存储接口，不依赖 Server 数据库。加密密钥和数据格式保持兼容；现有 Server 只提供 SQLite 适配。
+
+账号和完整 dsh 客户端将在后续迁入。完整方案见 `docs/dsh-plugin-suite.md`；实现进度见 `openspec/changes/refactor-dsh-plugin-suite/tasks.md`。
