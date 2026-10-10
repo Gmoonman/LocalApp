@@ -71,3 +71,9 @@ Server 打包现在包含多人插件的内部库及其 dsh 运行时和客户�
 ## 原生客户端应用工作区
 
 真实 Harness 接入官方 WorkspaceController 与其 Typert 描述。应用实现仅允许注册配置中的 workspaceRoot；默认初始化使用该目录，不使用上游系统 Documents 路径。两用户测试分别验证自己的工作区路径和其他目录拒绝，历史分页与重启恢复继续通过。统一 Server 的原生 workspace/initializeDefault HTTP 入口返回当前用户运行时的应用目录。真实 Harness 与 HTTP Agent 相关 2 个文件 9 项测试、插件和 Server 类型构建通过。客户端完整页面和会话写入仍待实施。
+
+## 原生页面的应用与供应商路径及启动资源服务
+
+新增只包含 appId 和 providerId 的原生路径编码，用户身份始终来自 Server 认证；不接受附加用户字段、不合法配置或超长编码。正式原生 HTTP 和 WebSocket 增加固定应用、固定供应商路径，查询参数不能改写该路径所选运行时。真实 HTTP 与实时轨迹流测试通过。
+
+新增 NativeClientAssets Cordis 服务，在独立 Context 中加载官方模块并生成 dsh 的启动注入表，父级 Agent 服务不进入资源 Context。资源分发只允许 plugins 路径；生命周期等待装配后释放内部 Context。原生启动表、路径编码和真实 HTTP Agent 相关 3 个文件 11 项测试通过，插件及 Server 类型构建通过。资源服务尚未连接正式页面路由，浏览器页面验收仍未完成。
