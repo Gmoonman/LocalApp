@@ -1,4 +1,6 @@
 import type { AccessLevel, PageAccess, RouteAccess, ManifestDbAccess, NotifyPermission } from "./models.cjs";
+import { getConnection, getDbPath } from "./app-db.cjs";
+import { validateNotifyPermissionConfig, buildPermissionSql } from "./notify-permission-sql.cjs";
 
 type GroupMembershipResolver = (userId: string, groupName: string) => boolean;
 
@@ -85,9 +87,6 @@ export function checkRouteAccessWithManifest(
   const level = defaultAccess?.[action] ?? "public";
   return checkAccess(level as AccessLevel, visitorId, ownerId);
 }
-
-import { getConnection, getDbPath } from "./app-db.cjs";
-import { validateNotifyPermissionConfig, buildPermissionSql } from "./notify-permission-sql.cjs";
 
 /**
  * Notify 端点权限校验。
