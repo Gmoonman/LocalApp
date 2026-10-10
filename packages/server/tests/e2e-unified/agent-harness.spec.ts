@@ -208,6 +208,12 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     try {
       await page.goto(`${baseUrl}/api/agent/native/${scope}/`);
       await page.locator("textarea, [contenteditable=true]").first().waitFor({ timeout: 15000 });
+      const input = page.locator("textarea, [contenteditable=true]").first();
+      await input.fill("native HTTP hello");
+      await input.press("Enter");
+      await page.getByText("native HTTP finished", { exact: true }).first().waitFor({ timeout: 15000 });
+      await page.getByText("轨迹", { exact: true }).click({ timeout: 5000 });
+      await page.locator('[aria-label="轨迹工具栏"]').waitFor({ timeout: 5000 });
       expect(errors).toEqual([]);
       expect(failures).toEqual([]);
     } finally {
