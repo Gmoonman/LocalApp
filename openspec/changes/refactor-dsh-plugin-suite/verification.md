@@ -51,3 +51,9 @@ EmbeddedWebServer 复用 dsh WebServer 注册接口，将路由交给现有 Serv
 新增 native-client 模块，通过真实 Cordis Loader 加载 dsh UI 插件的 Host 入口，并由官方 ClientModuleRegistry 读取原始客户端 bundle。Trajectory、Chat、Conversation、Session、Renderer 和 Locale 已加入精确版本依赖。加载测试确认注册图中存在官方 Trajectory 插件，并能解析其 client.js 产物。客户端模块、原生历史和真实 HTTP Agent 相关 3 个文件 9 项测试通过，插件类型构建和离线 frozen-lockfile 安装通过。
 
 该模块尚未接到正式页面，原生会话控制器等客户端依赖仍需完整装配，不能视为整个浏览器客户端已启动；现有界面尚未替换，也没有宣称通过浏览器验收。
+
+## 客户端模块依赖图与事件流握手
+
+原生客户端模块清单补齐为 23 个官方模块，测试逐个检查声明的 inject 模块均存在，并逐个读取官方 bundle。模块资源 Context 禁止与已有 Agent 执行 Context 混用，避免为资源扫描加载额外执行服务。模块依赖图和 bundle 可读仅证明客户端资源装配，尚不证明浏览器服务全部激活。
+
+真实 Harness 已接入官方 api-remotes 的事件源；通过统一 Server 的真实 WebSocket 验证客户端 $events 流收到 ready 和 clientId。模块资源、原生历史和真实 HTTP Agent 相关 3 个文件 10 项测试通过，插件和 Server 类型构建通过，离线 frozen-lockfile 安装通过。正式页面启动、发布包内的客户端资源和所有模式浏览器验收仍需继续实施。
