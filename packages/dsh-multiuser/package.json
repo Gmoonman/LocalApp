@@ -63,7 +63,18 @@
     "@deepseek-ai/dsh-session-query": "0.2.1-alpha.1",
     "@deepseek-ai/dsh-session-query-sqlite": "0.2.1-alpha.1",
     "@deepseek-ai/dsh-typert-registry": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-workspace": "0.2.1-alpha.1"
+    "@deepseek-ai/dsh-workspace": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-api-remotes": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-api-workspace-controller": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-resources": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-shortcuts": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-ui-input-trigger": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-ui-sidebar-right": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-ui-theme": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-ui-workspace": "0.2.1-alpha.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

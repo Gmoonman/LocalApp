@@ -1,6 +1,7 @@
 import { Context } from "@deepseek-ai/cordis";
 import TypertRegistry from "@deepseek-ai/dsh-typert-registry";
 import Gateway from "@deepseek-ai/dsh-api-gateway";
+import * as Remotes from "@deepseek-ai/dsh-api-remotes";
 import SessionController, { type SessionCreateRequest } from "@deepseek-ai/dsh-api-session-controller";
 import { TYPERT } from "@deepseek-ai/dsh-api-session-controller/typert";
 import DefaultModel from "@deepseek-ai/dsh-agent-default-model";
@@ -44,5 +45,6 @@ export async function mountNativeSessions(ctx: Context, config: NativeSessionCon
   await nativeContext.plugin(ApplicationSessionController, { nativeOpen: false });
   if (!nativeContext.get("sessionController")) throw new Error("Native SessionController dependencies are not ready");
   await nativeContext.plugin(Gateway);
+  await nativeContext.plugin(Remotes);
   return { transport, gateway: nativeContext.typertGateway };
 }
