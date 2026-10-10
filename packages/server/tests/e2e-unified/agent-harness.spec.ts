@@ -3,7 +3,7 @@ import WebSocket from "ws";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildServer } from "../../src/server.js";
 import { SetupTokenStore } from "../../src/lib/setup-token-store.js";
 import { closeMetaDb, createApiKey, createUser, findUserByName } from "../../src/lib/meta-sqlite.js";
@@ -141,18 +141,27 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     });
     const { sessionId } = (await (await send("create", { request: {} })).json()).result.value;
     const request = { sessionId, requestId: "native-http-request", mode: "queue", content: [{ type: "text", text: "native HTTP hello" }] };
-    const before = modelRequests.length;
+    const promptRequests = () => modelRequests.filter(item => item.messages.some((message: any) => message.content === "native HTTP hello"));
     const response = await send("prompt", { request });
     expect(response.status).toBe(200);
     expect((await response.json()).result.value).toEqual({ accepted: true });
-    await vi.waitFor(async () => {
-      const page = await send("page", { request: { address: { kind: "session", sessionId }, throughSeq: 0 } });
-      expect(await page.text()).toContain("native HTTP finished");
-    });
-    expect(modelRequests).toHaveLength(before + 1);
-    expect(modelRequests.at(-1)).toMatchObject({ model: "mock-model", authorization: "Bearer mock-key" });
+    const socket = new WebSocket(`${baseUrl.replace("http:", "ws:")}/api/agent/native/${scope}/api/remote.mux`, { headers: { "X-API-Key": adminKey } });
+    try {
+      const trajectory = await new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("Native prompt trajectory timed out")), 5000);
+        socket.once("error", error => { clearTimeout(timer); reject(error); });
+        socket.on("message", frame => {
+          const text = frame.toString();
+          if (text.includes("native HTTP finished")) { clearTimeout(timer); resolve(text); }
+        });
+        socket.once("open", () => socket.send(JSON.stringify({ type: "open", streamId: "prompt-trajectory", endpoint: "session/follow", payload: { args: { request: { address: { kind: "session", sessionId } } } } })));
+      });
+      expect(trajectory).toContain("native HTTP finished");
+    } finally { socket.terminate(); }
+    expect(promptRequests()).toHaveLength(1);
+    expect(promptRequests()[0]).toMatchObject({ model: "mock-model", authorization: "Bearer mock-key" });
     expect((await send("prompt", { request })).status).toBe(200);
-    expect(modelRequests).toHaveLength(before + 1);
+    expect(promptRequests()).toHaveLength(1);
     expect((await send("prompt", { request }, outsiderKey)).status).toBe(400);
   });
   it("pins native client transport paths to the selected provider and application", async () => {

@@ -128,7 +128,7 @@ export async function agentRoutes(app: FastifyInstance, options: { nativeClientR
     for (const prefix of ["/api/agent/native", "/api/agent/native/:scope"]) {
       nativeScope.get(prefix + "/api/remote.mux", async () => {});
       nativeScope.post(prefix + "/api/workspace/initializeDefault", async () => {});
-      for (const method of ["list", "page", "create", "modelCatalog", "selectModel"]) nativeScope.post(prefix + "/api/session/" + method, async () => {});
+      for (const method of ["list", "page", "create", "prompt", "modelCatalog", "selectModel"]) nativeScope.post(prefix + "/api/session/" + method, async () => {});
     }
   });
   const restoreSchedules = async (onlyUser?: string) => {
