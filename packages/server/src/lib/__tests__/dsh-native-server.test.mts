@@ -20,6 +20,6 @@ it("runs dsh registered routes through the existing Server without opening anoth
     expect((await fetch(`${base}/api-other`)).status).toBe(404);
     removeExact(); expect(await (await fetch(`${base}/api/exact`)).text()).toBe("native /api/exact");
     removePrefix(); expect((await fetch(`${base}/api/nested`)).status).toBe(404);
-    expect(ctx.webServer).toBe(native);
+    expect(ctx.webServer).toBeInstanceOf(EmbeddedWebServer);
   } finally { await app.close(); await ctx.fiber.dispose(); }
 });

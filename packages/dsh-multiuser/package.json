@@ -20,6 +20,14 @@
     "./settings": {
       "types": "./dist/settings.d.cts",
       "default": "./dist/settings.cjs"
+    },
+    "./native-server": {
+      "types": "./dist/native-server.d.mts",
+      "default": "./dist/native-server.mjs"
+    },
+    "./native-connection": {
+      "types": "./dist/native-connection.d.mts",
+      "default": "./dist/native-connection.mjs"
     }
   },
   "scripts": {
@@ -27,7 +35,10 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.0.5-alpha.1"
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@deepseek-ai/dsh-host-webserver": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-client-connection": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-credentials-local": "0.2.1-alpha.1"
   },
   "devDependencies": {
     "typescript": "5.6.3",
