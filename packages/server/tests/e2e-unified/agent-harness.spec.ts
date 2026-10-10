@@ -103,6 +103,20 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect(await status({ "X-API-Key": adminKey }, "?appId=missing/application")).toBe(400);
     expect(await status({ "X-API-Key": adminKey, Origin: "https://untrusted.test" })).toBe(403);
   });
+  it("establishes the native client forwarded-event stream", async () => {
+    const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux", { headers: { "X-API-Key": adminKey } });
+    try {
+      const frame = await new Promise<any>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("Native client readiness timed out")), 5000);
+        socket.once("error", error => { clearTimeout(timer); reject(error); });
+        socket.once("message", value => { clearTimeout(timer); resolve(JSON.parse(value.toString())); });
+        socket.once("open", () => socket.send(JSON.stringify({ type: "open", streamId: "client-events", endpoint: "$events", payload: { args: {} } })));
+      });
+      expect(frame.type).toBe("item");
+      expect(frame.value.type).toBe("ready");
+      expect(frame.value.clientId).toEqual(expect.any(String));
+    } finally { socket.terminate(); }
+  });
   it("follows native trajectory through the unified Server WebSocket", async () => {
     const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux", { headers: { "X-API-Key": adminKey } });
     try {
