@@ -4,7 +4,7 @@ import { environmentProbe, summarizeEnvironment, type AgentEnvironment, type Env
 import fs from "node:fs";
 import SessionPersistence from "@deepseek-ai/dsh-session-persistence-jsonl";
 import * as PiAi from "@deepseek-ai/dsh-llm-pi-ai";
-import { mountHarnessCapabilities } from "./deepseek-capabilities.mjs";
+import { mountHarnessCapabilities, mountApplicationFileSystem } from "./deepseek-capabilities.mjs";
 import type { AgentCapability, AgentSettings, AgentProvider } from "./agent-settings.js";
 import { randomUUID } from "node:crypto";
 import { Context } from "@deepseek-ai/cordis";
@@ -59,6 +59,17 @@ export function browserMessages(messages: Message[]) {
 /** A plugin tree inside the unified Server, with no additional listener or CLI. */
 export class DeepSeekHarness {
   private readonly ctx = new Context();
+  private nativeReady?: Promise<Awaited<ReturnType<typeof import("@localapp/dsh-multiuser/native-session").mountNativeSessions>>>;
+  async nativeApi() {
+    if (!this.config.root || !this.config.ownerId) throw new Error("Native API requires an authenticated application runtime");
+    return this.nativeReady ??= (async () => {
+      await this.ready;
+      const workspaceRoot = this.config.workspaceRoot ?? path.join(this.config.root!, "workspace");
+      if (!this.ctx.get("fs")) await mountApplicationFileSystem(this.ctx, workspaceRoot);
+      const { mountNativeSessions } = await import("@localapp/dsh-multiuser/native-session");
+      return mountNativeSessions(this.ctx, { userId: this.config.ownerId!, root: this.config.root!, workspaceRoot, model: this.config.llmModel });
+    })();
+  }
   private readonly conversations = new Map<string, Conversation>();
   private readonly pending = new Map<string, PendingResult>();
   private readonly watchers = new Map<string, Set<(event: unknown) => void>>();
@@ -386,6 +397,7 @@ export class DeepSeekHarness {
   async close() {
     clearInterval(this.timer);
     await this.ready.catch(() => {});
+    await this.nativeReady?.catch(() => {});
     await Promise.all([...this.conversations.values()].map((c) => c.handle.dispose()));
     this.conversations.clear();
     for (const listeners of this.watchers.values()) for (const emit of listeners) emit({ type: "connection_closed" });

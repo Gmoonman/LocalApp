@@ -283,3 +283,7 @@ export async function mountHarnessCapabilities(ctx: Context, root: string, capab
   }
   return workspace;
 }
+
+export async function mountApplicationFileSystem(ctx: Context, cwd: string): Promise<void> {
+  await ctx.plugin(ApplicationFileSystem, { cwd });
+}
