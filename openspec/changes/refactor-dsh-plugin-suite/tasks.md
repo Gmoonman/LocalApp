@@ -16,11 +16,11 @@
 
 | Spec Scenario | E2E Test | Status |
 | --- | --- | --- |
-| dsh-multiuser-runtime > Scenario: 两个用户使用相同会话 ID | 真实 Harness 两用户模型与历史集成测试 | ✗ |
-| dsh-multiuser-runtime > Scenario: 创建期间停止插件 | Cordis 插件生命周期测试（内部逻辑） | ✗ |
-| dsh-multiuser-runtime > Scenario: 设置变更期间创建完成 | 插件设置失效测试（内部逻辑） | ✗ |
+| dsh-multiuser-runtime > Scenario: 两个用户使用相同会话 ID | 真实 Harness 两用户模型与历史集成测试 | ✓ |
+| dsh-multiuser-runtime > Scenario: 创建期间停止插件 | Cordis 插件生命周期测试（内部逻辑） | ✓ |
+| dsh-multiuser-runtime > Scenario: 设置变更期间创建完成 | 插件设置失效测试（内部逻辑） | ✓ |
 
-- [ ] 3.1 [GREEN] 为 dsh-multiuser-runtime > Scenario: 两个用户使用相同会话 ID 编写并执行集成测试
-- [ ] 3.2 [GREEN] 为 dsh-multiuser-runtime > Scenario: 创建期间停止插件 编写并执行生命周期测试
-- [ ] 3.3 [GREEN] 为 dsh-multiuser-runtime > Scenario: 设置变更期间创建完成 编写并执行失效测试
-- [ ] 3.4 执行相关 Server 测试、类型构建、源码打包和 OpenSpec 严格验证
+- [x] 3.1 [GREEN] 为 dsh-multiuser-runtime > Scenario: 两个用户使用相同会话 ID 编写并执行集成测试
+- [x] 3.2 [GREEN] 为 dsh-multiuser-runtime > Scenario: 创建期间停止插件 编写并执行生命周期测试
+- [x] 3.3 [GREEN] 为 dsh-multiuser-runtime > Scenario: 设置变更期间创建完成 编写并执行失效测试
+- [x] 3.4 执行相关 Server 测试、类型构建、源码打包和 OpenSpec 严格验证
