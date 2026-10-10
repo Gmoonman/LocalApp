@@ -71,6 +71,19 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect(events.some((e) => e.type === "error")).toBe(false);
     expect(events.at(-1).type).toBe("done");
   });
+  it("serves native session history with Server authentication and application access", async () => {
+    const send = (key?: string, appId = "platform", origin?: string) => fetch(
+      baseUrl + "/api/agent/native/api/session/list?appId=" + encodeURIComponent(appId), {
+        method: "POST", headers: { "Content-Type": "application/json", ...(key ? { "X-API-Key": key } : {}), ...(origin ? { Origin: origin } : {}) },
+        body: JSON.stringify({ type: "client-request", rpcId: "native-list", method: "session/list", payload: { args: { _request: {} } } }),
+      });
+    expect((await send()).status).toBe(401);
+    const own = await send(adminKey); expect(own.status).toBe(200);
+    expect(await own.text()).toContain("http-e2e-session");
+    expect((await send(adminKey, "missing/application")).status).toBe(400);
+    expect((await send(adminKey, "platform", "https://untrusted.test")).status).toBe(403);
+    expect((await send(outsiderKey)).status).toBe(400);
+  });
   it("keeps provider credentials and settings separate for each user", async () => {
     const get = (key: string) => app.inject({ method: "GET", url: "/api/agent/settings", headers: { "X-API-Key": key } });
     const own = (await get(adminKey)).json();
