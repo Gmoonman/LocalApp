@@ -39,6 +39,29 @@ export async function agentRoutes(app: FastifyInstance) {
       return harness;
     });
   };
+  // dsh owns RPC parsing; dispatch before Fastify consumes the raw body.
+  // Read-only endpoints are enabled first; mutation and streams are wired with
+  // application tools and developer permissions in the following migration.
+  app.register(async nativeScope => {
+    nativeScope.addHook("onRequest", async (req, reply) => {
+      const query = req.query as { appId?: string; providerId?: string };
+      let native;
+      try { native = await (await runtime(req.userId, query.appId, query.providerId)).nativeApi(); }
+      catch (error) { return reply.status(400).send({ success: false, error: String(error) }); }
+      const originalUrl = req.raw.url;
+      req.raw.url = originalUrl?.replace(/^\/api\/agent\/native(?=\/)/, "");
+      reply.hijack();
+      try {
+        if (!await native.transport.http(req.userId, req.raw, reply.raw)) {
+          reply.raw.writeHead(404); reply.raw.end();
+        }
+      } catch (error) {
+        if (!reply.raw.headersSent) reply.raw.writeHead(500);
+        reply.raw.end(); app.log.error({ err: error }, "Native session request failed");
+      } finally { req.raw.url = originalUrl; }
+    });
+    for (const method of ["list", "page"]) nativeScope.post("/api/agent/native/api/session/" + method, async () => {});
+  });
   const restoreSchedules = async (onlyUser?: string) => {
     for (const userId of onlyUser ? [onlyUser] : settings.users()) {
       const saved = settings.read(userId);
