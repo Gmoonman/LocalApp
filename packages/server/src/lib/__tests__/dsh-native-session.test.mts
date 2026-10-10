@@ -14,6 +14,9 @@ it("exposes real Harness sessions and native trajectory records through the dsh 
       harnesses.push(harness);
       await harness.run(userId, { sessionId: `${userId}-session`, prompt: `${userId} private message`, systemPrompt: "", tools: [] }, () => {}, new AbortController().signal);
       const native = await harness.nativeApi();
+      const workspace = await native.gateway.invoke({ namespace: "workspace", method: "initializeDefault", args: {} });
+      expect(JSON.stringify(workspace)).toContain(path.join(root, userId, "workspace"));
+      await expect(native.gateway.invoke({ namespace: "workspace", method: "create", args: { request: { path: root } } })).rejects.toThrow("workspace");
       const sessions = await native.gateway.invoke({ namespace: "session", method: "list", args: { _request: {} } }) as { items: Array<{ id: string }> };
       expect(JSON.stringify(sessions)).toContain(`${userId}-session`);
       expect(JSON.stringify(sessions)).not.toContain(`${userId === "alice" ? "bob" : "alice"}-session`);
