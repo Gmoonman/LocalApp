@@ -75,6 +75,7 @@ import { deviceNotificationsRoutes, parseDeviceNotificationJson } from "./routes
 export interface BuildServerOptions {
   env?: NodeJS.ProcessEnv;
   webRoot?: string;
+  nativeClientRoot?: string;
   setupTokens?: SetupTokenStore;
   restartController?: RestartController;
   configStore?: ServerConfigStore;
@@ -89,6 +90,7 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
   app.decorate("config", config);
   await registerServerPluginsAndRoutes(app, {
     webRoot: options.webRoot,
+    nativeClientRoot: options.nativeClientRoot ?? env.LOCALAPP_NATIVE_CLIENT_ROOT ?? path.resolve(__dirname, "../../../tmp/native-client-entry"),
     setupTokens: options.setupTokens ?? new SetupTokenStore(),
     configStore,
     restartController: options.restartController ?? { requestRestart: (exitCode) => process.exit(exitCode) },
@@ -101,6 +103,7 @@ async function registerServerPluginsAndRoutes(
   app: FastifyInstance,
   options: {
     webRoot?: string;
+    nativeClientRoot?: string;
     setupTokens: SetupTokenStore;
     configStore: ServerConfigStore;
     restartController: RestartController;
@@ -178,7 +181,7 @@ async function registerServerPluginsAndRoutes(
   app.register(async (llmScope) => {
     await authPlugin(llmScope);
     llmScope.register(llmRoutes);
-    llmScope.register(agentRoutes);
+    llmScope.register(agentRoutes, { nativeClientRoot: options.nativeClientRoot });
   });
   app.register(issuesRoutes);
   app.register(favoritesRoutes);

@@ -3,6 +3,8 @@ import path from "node:path";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import { decodeNativeScope } from "@localapp/dsh-multiuser/native-scope";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import { readPythonEnvironment } from "../lib/python-environment.js";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
@@ -11,7 +13,7 @@ import { PUBLIC_AGENT_SKILLS } from "../lib/public-agent-skills.js";
 import { systemAgentEnvironment, publicSkillAvailability } from "../lib/system-agent-environment.js";
 import { resolveAgentApp } from "../lib/agent-app.js";
 
-export async function agentRoutes(app: FastifyInstance) {
+export async function agentRoutes(app: FastifyInstance, options: { nativeClientRoot?: string } = {}) {
   const { DeepSeekHarness } = await import("../lib/deepseek-harness.mjs");
   const settings = new AgentSettingsStore(app.config.dataDir);
   const { Context } = await import("@deepseek-ai/cordis");
@@ -42,6 +44,48 @@ export async function agentRoutes(app: FastifyInstance) {
       return harness;
     });
   };
+  let assetsReady: Promise<typeof context.nativeClientAssets> | undefined;
+  const clientAssets = () => assetsReady ??= (async () => {
+    const require = createRequire(path.join(__dirname, "../package.json"));
+    const module = await import(pathToFileURL(require.resolve("@localapp/dsh-multiuser/native-client-assets")).href);
+    await context.plugin(module.default);
+    return context.nativeClientAssets;
+  })();
+  app.register(async pages => {
+    pages.addHook("onRequest", async (req, reply) => {
+      try {
+        const scope = decodeNativeScope((req.params as { scope: string }).scope);
+        await runtime(req.userId, scope.appId, scope.providerId);
+      } catch (error) { return reply.status(400).send({ success: false, error: String(error) }); }
+    });
+    pages.get("/api/agent/native/:scope/", async (req, reply) => {
+      const scope = (req.params as { scope: string }).scope;
+      const base = "/api/agent/native/" + scope + "/";
+      if (!new URL(req.raw.url ?? "/", "http://localapp.invalid").pathname.endsWith("/")) return reply.redirect(base);
+      const html = '<!doctype html><html><head><meta charset="utf-8"><base href="' + base + '"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="client/entry.css"></head><body><div id="root"></div><script type="module" src="client/entry.js"></script></body></html>';
+      reply.header("Cache-Control", "no-store");
+      return reply.type("text/html; charset=utf-8").send(await (await clientAssets()).renderIndex(html));
+    });
+    const resourceHandler: import("fastify").RouteHandlerMethod = async (req, reply) => {
+      const prefix = "/api/agent/native/" + (req.params as { scope: string }).scope;
+      const original = req.raw.url; req.raw.url = original?.slice(prefix.length);
+      reply.hijack();
+      try { if (!await (await clientAssets()).resource(req.raw, reply.raw)) { reply.raw.writeHead(404); reply.raw.end(); } }
+      catch (error) { if (!reply.raw.headersSent) reply.raw.writeHead(500); reply.raw.end(); app.log.error({ err: error }, "Native client resource failed"); }
+      finally { req.raw.url = original; }
+    };
+    pages.get("/api/agent/native/:scope/plugins/", resourceHandler);
+    pages.get("/api/agent/native/:scope/plugins/*", resourceHandler);
+    pages.get("/api/agent/native/:scope/client/*", async (req, reply) => {
+      const filename = (req.params as { "*": string })["*"];
+      if (!options.nativeClientRoot || !/^(?:entry\.(?:js|css)|assets\/[a-zA-Z0-9_.-]+\.(?:woff2?|ttf))$/.test(filename)) return reply.status(404).send();
+      try {
+        const bytes = await fs.promises.readFile(path.join(options.nativeClientRoot, filename));
+        const mime = filename.endsWith(".js") ? "application/javascript" : filename.endsWith(".css") ? "text/css" : filename.endsWith(".woff2") ? "font/woff2" : filename.endsWith(".woff") ? "font/woff" : "font/ttf";
+        return reply.type(mime).send(bytes);
+      } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return reply.status(404).send(); throw error; }
+    });
+  });
   // dsh owns RPC parsing; dispatch before Fastify consumes the raw body.
   // History RPC and native streams are enabled first; mutation is wired with
   // application tools and developer permissions in the following migration.

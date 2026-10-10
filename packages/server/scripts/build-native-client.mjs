@@ -22,3 +22,7 @@ export async function buildNativeClient(outputDirectory) {
     logLevel: "silent",
   });
 }
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  await buildNativeClient(path.join(projectDirectory, "tmp/native-client-entry"));
+}

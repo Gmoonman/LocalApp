@@ -47,7 +47,12 @@ export async function buildServerPackage(options = {}) {
       "@localapp/dsh-multiuser/agent-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/agent-environment.cts"),
     },
     bundle: true,
-    plugins: [harnessBundlePlugin()],
+    plugins: [harnessBundlePlugin(), {
+      name: "localapp-native-harness-entry",
+      setup(build) {
+        build.onResolve({ filter: /(?:^|\/)deepseek-harness\.mjs$/ }, () => ({ path: "./harness.mjs", external: true }));
+      },
+    }],
     platform: "node",
     format: "cjs",
     target: "node24",
@@ -60,7 +65,8 @@ export async function buildServerPackage(options = {}) {
   };
   await build({ ...bundleOptions, entryPoints: [path.join(sourceDirectory, "package-cli.ts")], outfile: path.join(binDirectory, "server-cli.cjs") });
   await build({ ...bundleOptions, entryPoints: [path.join(sourceDirectory, "package-worker.ts")], outfile: path.join(binDirectory, "worker.cjs") });
-  const launcher = `#!/usr/bin/env node\nimport path from "node:path";\nimport { fileURLToPath } from "node:url";\n\nconst packageDirectory = path.dirname(fileURLToPath(import.meta.url));\nprocess.env.LOCALAPP_WORKER_PATH ??= path.join(packageDirectory, "worker.cjs");\nprocess.env.LOCALAPP_PUBLIC_SKILLS_ROOT ??= path.resolve(packageDirectory, "../skills");\nprocess.env.LOCALAPP_WEB_ROOT ??= path.resolve(packageDirectory, "../web");\nawait import("./server-cli.cjs");\n`;
+  await build({ ...bundleOptions, format: "esm", plugins: [], entryPoints: [path.join(sourceDirectory, "lib/deepseek-harness.mts")], outfile: path.join(binDirectory, "harness.mjs") });
+  const launcher = `#!/usr/bin/env node\nimport path from "node:path";\nimport { fileURLToPath } from "node:url";\n\nconst packageDirectory = path.dirname(fileURLToPath(import.meta.url));\nprocess.env.LOCALAPP_WORKER_PATH ??= path.join(packageDirectory, "worker.cjs");\nprocess.env.LOCALAPP_PUBLIC_SKILLS_ROOT ??= path.resolve(packageDirectory, "../skills");\nprocess.env.LOCALAPP_WEB_ROOT ??= path.resolve(packageDirectory, "../web");\nprocess.env.LOCALAPP_NATIVE_CLIENT_ROOT ??= path.resolve(packageDirectory, "../native-client");\nawait import("./server-cli.cjs");\n`;
   await fs.writeFile(path.join(binDirectory, "server.mjs"), launcher, { mode: 0o755 });
   await fs.chmod(path.join(binDirectory, "server-cli.cjs"), 0o755);
   await fs.chmod(path.join(binDirectory, "worker.cjs"), 0o755);

@@ -27,7 +27,10 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     });
     await new Promise<void>((resolve) => model.listen(0, "127.0.0.1", resolve));
     const tokens = new SetupTokenStore();
-    app = await buildServer({ setupTokens: tokens, env: { DATA_DIR: dataDir, JWT_SECRET: "test-harness-http-e2e", BOOTSTRAP_API_KEY: adminKey, LLM_API_KEY: "mock-key", LLM_BASE_URL: `http://127.0.0.1:${(model.address() as any).port}/v1`, LLM_MODEL: "mock-model" } });
+    const { buildNativeClient } = await import("../../scripts/build-native-client.mjs");
+    const nativeClientRoot = path.join(dataDir, "native-client");
+    await buildNativeClient(nativeClientRoot);
+    app = await buildServer({ nativeClientRoot, setupTokens: tokens, env: { DATA_DIR: dataDir, JWT_SECRET: "test-harness-http-e2e", BOOTSTRAP_API_KEY: adminKey, LLM_API_KEY: "mock-key", LLM_BASE_URL: `http://127.0.0.1:${(model.address() as any).port}/v1`, LLM_MODEL: "mock-model" } });
     const token = tokens.issue();
     expect((await app.inject({ method: "POST", url: "/api/setup/initialize", payload: { token: token.token, username: "harness-http-admin", password: "harness-test-password" } })).statusCode).toBe(201);
     createUser("harness-outsider", "harness-outsider", "not-used");
@@ -119,7 +122,12 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect(html).toContain("__ModuleLoader__");
     expect(html).toContain("dsh-client-ui-trajectory");
     expect(html).toContain(url.replace(baseUrl, ""));
-    const plugin = await fetch(url + "plugins/??@deepseek-ai/dsh-client-ui-trajectory/client.js", { headers: { "X-API-Key": adminKey } });
+    const entry = await fetch(url + "client/entry.js", { headers: { "X-API-Key": adminKey } });
+    expect(entry.status).toBe(200);
+    expect(await entry.text()).toContain("Native client mount point is missing");
+    const resource = html.match(/"id":"@deepseek-ai\/dsh-client-ui-trajectory"[^}]*"url":"([^"]+)"/)?.[1];
+    expect(resource).toBeDefined();
+    const plugin = await fetch(url + resource, { headers: { "X-API-Key": adminKey } });
     expect(plugin.status).toBe(200);
     expect((await plugin.text()).length).toBeGreaterThan(100);
   });

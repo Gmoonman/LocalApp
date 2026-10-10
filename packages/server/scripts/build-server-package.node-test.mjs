@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { buildServerPackage } from "./build-server-package.mjs";
@@ -52,9 +53,10 @@ test("packed Node Server initializes and serves Web without repository dependenc
   assert.match(await fs.readFile(artifact.bin, "utf8"), /LOCALAPP_PUBLIC_SKILLS_ROOT/);
   assert.equal((await fs.readFile(artifact.bin, "utf8")).startsWith("#!/usr/bin/env node\n"), true);
 
+  const packageKey = randomUUID();
   const child = spawn(process.execPath, [artifact.bin, "start", "--data-dir", dataDirectory, "--port", "0"], {
     cwd: outputDirectory,
-    env: { ...process.env, NODE_PATH: "" },
+    env: { ...process.env, NODE_PATH: "", BOOTSTRAP_API_KEY: packageKey },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stderr = "";
@@ -68,6 +70,22 @@ test("packed Node Server initializes and serves Web without repository dependenc
     assert.equal(setupResponse.status, 200, stderr);
     assert.match(await setupResponse.text(), /Create|admin|管理员/i);
     assert.equal(await fileExists(path.join(dataDirectory, "jwt.key")), true);
+    const headers = { "X-API-Key": packageKey, "Content-Type": "application/json" };
+    const setup = await fetch(ready.url + "/api/setup/initialize", { method: "POST", headers,
+      body: JSON.stringify({ token: new URL(ready.setupUrl).searchParams.get("token"), username: "native-package-owner", password: randomUUID() }) });
+    assert.equal(setup.status, 201);
+    const settings = await fetch(ready.url + "/api/agent/settings", { method: "PUT", headers,
+      body: JSON.stringify({ providers: [{ id: "model", name: "Package model", protocol: "openai-completions", baseUrl: "http://127.0.0.1:1/v1", model: "package-model", apiKey: randomUUID() }], defaultProviderId: "model", grants: {}, mcpServers: [] }) });
+    assert.equal(settings.status, 200);
+    const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "model" })).toString("base64url");
+    const pageUrl = ready.url + "/api/agent/native/" + scope + "/";
+    const nativePage = await fetch(pageUrl, { headers });
+    const nativeHtml = await nativePage.text();
+    assert.equal(nativePage.status, 200, nativeHtml + stderr);
+    assert.match(nativeHtml, /__DSH_BOOT__/);
+    const nativeScript = await fetch(pageUrl + "client/entry.js", { headers });
+    assert.equal(nativeScript.status, 200);
+    assert.match(await nativeScript.text(), /Native client mount point is missing/);
   } finally {
     if (!child.killed) child.kill("SIGTERM");
     await onceExit(child);
