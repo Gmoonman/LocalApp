@@ -97,6 +97,17 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect((await send(adminKey, "platform", "https://untrusted.test")).status).toBe(403);
     expect((await send(outsiderKey)).status).toBe(400);
   });
+  it("pins native client transport paths to the selected provider and application", async () => {
+    const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
+    const send = (key: string, token = scope) => fetch(baseUrl + "/api/agent/native/" + token + "/api/session/list?appId=missing/application&providerId=missing", {
+      method: "POST", headers: { "X-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId: "scoped-list", method: "session/list", payload: { args: { _request: {} } } }),
+    });
+    const response = await send(adminKey); expect(response.status).toBe(200);
+    expect(await response.text()).toContain("http-e2e-session");
+    expect((await send(adminKey, "invalid")).status).toBe(400);
+    expect((await send(outsiderKey)).status).toBe(400);
+  });
   it("rejects unauthenticated, inaccessible and foreign-origin native sockets", async () => {
     const status = (headers: Record<string, string>, query = "") => new Promise<number>((resolve, reject) => {
       const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux" + query, { headers });
