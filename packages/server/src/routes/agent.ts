@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import path from "node:path";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
+import { decodeNativeScope } from "@localapp/dsh-multiuser/native-scope";
 import { readPythonEnvironment } from "../lib/python-environment.js";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
@@ -48,7 +49,7 @@ export async function agentRoutes(app: FastifyInstance) {
   // through authentication hooks. This observer never consumes the socket.
   const nativeUpgrades = new WeakMap<IncomingMessage, { socket: Duplex; head: Buffer }>();
   const captureUpgrade = (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-    if (new URL(request.url ?? "/", "http://localapp.invalid").pathname === "/api/agent/native/api/remote.mux") nativeUpgrades.set(request, { socket, head });
+    if (/^\/api\/agent\/native\/(?:[^/]+\/)?api\/remote\.mux$/.test(new URL(request.url ?? "/", "http://localapp.invalid").pathname)) nativeUpgrades.set(request, { socket, head });
   };
   app.server.prependListener("upgrade", captureUpgrade);
   app.addHook("onClose", async () => { app.server.removeListener("upgrade", captureUpgrade); });
@@ -56,10 +57,15 @@ export async function agentRoutes(app: FastifyInstance) {
     nativeScope.addHook("onRequest", async (req, reply) => {
       const query = req.query as { appId?: string; providerId?: string };
       let native;
-      try { native = await (await runtime(req.userId, query.appId, query.providerId)).nativeApi(); }
+      const encoded = (req.params as { scope?: string }).scope;
+      try {
+        const scope = encoded === undefined ? query : decodeNativeScope(encoded);
+        native = await (await runtime(req.userId, scope.appId, scope.providerId)).nativeApi();
+      }
       catch (error) { return reply.status(400).send({ success: false, error: String(error) }); }
       const originalUrl = req.raw.url;
-      req.raw.url = originalUrl?.replace(/^\/api\/agent\/native(?=\/)/, "");
+      const prefix = encoded === undefined ? "/api/agent/native" : "/api/agent/native/" + encoded;
+      req.raw.url = originalUrl?.slice(prefix.length);
       reply.hijack();
       try {
         const upgrade = nativeUpgrades.get(req.raw);
@@ -75,9 +81,11 @@ export async function agentRoutes(app: FastifyInstance) {
         reply.raw.end(); app.log.error({ err: error }, "Native session request failed");
       } finally { req.raw.url = originalUrl; }
     });
-    nativeScope.get("/api/agent/native/api/remote.mux", async () => {});
-    nativeScope.post("/api/agent/native/api/workspace/initializeDefault", async () => {});
-    for (const method of ["list", "page"]) nativeScope.post("/api/agent/native/api/session/" + method, async () => {});
+    for (const prefix of ["/api/agent/native", "/api/agent/native/:scope"]) {
+      nativeScope.get(prefix + "/api/remote.mux", async () => {});
+      nativeScope.post(prefix + "/api/workspace/initializeDefault", async () => {});
+      for (const method of ["list", "page"]) nativeScope.post(prefix + "/api/session/" + method, async () => {});
+    }
   });
   const restoreSchedules = async (onlyUser?: string) => {
     for (const userId of onlyUser ? [onlyUser] : settings.users()) {

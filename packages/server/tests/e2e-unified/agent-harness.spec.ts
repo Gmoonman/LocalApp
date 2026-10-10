@@ -135,7 +135,8 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     } finally { socket.terminate(); }
   });
   it("follows native trajectory through the unified Server WebSocket", async () => {
-    const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/api/remote.mux", { headers: { "X-API-Key": adminKey } });
+    const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
+    const socket = new WebSocket(baseUrl.replace("http:", "ws:") + "/api/agent/native/" + scope + "/api/remote.mux", { headers: { "X-API-Key": adminKey } });
     try {
       const frame = await new Promise<any>((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error("Native trajectory socket timed out")), 5000);

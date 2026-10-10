@@ -36,6 +36,10 @@
     "./native-client": {
       "types": "./dist/native-client.d.mts",
       "default": "./dist/native-client.mjs"
+    },
+    "./native-scope": {
+      "types": "./dist/native-scope.d.cts",
+      "default": "./dist/native-scope.cjs"
     }
   },
   "scripts": {

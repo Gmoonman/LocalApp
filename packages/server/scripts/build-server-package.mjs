@@ -39,6 +39,7 @@ export async function buildServerPackage(options = {}) {
 
   const bundleOptions = {
     alias: {
+      "@localapp/dsh-multiuser/native-scope": path.join(projectDirectory, "packages/dsh-multiuser/src/native-scope.cts"),
       "@localapp/dsh-multiuser/native-session": path.join(projectDirectory, "packages/dsh-multiuser/src/native-session.mts"),
       "@localapp/dsh-multiuser": path.join(projectDirectory, "packages/dsh-multiuser/src/index.mts"),
       "@localapp/dsh-multiuser/settings": path.join(projectDirectory, "packages/dsh-multiuser/src/settings.cts"),
