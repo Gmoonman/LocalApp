@@ -57,3 +57,7 @@ EmbeddedWebServer 复用 dsh WebServer 注册接口，将路由交给现有 Serv
 原生客户端模块清单补齐为 23 个官方模块，测试逐个检查声明的 inject 模块均存在，并逐个读取官方 bundle。模块资源 Context 禁止与已有 Agent 执行 Context 混用，避免为资源扫描加载额外执行服务。模块依赖图和 bundle 可读仅证明客户端资源装配，尚不证明浏览器服务全部激活。
 
 真实 Harness 已接入官方 api-remotes 的事件源；通过统一 Server 的真实 WebSocket 验证客户端 $events 流收到 ready 和 clientId。模块资源、原生历史和真实 HTTP Agent 相关 3 个文件 10 项测试通过，插件和 Server 类型构建通过，离线 frozen-lockfile 安装通过。正式页面启动、发布包内的客户端资源和所有模式浏览器验收仍需继续实施。
+
+## 安装包中的原生客户端资源
+
+Server 打包现在包含多人插件的内部库及其 dsh 运行时和客户端依赖。内部库直接从源文件编译，不读取工作区旧 dist。独立目录中的安装包通过真实 Cordis Loader 注册至少 23 个客户端模块，并逐个确认客户端产物位于安装包目录内、bundle 返回 200。相同源码连续打包摘要一致；独立 Server health 与初始化页面验证通过。该测试不代表原生客户端已在浏览器渲染，正式页面入口仍待接入。
