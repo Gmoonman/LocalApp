@@ -67,3 +67,7 @@ Server 打包现在包含多人插件的内部库及其 dsh 运行时和客户�
 新增浏览器入口直接运行官方 AppWebEntry，并在 pagehide 时释放插件树。构建沿用上游对 Cordis Loader 的浏览器 Node 模块适配和环境定义；生成 entry.js、entry.css 和字体资源，全部进入 Server 包。浏览器入口构建测试通过，独立 Server 包的两次打包摘要一致、原生模块解析和资源读取、health 与初始化页面测试通过；插件类型构建和离线 frozen-lockfile 安装通过。
 
 正式页面路由、会话操作和应用工具绑定尚未完成，未执行完整浏览器启动及轨迹 UI 验收。上述构建与资源证据不能替代页面功能验收。
+
+## 原生客户端应用工作区
+
+真实 Harness 接入官方 WorkspaceController 与其 Typert 描述。应用实现仅允许注册配置中的 workspaceRoot；默认初始化使用该目录，不使用上游系统 Documents 路径。两用户测试分别验证自己的工作区路径和其他目录拒绝，历史分页与重启恢复继续通过。统一 Server 的原生 workspace/initializeDefault HTTP 入口返回当前用户运行时的应用目录。真实 Harness 与 HTTP Agent 相关 2 个文件 9 项测试、插件和 Server 类型构建通过。客户端完整页面和会话写入仍待实施。
