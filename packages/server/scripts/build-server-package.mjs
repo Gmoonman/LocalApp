@@ -38,6 +38,7 @@ export async function buildServerPackage(options = {}) {
   const bundleOptions = {
     alias: {
       "@localapp/dsh-multiuser": path.join(projectDirectory, "packages/dsh-multiuser/src/index.mts"),
+      "@localapp/dsh-multiuser/settings": path.join(projectDirectory, "packages/dsh-multiuser/src/settings.cts"),
       "@localapp/dsh-multiuser/python-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/python-environment.cts"),
       "@localapp/dsh-multiuser/agent-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/agent-environment.cts"),
     },

@@ -12,6 +12,7 @@
 ## Capabilities
 
 ### New Capabilities
+- `dsh-native-client`: 完整客户端、原生接口隔离、轨迹和业务插件兼容。
 - `dsh-multiuser-runtime`: 多人使用插件中的 Agent 运行时隔离和生命周期。
 
 ### Modified Capabilities

@@ -16,7 +16,7 @@
 - [ ] 2.1 迁移账号、用户模型和管理员 Python 环境到多人使用插件
 - [x] 2.1.1 [RED] 编写不依赖 Server 数据库的用户模型加密与隔离测试
 - [x] 2.1.2 [GREEN] 迁移模型设置校验、加密、凭据隐藏与类型到多人使用插件
-- [ ] 2.1.3 [REFACTOR] 验证现有 SQLite 适配、密钥兼容和发布包加载
+- [x] 2.1.3 [REFACTOR] 验证现有 SQLite 适配、密钥兼容和发布包加载
 - [ ] 2.2 接入完整 dsh 客户端，验证原生 RPC、事件流与文件权限
 - [ ] 2.3 迁移应用平台的托管、权限、数据与发布
 - [ ] 2.4 迁移应用开发、创建会话与源码同步
@@ -30,7 +30,21 @@
 | dsh-multiuser-runtime > Scenario: 创建期间停止插件 | Cordis 插件生命周期测试（内部逻辑） | ✓ |
 | dsh-multiuser-runtime > Scenario: 设置变更期间创建完成 | 插件设置失效测试（内部逻辑） | ✓ |
 
+| dsh-native-client > Scenario: 查看开发会话轨迹 | 待实现浏览器轨迹与历史恢复测试 | ✗ |
+| dsh-native-client > Scenario: 普通用户使用应用 | 待实现用户模式测试 | ✗ |
+| dsh-native-client > Scenario: 原生会话和搜索隔离 | 待实现原生 HTTP 隔离测试 | ✗ |
+| dsh-native-client > Scenario: 原生事件流与文件隔离 | 待实现原生流与文件隔离测试 | ✗ |
+| dsh-native-client > Scenario: 使用存量应用 | 待实现 0.4.0 数据升级测试 | ✗ |
+| dsh-native-client > Scenario: 完成应用开发和发布 | 待实现创建、同步、开发与发布测试 | ✗ |
+
 - [x] 3.1 [GREEN] 为 dsh-multiuser-runtime > Scenario: 两个用户使用相同会话 ID 编写并执行集成测试
 - [x] 3.2 [GREEN] 为 dsh-multiuser-runtime > Scenario: 创建期间停止插件 编写并执行生命周期测试
 - [x] 3.3 [GREEN] 为 dsh-multiuser-runtime > Scenario: 设置变更期间创建完成 编写并执行失效测试
 - [x] 3.4 执行相关 Server 测试、类型构建、源码打包和 OpenSpec 严格验证
+
+- [ ] 3.5 [GREEN] 为 dsh-native-client > Scenario: 查看开发会话轨迹 编写并执行端到端测试
+- [ ] 3.6 [GREEN] 为 dsh-native-client > Scenario: 普通用户使用应用 编写并执行端到端测试
+- [ ] 3.7 [GREEN] 为 dsh-native-client > Scenario: 原生会话和搜索隔离 编写并执行端到端测试
+- [ ] 3.8 [GREEN] 为 dsh-native-client > Scenario: 原生事件流与文件隔离 编写并执行端到端测试
+- [ ] 3.9 [GREEN] 为 dsh-native-client > Scenario: 使用存量应用 编写并执行端到端测试
+- [ ] 3.10 [GREEN] 为 dsh-native-client > Scenario: 完成应用开发和发布 编写并执行端到端测试
