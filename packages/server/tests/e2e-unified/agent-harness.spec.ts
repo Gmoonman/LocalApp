@@ -214,6 +214,14 @@ describe("unified Server DeepSeek Harness HTTP", () => {
       await page.getByText("native HTTP finished", { exact: true }).first().waitFor({ timeout: 15000 });
       await page.getByText("轨迹", { exact: true }).click({ timeout: 5000 });
       await page.locator('[aria-label="轨迹工具栏"]').waitFor({ timeout: 5000 });
+      await page.reload();
+      await page.getByText("native HTTP finished", { exact: true }).first().waitFor({ timeout: 10000 });
+      await page.locator('[aria-label="轨迹工具栏"]').waitFor({ timeout: 5000 });
+      await page.getByText("echo hello", { exact: true }).click();
+      await page.getByText("工具已完成", { exact: true }).first().waitFor({ timeout: 10000 });
+      await page.getByText("轨迹", { exact: true }).click();
+      await page.locator('[aria-label="轨迹工具栏"]').waitFor({ timeout: 5000 });
+      await page.getByText("echo", { exact: true }).first().waitFor({ timeout: 5000 });
       expect(errors).toEqual([]);
       expect(failures).toEqual([]);
     } finally {

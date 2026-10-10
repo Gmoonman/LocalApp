@@ -11,7 +11,10 @@ it("creates native sessions only in the application workspace", async () => {
   try {
     const native = await harness.nativeApi();
     const settings = await native.gateway.invoke({ namespace: "settings", method: "describe", args: {} });
-    expect(settings).toMatchObject({ writable: false, hasDocument: false, namespaces: [{ ns: "localapp-model", value: { provider: "localapp", model: "test-model" } }] });
+    expect(settings).toMatchObject({ writable: false, hasDocument: false, namespaces: [
+      { ns: "localapp-model", value: { provider: "localapp", model: "test-model" } },
+      { ns: "ui-settings", value: { enabled: true } },
+    ] });
     expect(JSON.stringify(settings)).not.toContain("test-key");
     const created = await native.gateway.invoke({ namespace: "session", method: "create", args: { request: {} } }) as { sessionId: string };
     expect(created.sessionId).toMatch(/^session-/);

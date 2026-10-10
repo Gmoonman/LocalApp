@@ -42,6 +42,9 @@ export async function mountNativeSessions(ctx: Context, config: NativeSessionCon
       return { writable: false, hasDocument: false, namespaces: [{
         ns: "localapp-model", autoGenerate: false, schema: { type: "object", dict: {} },
         value: { provider: "localapp", model: config.model }, applies: "live", secrets: [], revision: 0,
+      }, {
+        ns: "ui-settings", autoGenerate: false, schema: { type: "object", dict: {} },
+        value: { enabled: true }, applies: "live", secrets: [], revision: 0,
       }] };
     }
   }
