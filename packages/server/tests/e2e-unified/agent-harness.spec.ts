@@ -100,6 +100,24 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect((await send(adminKey, "platform", "https://untrusted.test")).status).toBe(403);
     expect((await send(outsiderKey)).status).toBe(400);
   });
+  it("exposes the configured model through native session RPC", async () => {
+    const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
+    const send = (method: string, args: unknown, key = adminKey) => fetch(`${baseUrl}/api/agent/native/${scope}/api/session/${method}`, {
+      method: "POST", headers: { "X-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId: `native-${method}`, method: `session/${method}`, payload: { args } }),
+    });
+    const catalog = await send("modelCatalog", {});
+    expect(catalog.status).toBe(200);
+    const value = (await catalog.json()).result.value;
+    expect(value.groups).toEqual([{ id: "localapp", name: "localapp", models: [{ id: "mock-model", name: "mock-model" }] }]);
+    expect(value.failures).toEqual([]);
+    const selection = await send("selectModel", { request: { sessionId: "http-e2e-session", provider: "localapp", model: "mock-model" } });
+    expect(selection.status).toBe(200);
+    expect((await selection.json()).result.value.selected).toMatchObject({ provider: "localapp", model: "mock-model" });
+    const foreign = await send("selectModel", { request: { sessionId: "http-e2e-session", provider: "other", model: "mock-model" } });
+    expect(await foreign.text()).toContain("session/model-unavailable");
+    expect((await send("modelCatalog", {}, outsiderKey)).status).toBe(400);
+  });
   it("pins native client transport paths to the selected provider and application", async () => {
     const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
     const send = (key: string, token = scope) => fetch(baseUrl + "/api/agent/native/" + token + "/api/session/list?appId=missing/application&providerId=missing", {
