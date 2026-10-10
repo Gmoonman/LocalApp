@@ -109,3 +109,9 @@ Server 打包现在包含多人插件的内部库及其 dsh 运行时和客户�
 ## 原生消息 HTTP 与实时轨迹
 
 统一 Server 显式开放 session/prompt。真实 HTTP 测试通过该入口创建会话、提交消息，并从原生 WebSocket session/follow 读取最终回复；模拟 HTTP 模型确认模型名和当前用户凭据。相同消息 requestId 重发仅接受一次模型消息请求，自动命名的独立请求不算重复消息；其他用户无配置无法提交。HTTP Agent 全部 13 项测试和 Server 类型构建通过。分页按固定 throughSeq 读取历史；本次完整消息验证使用真实 follow，避免用旧游标截断新事件。模型服务是本地模拟响应，浏览器和真实供应商验收仍未完成，应用动态工具绑定仍待迁移。
+
+## 原生客户端真实浏览器启动
+
+新增可选 Chrome 浏览器集成检查，使用真实统一 Server、原生页面和上游客户端资源。首次执行发现 settings/describe 缺失导致 404，现已接入官方 SettingsController/Typert，并提供当前 LocalApp 运行时模型的只读描述；配置修改仍由现有用户设置 API 完成，描述不包含模型凭据，不提供服务器设置文档。原生页面指定内嵌 favicon，避免缺失资源请求。Chrome 实际渲染出原生会话列表、工作区和输入框；页面异常、console error 和失败 HTTP 资源均为空。运行 LOCALAPP_NATIVE_BROWSER_VERIFY=1 的 HTTP 集成共 14 项通过，原生会话回归 4 项、插件及 Server 类型构建、离线 frozen-lockfile 安装通过。截图和浏览器证据位于 tmp/deepseek-test-harness-http-e2e/browser-evidence。
+
+本次仅证明原生客户端启动，尚未通过浏览器发送消息或操作轨迹，也未接入正式应用悬浮入口、开发者身份和动态应用工具；不能据此标记完整客户端或插件化完成。
