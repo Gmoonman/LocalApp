@@ -23,3 +23,11 @@
 ## 用户模型设置迁移
 
 模型与 MCP 配置校验、AES-GCM 加密、凭据隐藏和能力偏好类型已迁入多人使用插件。现有 Server 仅通过存储接口访问原 SQLite 表，密钥文件和加密格式不变。独立插件模型存储、凭据隐藏、跨用户密文复制拒绝、现有模型设置与真实 HTTP Agent 测试共 4 个文件 9 项通过；插件及 Server 类型构建通过；打包后的独立 Server 启动通过。
+
+## 原生 dsh 承载
+
+EmbeddedWebServer 复用 dsh WebServer 注册接口，将路由交给现有 Server，不创建监听端口。每个用户 Context 有独立原生 Connection，保留 dsh Host/Origin 检查及 RPC 协议。内部令牌与 Cookie 不返回客户端，连接凭据服务与模型凭据服务隔离。
+
+真实 HTTP 测试使用现有 API Key 验证逻辑选择两名用户的 Context：未认证或无效 Key 返回 401，伪造请求体用户不能改变身份，跨来源返回 403，跨用户调用及停止后的调用被拒绝。精确路由、前缀边界、fallback 注册与撤销通过；现有 Agent HTTP 与运行时测试一并执行，共 4 个文件 13 项通过，类型构建通过。
+
+当前只是承载基础和测试中的原生 RPC，尚未在正式应用入口开放原生接口。SessionController、Gateway 正式集成，会话搜索、WebSocket、文件隔离和 Trajectory 界面仍未完成。

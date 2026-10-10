@@ -20,7 +20,7 @@
 - [ ] 2.2 接入完整 dsh 客户端，验证原生 RPC、事件流与文件权限
 - [x] 2.2.1 [RED] 编写统一 Server 中承载 dsh 路由的失败测试
 - [x] 2.2.2 [GREEN] 实现 dsh WebServer 承载与每用户原生 Connection
-- [ ] 2.2.3 [REFACTOR] 验证认证、跨来源检查、凭据服务隔离及现有 Agent 回归
+- [x] 2.2.3 [REFACTOR] 验证认证、跨来源检查、凭据服务隔离及现有 Agent 回归
 - [ ] 2.2.4 将承载接入实际 Harness 与 SessionController，完成正式原生接口
 - [ ] 2.3 迁移应用平台的托管、权限、数据与发布
 - [ ] 2.4 迁移应用开发、创建会话与源码同步
