@@ -13,6 +13,10 @@ it("creates native sessions only in the application workspace", async () => {
     const created = await native.gateway.invoke({ namespace: "session", method: "create", args: { request: {} } }) as { sessionId: string };
     expect(created.sessionId).toMatch(/^session-/);
     expect(JSON.stringify(await native.gateway.invoke({ namespace: "session", method: "list", args: { _request: {} } }))).toContain(created.sessionId);
-    await expect(native.gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId: "../escape" } } })).rejects.toThrow();
+    for (const sessionId of ["../escape", "/absolute", "nested/session", "", "a".repeat(129)]) {
+      await expect(native.gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId } } })).rejects.toThrow("Invalid session ID");
+    }
+    const named = await native.gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId: "existing-session_1" } } });
+    expect(named).toEqual({ sessionId: "existing-session_1" });
   } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
 });

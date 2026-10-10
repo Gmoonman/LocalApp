@@ -54,6 +54,9 @@ export async function mountNativeSessions(ctx: Context, config: NativeSessionCon
   // reaches that operation. The application decides the directory, not a client.
   class ApplicationSessionController extends SessionController {
     override async create(request: SessionCreateRequest) {
+      if (request.sessionId !== undefined && !/^[a-zA-Z0-9_-]{1,128}$/.test(request.sessionId)) {
+        throw new Error("Invalid session ID");
+      }
       const selected = request.workspaceId === undefined ? undefined : this.ctx.workspaceRegistry.get(request.workspaceId);
       const cwd = selected?.path ?? request.cwd ?? workspaceRoot;
       if (path.resolve(cwd) !== workspaceRoot) throw new Error("Session workspace is outside the application workspace");
