@@ -3,7 +3,7 @@ import WebSocket from "ws";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildServer } from "../../src/server.js";
 import { SetupTokenStore } from "../../src/lib/setup-token-store.js";
 import { closeMetaDb, createApiKey, createUser, findUserByName } from "../../src/lib/meta-sqlite.js";
@@ -21,9 +21,11 @@ describe("unified Server DeepSeek Harness HTTP", () => {
       const request = JSON.parse(raw);
       modelRequests.push({ ...request, authorization: req.headers.authorization });
       const hasResult = request.messages.at(-1)?.role === "tool";
-      const delta = hasResult ? { content: "工具已完成" } : { tool_calls: [{ index: 0, id: "http-call", function: { name: "echo", arguments: '{"text":"hello"}' } }] };
+      const native = request.messages.some((message: any) => message.content === "native HTTP hello");
+      const completed = hasResult || native;
+      const delta = completed ? { content: native ? "native HTTP finished" : "工具已完成" } : { tool_calls: [{ index: 0, id: "http-call", function: { name: "echo", arguments: '{"text":"hello"}' } }] };
       res.writeHead(200, { "Content-Type": "text/event-stream" });
-      res.end(`data: ${JSON.stringify({ choices: [{ delta, finish_reason: hasResult ? "stop" : "tool_calls" }] })}\n\ndata: [DONE]\n\n`);
+      res.end(`data: ${JSON.stringify({ choices: [{ delta, finish_reason: completed ? "stop" : "tool_calls" }] })}\n\ndata: [DONE]\n\n`);
     });
     await new Promise<void>((resolve) => model.listen(0, "127.0.0.1", resolve));
     const tokens = new SetupTokenStore();
@@ -130,6 +132,28 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect(await (await send({ sessionId: "../escape" })).text()).toContain("Invalid session ID");
     expect(await (await send({ cwd: dataDir })).text()).toContain("outside the application workspace");
     expect((await send({}, outsiderKey)).status).toBe(400);
+  });
+  it("executes native HTTP prompts and keeps their original trajectory", async () => {
+    const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
+    const send = (method: string, args: unknown, key = adminKey) => fetch(`${baseUrl}/api/agent/native/${scope}/api/session/${method}`, {
+      method: "POST", headers: { "X-API-Key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId: `native-${method}`, method: `session/${method}`, payload: { args } }),
+    });
+    const { sessionId } = (await (await send("create", { request: {} })).json()).result.value;
+    const request = { sessionId, requestId: "native-http-request", mode: "queue", content: [{ type: "text", text: "native HTTP hello" }] };
+    const before = modelRequests.length;
+    const response = await send("prompt", { request });
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.value).toEqual({ accepted: true });
+    await vi.waitFor(async () => {
+      const page = await send("page", { request: { address: { kind: "session", sessionId }, throughSeq: 0 } });
+      expect(await page.text()).toContain("native HTTP finished");
+    });
+    expect(modelRequests).toHaveLength(before + 1);
+    expect(modelRequests.at(-1)).toMatchObject({ model: "mock-model", authorization: "Bearer mock-key" });
+    expect((await send("prompt", { request })).status).toBe(200);
+    expect(modelRequests).toHaveLength(before + 1);
+    expect((await send("prompt", { request }, outsiderKey)).status).toBe(400);
   });
   it("pins native client transport paths to the selected provider and application", async () => {
     const scope = Buffer.from(JSON.stringify({ appId: "platform", providerId: "mock" })).toString("base64url");
