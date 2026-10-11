@@ -59,8 +59,12 @@ it.each(["documents", "application", "capabilities", "grants"] as const)("stoppi
     expect((await runs[0]).statusCode).toBe(200);
     expect(context.localappMultiuser.forUser("alice")).toHaveLength(1);
     applicationAvailable = true;
-    const history = await app.inject("/api/agent/sessions/document-stream");
-    expect(history.statusCode).toBe(200);
+    let history = await app.inject("/api/agent/sessions/document-stream");
+    // The run response can end before asynchronous runtime invalidation finishes.
+    await expect.poll(async () => {
+      history = await app.inject("/api/agent/sessions/document-stream");
+      return history.statusCode;
+    }, { timeout: 3000 }).toBe(200);
     expect(history.body).toContain("Document stream marker");
     const workspace = path.join(root, "agent", createHash("sha256").update(JSON.stringify(["alice", "platform", "own"])).digest("hex"), "workspace", ".localapp-public-skills");
     if (reason === "documents") expect(await fs.readdir(workspace)).toEqual([]);
