@@ -23,6 +23,7 @@ jobs:
       - run: bash scripts/setup-ci-sandbox.sh
       - run: pnpm -C packages/server-core build
       - run: pnpm -C packages/server build
+      - run: pnpm -C packages/web build
       - name: Verify isolated process shutdown and session persistence
         run: >-
           pnpm -C packages/server exec vitest run
