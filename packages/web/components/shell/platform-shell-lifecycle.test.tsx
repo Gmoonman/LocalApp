@@ -149,6 +149,7 @@ describe("PlatformShell offline lifecycle", () => {
 it.each(["disabled", "missing", "failure", "network"])("keeps developer controls hidden when plugin status is %s", async state => {
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
+    if (url === "/api/agent/ui") return json({success:true,data:{enabled:true,identities:[{id:"user",label:"用户"}]}});
     if (url === "/api/system/plugins") {
       if (state === "network") throw new Error("Network unavailable");
       if (state === "failure") return new Response("Unavailable", { status: 503 });

@@ -44,16 +44,6 @@
       "reason": "The unchanged Windows layout fixture uses the fictional user Alice; it is not a developer machine path."
     },
     {
-      "path": "packages/server/src/routes/device-control.ts",
-      "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "570b1f02b1df63ab956605b24ded8b0bc5b3df6d6ca732315a657b6b547fde14"
-    },
-    {
-      "path": "packages/server/src/routes/device-notifications.ts",
-      "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "5ab094359f0f0750be2f507205a514a91723636f3d1799a17209df7c4b6c314f"
-    },
-    {
       "path": "packages/server/tests/config-store.test.ts",
       "rule": "POSSIBLE_CREDENTIAL",
       "sha256": "e6e207d15266ed1cacfa2ab9dbf0e68139cfbacaba2df2e1bc4e0ebb944c8b11"
@@ -137,12 +127,6 @@
       "path": "scripts/release-workflow.node-test.mjs",
       "rule": "PRIVATE_TEST_IDENTITY",
       "sha256": "fd92a49a95b24e215df5bd4712f1eac0cce46dd3b22a34aedb04b2748932c9d7"
-    },
-    {
-      "path": "packages/server/src/lib/deepseek-harness.mts",
-      "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "458fa1f96ba54ff2bef8c0d72b298cf4f179c28d7763be755d6cf8321719aef8",
-      "reason": "apiKeyEnv names the LOCALAPP_USER_MODEL_KEY environment variable; it contains no credential value."
     },
     {
       "path": "packages/dsh-app-platform/src/device-control-routes.cts",
