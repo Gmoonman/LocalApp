@@ -3,7 +3,7 @@ import { useId, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/** QEDAgent's per-turn process disclosure: answers stay outside, details open only on request. */
+/** Per-turn process disclosure: answers stay outside, details open only on request. */
 export function ConversationProcess({ children, running }: { children: ReactNode; running: boolean }) {
   const [open, setOpen] = useState(false);
   const id = useId();
