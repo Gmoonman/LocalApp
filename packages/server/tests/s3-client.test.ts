@@ -1,30 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-vi.mock("@aws-sdk/client-s3", () => {
-  const mockSend = vi.fn();
-  class MockS3Client {
-    send = mockSend;
-  }
-  class MockCommand {
-    input: unknown;
-    constructor(input: unknown) { this.input = input; }
-  }
-  return {
-    S3Client: MockS3Client as unknown as typeof import("@aws-sdk/client-s3").S3Client,
-    CreateBucketCommand: MockCommand as unknown as typeof import("@aws-sdk/client-s3").CreateBucketCommand,
-    HeadBucketCommand: MockCommand as unknown as typeof import("@aws-sdk/client-s3").HeadBucketCommand,
-    PutObjectCommand: MockCommand as unknown as typeof import("@aws-sdk/client-s3").PutObjectCommand,
-    GetObjectCommand: MockCommand as unknown as typeof import("@aws-sdk/client-s3").GetObjectCommand,
-    __mockSend: mockSend,
-  };
-});
+import path from "node:path";
+import fs from "node:fs/promises";
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 
 import { initS3Client, putObject, getObject } from "../src/lib/s3-client.js";
-import { __mockSend } from "@aws-sdk/client-s3";
+import { S3Client } from "@aws-sdk/client-s3";
+// The plugin is compiled as CommonJS; spy on the shared SDK prototype so both
+// ESM tests and the real plugin module observe the same send implementation.
+const __mockSend = vi.spyOn(S3Client.prototype, "send");
 
 const testConfig = {
   port: 3000,
-  dataDir: "./data",
+  dataDir: path.resolve(import.meta.dirname, "../../../tmp/s3-client-unit"),
   jwtSecret: "secret",
   bootstrapApiKey: "key",
   templateRepoUrl: "http://example.com",
@@ -41,6 +27,8 @@ const testConfig = {
 };
 
 describe("s3-client", () => {
+  afterAll(() => __mockSend.mockRestore());
+  afterEach(async () => { await fs.rm(testConfig.dataDir, {recursive: true, force: true}); });
   beforeEach(() => {
     __mockSend.mockReset();
   });
