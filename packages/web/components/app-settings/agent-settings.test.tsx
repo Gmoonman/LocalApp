@@ -9,9 +9,9 @@ it("saves skill, capability and individual tool choices for this application", a
   render(<AppAgentSettings appId="owner/demo" />);
   fireEvent.click(await screen.findByLabelText("Skills"));
   fireEvent.click(screen.getByLabelText("PDF"));
-  fireEvent.click(screen.getByRole("switch", { name: "deleteRecord", exact: true }));
-  fireEvent.click(screen.getByRole("button", { name: "DSH", exact: true }));
-  expect(screen.queryByRole("switch", { name: "deleteRecord", exact: true })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("switch", { name: "deleteRecord" }));
+  fireEvent.click(screen.getByRole("button", { name: "DSH" }));
+  expect(screen.queryByRole("switch", { name: "deleteRecord" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "保存 Agent 设置" }));
   await screen.findByText("Agent 设置已保存");
   const body = JSON.parse(String(fetchMock.mock.calls.find((call) => call[1]?.method === "PUT")?.[1]?.body));

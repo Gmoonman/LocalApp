@@ -145,3 +145,23 @@ describe("PlatformShell offline lifecycle", () => {
     expect(MockEventSource.urls).toEqual([]);
   });
 });
+
+it.each(["disabled", "missing", "failure", "network"])("keeps developer controls hidden when plugin status is %s", async state => {
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url === "/api/system/plugins") {
+      if (state === "network") throw new Error("Network unavailable");
+      if (state === "failure") return new Response("Unavailable", { status: 503 });
+      return json(state === "missing" ? { success: true, data: {} } : { success: true, data: { development: false } });
+    }
+    if (url === "/api/me") return json({ success: true, data: { id: "owner", name: "owner" } });
+    if (url.includes("/meta")) return json({ success: true, data: { name: "plugin-app", userId: "owner", lifecycleStatus: "online" } });
+    if (url.includes("/api/favorites")) return json({ success: true, data: { count: 0, favorited: false } });
+    if (url.startsWith("/api/issues?")) return json({ success: true, data: [], meta: { open: 0 } });
+    return json({ success: true, data: [] });
+  }));
+  const view = render(<PlatformShell userId="owner" name="plugin-app" />);
+  await screen.findByRole("button", { name: "展开应用对话" });
+  expect(screen.queryByRole("button", { name: "展开开发对话" })).toBeNull();
+  view.unmount();
+});

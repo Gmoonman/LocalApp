@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { BOOTSTRAP_USER_ID } from "../../src/lib/meta-sqlite.js";
 import { execRawSql, getConnection } from "../../src/lib/app-db.js";
+import { readPageMeta } from "../../src/plugins/storage.js";
 import { createTestPage, createTestServer, getAppUrl, getTestApiKey } from "./helpers.js";
 
 const RESOURCE_SCHEMA_URL = "https://localapp.dev/schemas/backend/resource-schema.schema.json";
@@ -140,6 +141,44 @@ describe("collaboration commit API", () => {
       return 0;
     }
   }
+
+  it("isolates verification collaboration events from the formal application", async () => {
+    const pageName = "collab-event-isolation";
+    await setupPage(pageName);
+    const created = await fetch(`${baseUrl}/api/verification/sessions`, {
+      method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+      body: JSON.stringify({ owner, app: pageName, version: readPageMeta(dataDir, owner, pageName)!.currentVersion, identity: "owner", ttlSeconds: 60 }),
+    });
+    expect(created.status).toBe(201);
+    const session = await created.json() as any;
+    const opened = await fetch(session.data.openUrl, { redirect: "manual" });
+    const cookies = opened.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
+    const abort = new AbortController();
+    let liveText = "";
+    let verificationText = "";
+    const read = async (response: Response, append: (chunk: string) => void) => {
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      try { while (true) { const next = await reader.read(); if (next.done) break; append(decoder.decode(next.value)); } }
+      catch (error) { if (!abort.signal.aborted) throw error; }
+      finally { reader.releaseLock(); }
+    };
+    const url = `${baseUrl}/serve/${owner}/${pageName}/api/collaboration/events`;
+    const live = await fetch(url, { signal: abort.signal });
+    const verification = await fetch(url, { signal: abort.signal, headers: { Cookie: cookies } });
+    const reads = [read(live, chunk => { liveText += chunk; }), read(verification, chunk => { verificationText += chunk; })];
+    try {
+      const result = await fetch(`${baseUrl}/serve/${owner}/${pageName}/api/collaboration/commit`, {
+        method: "POST", headers: { "Content-Type": "application/json", Cookie: cookies },
+        body: JSON.stringify({ resource: "tasks", recordId: "task-1", baseRevision: 0, operationId: "verification-only", params: { id: "task-1", title: "Isolated" } }),
+      });
+      const resultBody = await result.json();
+      expect(result.status, JSON.stringify(resultBody)).toBe(200);
+      await expect.poll(() => verificationText).toContain("verification-only");
+      expect(liveText).not.toContain("verification-only");
+      expect(readTitle(pageName)).toBe("Original");
+    } finally { abort.abort(); await Promise.all(reads); }
+  });
 
   it("baseRevision 匹配时执行声明 mutation、推进 revision、写 operation log", async () => {
     const pageName = "collab-commit-ok";

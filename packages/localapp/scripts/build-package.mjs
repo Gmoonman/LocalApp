@@ -47,6 +47,22 @@ export async function buildLocalAppPackage(options = {}) {
   }
   const { buildServerPackage } = await import(pathToFileURL(path.join(projectDirectory, "packages/server/scripts/build-server-package.mjs")).href);
   const serverArtifact = await buildServerPackage({ outputDirectory: path.join(outputDirectory, "runtime/server") });
+  const pluginExports = {};
+  const pluginDirectory = path.join(outputDirectory, "plugins");
+  await fs.mkdir(pluginDirectory, { recursive: true });
+  for (const [name, packageName, client] of [
+    ["multiuser", "dsh-multiuser", true],
+    ["agent-ui", "dsh-agent-ui", true],
+    ["applications", "dsh-app-platform", true],
+    ["development", "dsh-app-development", true],
+    ["documents", "dsh-document-tools", false],
+  ]) {
+    const entry = `../runtime/server/node_modules/@localapp/${packageName}/dist/index.mjs`;
+    const resources = client ? `export const clientHostUrl = new URL('../runtime/server/node_modules/@localapp/${packageName}/dist/${name === "multiuser" ? "index" : "client-host"}.mjs', import.meta.url).href;\n` : "";
+    await fs.writeFile(path.join(pluginDirectory, `${name}.mjs`), `export { default } from ${JSON.stringify(entry)};\nexport * from ${JSON.stringify(entry)};\n${resources}`);
+    await fs.writeFile(path.join(pluginDirectory, `${name}.d.mts`), `export { default } from ${JSON.stringify(entry)};\nexport * from ${JSON.stringify(entry)};\n${client ? "export declare const clientHostUrl: string;\n" : ""}`);
+    pluginExports[`./plugins/${name}`] = { types: `./plugins/${name}.d.mts`, import: `./plugins/${name}.mjs`, default: `./plugins/${name}.mjs` };
+  }
   await build({
     absWorkingDir: projectDirectory,
     alias: {
@@ -84,6 +100,7 @@ export async function buildLocalAppPackage(options = {}) {
     bugs: sourceManifest.bugs,
     type: "module",
     bin: { localapp: "bin/localapp.mjs" },
+    exports: pluginExports,
     engines: { node: ">=24" },
   };
   const bootstrapEntrypoint = "runtime/bootstrap/localapp-daemon-bootstrap.mjs";

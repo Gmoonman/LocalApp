@@ -1,4 +1,6 @@
-import { findUserByName, findUserById } from "./meta-sqlite.js";
+import { notificationServices } from "./notification-state.js";
+import { requestLogger } from "./request-logger.js";
+import { findUserByName, findUserById, analytics } from "./meta-sqlite.js";
 import { getPageDir, readPageMeta } from "../plugins/storage.js";
 import { readManifestState } from "./app-manifest.js";
 import { checkPageAccess } from "./access-control.js";
@@ -6,6 +8,9 @@ import type { ApplicationStore } from "@localapp/dsh-app-platform" with { "resol
 
 export function applicationStore(dataDir: string): ApplicationStore {
   return {
+    requestLogger,
+    analytics,
+    notificationServices,
     owner: identity => findUserByName(identity) ?? findUserById(identity) ?? undefined,
     application: (ownerId, name) => {
       const meta = readPageMeta(dataDir, ownerId, name);

@@ -1,76 +1,57 @@
+import { systemEnvironment } from "./lib/system-agent-environment.js";
+import { accountServices } from "./lib/meta-sqlite.js";
+import { applicationStore } from "./lib/agent-app.js";
+import { developmentClientResources } from "./lib/native-client-resources.js";
 import Fastify, { type FastifyInstance } from "fastify";
-import { guardTimerCallback } from "./lib/timer-guard.js";
-import fastifyStatic from "@fastify/static";
 import multipart from "@fastify/multipart";
 import cookie from "@fastify/cookie";
 import * as path from "node:path";
 import { storagePlugin } from "./plugins/storage.js";
 import { verificationPlugin } from "./plugins/verification.js";
-import { closeAllConnections, closeIdleConnections, isCurrentDbQueueOwner, setDatabaseWriteGuard } from "./lib/app-db.js";
 import { authPlugin, registerVersionCheck } from "./plugins/auth.js";
-import { sessionPlugin } from "./plugins/session.js";
-import { keysRoutes } from "./routes/keys.js";
-import { uploadRoutes } from "./routes/upload.js";
-import { pagesRoutes } from "./routes/pages.js";
-import { serveRoutes } from "./routes/serve.js";
-import { starterDocRoutes } from "./routes/starter-doc.js";
-import { schemasRoutes } from "./routes/schemas.js";
-import { authenticatedCliRoutes } from "./routes/cli.js";
-import { depsRoutes } from "./routes/deps.js";
-import { authRoutes } from "./routes/auth.js";
-import { profileRoutes } from "./routes/profile.js";
-import { appSettingsRoutes } from "./routes/app-settings.js";
-import { groupsRoutes } from "./routes/groups.js";
-import { configRoutes } from "./routes/config.js";
-import { adminRoutes } from "./routes/admin.js";
-import { myServeRoutes } from "./routes/my-serve.js";
-import { issuesRoutes } from "./routes/issues.js";
-import { favoritesRoutes } from "./routes/favorites.js";
-import { subscribeRoutes } from "./routes/subscribe.js";
-import { inboxRoutes } from "./routes/inbox.js";
-import { wsRoutes } from "./routes/ws.js";
-import { agentRoutes } from "./routes/agent.js";
-import { llmRoutes } from "./routes/llm.js";
-import { platformDataRoutes } from "./routes/platform-data.js";
-import { dbRoutes } from "./routes/db.js";
-import { desktopActionsRoutes } from "./routes/desktop-actions.js";
-import { deviceActionsRoutes } from "./routes/device-actions.js";
-import { deviceControlRoutes } from "./routes/device-control.js";
-import { verificationRoutes } from "./routes/verification.js";
-import { setupRoutes } from "./routes/setup.js";
-import { cleanOldLogs, listUsers } from "./lib/meta-sqlite.js";
-import { startRequestLogger, stopRequestLogger, pushRequestLog } from "./lib/request-logger.js";
-import { initContentStorage } from "./lib/s3-client.js";
-import { applyPlatformMigrationsToAllApps } from "./lib/platform-migrations.js";
-import { assertAppDataWritable } from "./lib/app-data-maintenance.js";
+import { createBrowserSessionHost } from "./plugins/session.js";
+import { createKeyRoutesHost } from "./routes/keys.js";
+import { createApplicationUploadHost } from "./routes/upload.js";
+import { createApplicationPagesHost } from "./routes/pages.js";
+import { createApplicationEntryHost } from "./routes/serve.js";
+import { createApplicationSchemaHost } from "./routes/schemas.js";
+import { createAuthenticationHost } from "./routes/auth.js";
+import { createOwnApplicationPagesHost, createProfileHost } from "./routes/profile.js";
+import { createApplicationDataSettingsHost, createApplicationSettingsHost } from "./routes/app-settings.js";
+import { createGroupRoutesHost } from "./routes/groups.js";
+import { createAdministratorApplicationsHost, createAdministratorAccountsHost } from "./routes/admin.js";
+import { adminAuth } from "./plugins/auth.js";
+import { createPersonalPagesHost } from "./routes/my-serve.js";
+import { createIssueRoutesHost } from "./routes/issues.js";
+import { createApplicationFavoritesHost } from "./routes/favorites.js";
+import { createSubscriptionRoutesHost } from "./routes/subscribe.js";
+import { createApplicationInboxHost } from "./routes/inbox.js";
+import { createWebSocketHost } from "./routes/ws.js";
+import { createAgentRoutesHost } from "./routes/agent.js";
+import { createLlmRoutesHost } from "./routes/llm.js";
+import { createPlatformDataHost } from "./routes/platform-data.js";
+import { createApplicationDatabaseHost } from "./routes/db.js";
+import { desktopActionContribution } from "./routes/desktop-actions.js";
+import { deviceActionContribution } from "./routes/device-actions.js";
+import { createDeviceControlHost } from "./routes/device-control.js";
+import { createVerificationHost } from "./routes/verification.js";
+import { createSetupHost } from "./routes/setup.js";
+import { listUsers, getDb, flushMetaDb, findUserById, validateApiKey } from "./lib/meta-sqlite.js";
 import { SetupTokenStore } from "./lib/setup-token-store.js";
 import { createServerConfigStore, type ServerConfigStore } from "./lib/server-config-store.js";
 import { systemRoutes, type RestartController } from "./routes/system.js";
-import { ProjectStore } from "./lib/development/projects.js";
-import { DevelopmentBuilds } from "./lib/development/builds.js";
-import { DevelopmentPreviews } from "./lib/development/previews.js";
-import { developmentRoutes } from "./routes/development.js";
-import { appsRoutes } from "./routes/apps.js";
+import { createBuildOperations } from "./lib/development/builds.js";
+import { previewHost } from "./lib/development/previews.js";
+import { createDevelopmentRoutesHost } from "./routes/development.js";
+import { createApplicationInstallHost } from "./routes/apps.js";
 import { MAX_APP_PACKAGE_BYTES } from "./lib/app-package.js";
-import { WorkspaceStore } from "./lib/workspace-store.js";
-import { TaskStore } from "./lib/task-store.js";
-import { TaskRunner } from "./lib/task-runner.js";
-import { AgentRunner } from "./lib/agent-runner.js";
-import { workspacesRoutes } from "./routes/workspaces.js";
-import { tasksRoutes } from "./routes/tasks.js";
-import { SecretBox } from "./lib/secret-box.js";
-import { PeerStore } from "./lib/peer-store.js";
-import { peersRoutes } from "./routes/peers.js";
-import { peerProtocolRoutes } from "./routes/peer-protocol.js";
-import { SyncSessionStore } from "./lib/sync-session-store.js";
-import { SyncJobStore } from "./lib/sync-job-store.js";
-import { AppSyncTarget } from "./lib/app-sync-target.js";
-import { AppSyncSource } from "./lib/app-sync-source.js";
-import { reconcileAppInstallTransactions } from "./lib/app-installer.js";
-import { syncSourceRoutes, syncTargetRoutes } from "./routes/sync.js";
-import { devRoutes, installDevRequestContext } from "./routes/dev.js";
-import { DeviceNotificationSourceStore } from "./lib/device-notification-source-store.js";
-import { deviceNotificationsRoutes, parseDeviceNotificationJson } from "./routes/device-notifications.js";
+import { createWorkspaceRoutesHost } from "./routes/workspaces.js";
+import { createTaskRoutesHost } from "./routes/tasks.js";
+import { createSyncTargetAuthentication } from "./routes/sync.js";
+import { devToolkitContribution, installDevRequestContext } from "./routes/dev.js";
+import { createDeviceNotificationPersistence } from "./lib/device-notification-source-store.js";
+import { createDeviceNotificationRoutesHost } from "./routes/device-notifications.js";
+import type { Context as DshContext } from "@deepseek-ai/cordis" with { "resolution-mode": "import" };
 
 export interface BuildServerOptions {
   env?: NodeJS.ProcessEnv;
@@ -80,15 +61,37 @@ export interface BuildServerOptions {
   restartController?: RestartController;
   configStore?: ServerConfigStore;
   enableDevTools?: boolean;
+  pluginCombination?: "multiuser" | "platform" | "full";
+  agentUI?: boolean;
+  documents?: false | { root?: string };
+}
+
+async function authenticateCliRequest(app: FastifyInstance): Promise<void> {
+  await authPlugin(app);
+  registerVersionCheck(app);
 }
 
 export async function buildServer(options: BuildServerOptions = {}): Promise<FastifyInstance> {
   const env = options.env ?? process.env;
   const configStore = options.configStore ?? createServerConfigStore({ env });
   const config = await configStore.read();
-  const app = Fastify({ ignoreTrailingSlash: true });
+  const { Context } = await import("@deepseek-ai/cordis");
+  const { default: EmbeddedWebServer } = await import("@localapp/dsh-multiuser/native-server");
+  const context = new Context();
+  await context.plugin(EmbeddedWebServer, { host: "127.0.0.1", port: 0 });
+  const carrier = context.webServer as InstanceType<typeof EmbeddedWebServer>;
+  const app = Fastify({ ignoreTrailingSlash: true, maxParamLength: 1024,
+    serverFactory: handler => carrier.createListener(handler),
+  });
   app.decorate("config", config);
+  try {
   await registerServerPluginsAndRoutes(app, {
+    context,
+    pluginCombination: options.pluginCombination ?? config.pluginCombination ?? "full",
+    pluginCombinationControlled: options.pluginCombination !== undefined || Boolean(env.LOCALAPP_PLUGIN_COMBINATION),
+    documents: options.documents ?? (config.documentsEnabled === false ? false : undefined),
+    documentsControlled: options.documents !== undefined,
+    agentUI: options.agentUI ?? env.LOCALAPP_AGENT_UI !== "0",
     webRoot: options.webRoot,
     nativeClientRoot: options.nativeClientRoot ?? env.LOCALAPP_NATIVE_CLIENT_ROOT ?? path.resolve(__dirname, "../../../tmp/native-client-entry"),
     setupTokens: options.setupTokens ?? new SetupTokenStore(),
@@ -97,157 +100,175 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
     enableDevTools: options.enableDevTools ?? env.LOCALAPP_DEV_TOOLS === "1",
   });
   return app;
+  } catch (error) {
+    await app.close();
+    await context.fiber.dispose();
+    throw error;
+  }
 }
 
 async function registerServerPluginsAndRoutes(
   app: FastifyInstance,
   options: {
+    context: DshContext;
     webRoot?: string;
     nativeClientRoot?: string;
     setupTokens: SetupTokenStore;
     configStore: ServerConfigStore;
     restartController: RestartController;
     enableDevTools: boolean;
+    pluginCombination: "multiuser" | "platform" | "full";
+    pluginCombinationControlled: boolean;
+    documents?: false | { root?: string };
+    documentsControlled: boolean;
+    agentUI?: boolean;
   },
 ): Promise<void> {
   const { default: websocket } = await import("@fastify/websocket");
   await app.register(websocket);
-  await app.register(storagePlugin);
-  await reconcileAppInstallTransactions(app.config.dataDir);
-  setDatabaseWriteGuard((dbPath) => assertAppDataWritable(path.dirname(dbPath), isCurrentDbQueueOwner(dbPath)));
-  await initContentStorage(app.config);
-  await app.register(verificationPlugin);
-  if (listUsers(1, 1).total > 0) {
-    await applyPlatformMigrationsToAllApps({ dataDir: app.config.dataDir, logger: console });
-  }
+  const hasPlatform = options.pluginCombination !== "multiuser";
+  await app.register(storagePlugin, { schema: hasPlatform ? "platform" : "accounts" });
 
   await app.register(cookie);
   await app.register(multipart, { limits: { fileSize: MAX_APP_PACKAGE_BYTES } });
-  await app.register(sessionPlugin);
-  if (options.enableDevTools) await installDevRequestContext(app);
-  const developmentProjects = new ProjectStore(app.config.dataDir);
-  const developmentBuilds = new DevelopmentBuilds(app.config.dataDir, developmentProjects);
-  const developmentPreviews = new DevelopmentPreviews(app.config.dataDir, developmentProjects, developmentBuilds);
-  developmentPreviews.attach(app);
-  app.addHook("onClose", async () => developmentBuilds.close());
-  const workspaceStore = new WorkspaceStore({
-    workspaceDir: app.config.workspaceDir,
-    archiveLimits: {
-      maxCompressedBytes: app.config.appDataArchiveMaxBytes,
-      maxExpandedBytes: app.config.appDataExpandedMaxBytes,
-      maxFileEntries: app.config.appDataArchiveMaxFiles,
-    },
+  const { createPluginSuite } = await import("./lib/dsh-plugin-suite.mjs");
+  const pluginContext = await createPluginSuite({
+    context: options.context,
+    combination: options.pluginCombination,
+    agentUI: options.agentUI,
+    documents: options.documents,
+    multiuser: { capacity: 100, accountServices, systemEnvironment },
+    platform: hasPlatform ? applicationStore(app.config.dataDir) : undefined,
+    development: options.pluginCombination === "full"
+      ? { dataDir: app.config.dataDir, persistence: { database: getDb, flush: flushMetaDb } }
+      : undefined,
   });
-  const taskStore = new TaskStore();
-  const taskRunner = new TaskRunner({
-    workspaceStore,
-    taskStore,
-    taskDir: path.join(app.config.dataDir, "tasks"),
+  pluginContext.get("localappAgentUI")?.registerHttp(app);
+  await pluginContext.localappMultiuser.registerBrowserSessions(app, createBrowserSessionHost());
+  if (hasPlatform) await pluginContext.localappApps.initializeStorage({
+    config: app.config, migrationsDir: path.resolve(__dirname, "../platform-migrations"),
+    hasAccounts: () => listUsers(1, 1).total > 0, logger: console,
   });
-  const agentRunner = new AgentRunner({ taskRunner });
-  const secretBox = new SecretBox(app.config.masterKeyFile);
-  const peerStore = new PeerStore(secretBox);
-  const deviceNotificationSourceStore = new DeviceNotificationSourceStore(secretBox);
-  const syncSessions = new SyncSessionStore({ dataDir: app.config.dataDir });
-  syncSessions.prune();
-  const syncJobs = new SyncJobStore();
-  syncJobs.reconcileInterrupted();
-  const syncTarget = new AppSyncTarget(app.config.dataDir, syncSessions);
-  await syncTarget.reconcileInterrupted();
-  const syncSource = new AppSyncSource(app.config.dataDir, syncJobs, peerStore);
-  await taskRunner.reconcileRunning();
-  workspaceStore.setTaskRunner(taskRunner);
-  app.addHook("onClose", async () => {
-    await syncSource.shutdown();
-    await Promise.all([taskRunner.shutdown(), workspaceStore.shutdown()]);
+  if (hasPlatform) await app.register(verificationPlugin, { createStore: directory => pluginContext.localappApps.verification(directory) });
+  app.addHook("onClose", () => pluginContext.fiber.dispose());
+  const development = options.pluginCombination === "full" ? await (async () => {
+    if (options.enableDevTools) await devToolkitContribution(app, pluginContext.localappDevelopment.createDevToolkit.bind(pluginContext.localappDevelopment)).installRequestContext(app);
+    return pluginContext.localappDevelopment.initializeRuntime(app, {
+      builds: createBuildOperations(), preview: previewHost,
+      workspaces: {
+        authorizeExecution: user => accountServices.accounts.getUserRole(user) === "admin",
+        workspaceDir: app.config.workspaceDir,
+        archiveLimits: {
+          maxCompressedBytes: app.config.appDataArchiveMaxBytes,
+          maxExpandedBytes: app.config.appDataExpandedMaxBytes,
+          maxFileEntries: app.config.appDataArchiveMaxFiles,
+        },
+      },
+      tasks: {
+        authorizeExecution: user => accountServices.accounts.getUserRole(user) === "admin",
+        taskDir: path.join(app.config.dataDir, "tasks"),
+      },
+    });
+  })() : undefined;
+  const platform = hasPlatform ? await (async () => {
+    const secretBox = pluginContext.localappMultiuser.createSecrets(app.config.masterKeyFile);
+    const deviceNotificationSourceStore = pluginContext.localappApps.createDeviceNotificationSources(
+      createDeviceNotificationPersistence(), secretBox);
+    const synchronization = await pluginContext.localappApps.initializeSynchronization({
+      dataDir: app.config.dataDir, secrets: secretBox,
+      persistence: { database: getDb, flush: flushMetaDb },
+    });
+    return { ...synchronization, deviceNotificationSourceStore };
+  })() : undefined;
+  await pluginContext.localappMultiuser.registerSetup(app, createSetupHost(app, options.setupTokens));
+  await systemRoutes(app, { documentsEnabled: options.documents !== false, documentsControlled: options.documentsControlled, pluginCombination: options.pluginCombination, pluginCombinationControlled: options.pluginCombinationControlled, configStore: options.configStore, restartController: options.restartController });
+  if (platform) pluginContext.localappApps.registerSynchronizationRoutes(app, {
+    protocol: { keyOwner: validateApiKey, user: findUserById },
+    target: platform.syncTarget, authenticateTarget: createSyncTargetAuthentication,
+    source: platform.syncSource, userId: request => request.userId,
+    authenticateUser: authPlugin, peers: platform.peerStore, authenticateAdministrator: adminAuth,
   });
-  app.register(verificationRoutes);
-  await setupRoutes(app, options.setupTokens);
-  await systemRoutes(app, { configStore: options.configStore, restartController: options.restartController });
-  await peerProtocolRoutes(app);
-  await syncTargetRoutes(app, syncTarget);
   app.get("/health", async () => ({ status: "ok" }));
-  starterDocRoutes(app);
+  app.get("/api/system/plugins", async () => ({
+    success: true,
+    data: { combination: options.pluginCombination, multiuser: true, applications: Boolean(platform), development: Boolean(development) },
+  }));
+  if (development) app.register(async scope => pluginContext.localappDevelopment.registerStarter(scope));
 
   const webRoot = options.webRoot ?? path.resolve(__dirname, "../../web/out");
-  await app.register(fastifyStatic, { root: path.join(webRoot, "_next"), prefix: "/_next", decorateReply: false });
-  await app.register(fastifyStatic, { root: path.join(webRoot, "home"), prefix: "/home", decorateReply: false });
+  await pluginContext.localappMultiuser.registerWebAssets(app, webRoot);
 
-  app.register(authRoutes);
-  app.register(profileRoutes);
-  app.register(appSettingsRoutes);
-  app.register(groupsRoutes);
-  app.register(platformDataRoutes);
-  app.register(async (llmScope) => {
-    await authPlugin(llmScope);
-    llmScope.register(llmRoutes);
-    llmScope.register(agentRoutes, { nativeClientRoot: options.nativeClientRoot });
+  pluginContext.localappMultiuser.registerHttp(app, {
+    authentication: createAuthenticationHost(app), groups: createGroupRoutesHost(), profile: createProfileHost(app),
   });
-  app.register(issuesRoutes);
-  app.register(favoritesRoutes);
-  app.register(subscribeRoutes);
-  app.register(inboxRoutes);
-  app.register(wsRoutes);
-  app.register(desktopActionsRoutes);
-  app.register(deviceActionsRoutes);
-  app.register(deviceControlRoutes);
-  app.register(async (notificationScope) => {
-    notificationScope.removeContentTypeParser("application/json");
-    notificationScope.addContentTypeParser("application/json", { parseAs: "string" }, (_request, body, done) => {
-      try {
-        done(null, parseDeviceNotificationJson(String(body)));
-      } catch {
-        done(null, { __invalidJson: true });
-      }
-    });
-    await deviceNotificationsRoutes(notificationScope, deviceNotificationSourceStore);
+  if (platform) pluginContext.localappApps.registerApplicationDataRoutes(app,{
+    ownPages:createOwnApplicationPagesHost(app),settings:createApplicationSettingsHost(app),
+    dataSettings:createApplicationDataSettingsHost(app),data:createPlatformDataHost(),
   });
-  app.register(myServeRoutes, { webRoot });
-  app.register(async (peerScope) => peersRoutes(peerScope, peerStore));
-  app.register(serveRoutes, { webRoot });
-  app.register(authenticatedCliRoutes);
-  app.register(depsRoutes);
-  app.register(async (authScope) => {
-    await authPlugin(authScope);
-    registerVersionCheck(authScope);
-    authScope.register(keysRoutes);
-    authScope.register(configRoutes);
-    authScope.register(uploadRoutes);
-    authScope.register(appsRoutes);
-    authScope.register(developmentRoutes, { projects: developmentProjects, builds: developmentBuilds, previews: developmentPreviews });
-    authScope.register(dbRoutes);
-    authScope.register(pagesRoutes);
-    authScope.register(schemasRoutes);
-    authScope.register(async (workspaceScope) => workspacesRoutes(workspaceScope, workspaceStore));
-    authScope.register(async (taskScope) => tasksRoutes(taskScope, { taskStore, taskRunner, agentRunner }));
-    authScope.register(async (syncScope) => syncSourceRoutes(syncScope, syncSource));
-    if (options.enableDevTools) authScope.register(devRoutes);
+  pluginContext.localappMultiuser.registerModelRoutes(app, {
+    authenticate: authPlugin, llm: createLlmRoutesHost(app, pluginContext.localappMultiuser),
+    agent: () => createAgentRoutesHost(app, pluginContext), nativeClientRoot: options.nativeClientRoot,
   });
-  app.register(adminRoutes);
+  if (platform) pluginContext.localappApps.registerApplicationInteractionRoutes(app, {
+    issues: createIssueRoutesHost(app), favorites: createApplicationFavoritesHost(),
+    subscriptions: createSubscriptionRoutesHost(), inbox: createApplicationInboxHost(),
+    websocket: createWebSocketHost(),
+  });
+  if (platform) pluginContext.localappApps.registerDeviceRoutes(app, {
+    desktop: desktopActionContribution(app, pluginContext.localappApps.createDesktopActionRoutes.bind(pluginContext.localappApps)),
+    device: deviceActionContribution(app, pluginContext.localappApps.createDeviceActionRoutes.bind(pluginContext.localappApps)),
+    control: createDeviceControlHost(app),
+  });
+  if (platform) pluginContext.localappApps.registerNotificationRoutes(
+    app, platform.deviceNotificationSourceStore, createDeviceNotificationRoutesHost(app));
+  pluginContext.localappMultiuser.registerPersonalResources(app, {
+    pages: createPersonalPagesHost({ webRoot }),
+    dependenciesDirectory: path.resolve(process.cwd(), "static", "deps"),
+  });
+  pluginContext.localappMultiuser.registerKeyRoutes(app, {
+    authenticate: authenticateCliRequest, keys: createKeyRoutesHost(),
+  });
+  if (platform) pluginContext.localappApps.registerApplicationServing(app, {
+    entry: createApplicationEntryHost(app, { webRoot }), verification: createVerificationHost(app),
+  });
+  if (development) pluginContext.localappDevelopment.registerDeveloperUtilities(app, {
+    authenticate: authPlugin,
+    cli: { manifestUrl: app.config.releaseManifestUrl }, configuration: app.config,
+    checkConfigurationVersion: registerVersionCheck,
+  });
+  if (platform) pluginContext.localappApps.registerPackageManagement(app, {
+    authenticate: authenticateCliRequest,
+    routes: {
+      pages: createApplicationPagesHost(app), upload: createApplicationUploadHost(app), install: createApplicationInstallHost(app),
+      schemas: createApplicationSchemaHost(app), database: createApplicationDatabaseHost(app),
+    },
+  });
+  if (development) pluginContext.localappDevelopment.registerWorkflowRoutes(app, {
+      authenticate: authenticateCliRequest,
+      development: () => createDevelopmentRoutesHost(app, {
+        builds: development.builds,
+        previews: development.previews,
+        runtimeRegistry: pluginContext.localappMultiuser,
+        documents: () => pluginContext.get("localappDocuments"),
+        nativeClient: developmentClientResources(pluginContext, options.nativeClientRoot),
+      }, pluginContext.localappMultiuser),
+      workspaces: createWorkspaceRoutesHost(development.workspaceStore),
+      tasks: createTaskRoutesHost({ taskStore: development.taskStore, taskRunner: development.taskRunner, agentRunner: development.agentRunner }),
+      tools: options.enableDevTools ? scope => devToolkitContribution(app).register(scope) : undefined,
+  });
+  pluginContext.localappMultiuser.registerAdministrationRoutes(app, {
+    authenticate: adminAuth, accounts: createAdministratorAccountsHost(app.config.dataDir),
+    environment: { dataDir: app.config.dataDir, checkEnvironment: () => systemEnvironment.check(app.config.dataDir) },
+    contributions: async scope => {
+      if (platform) await pluginContext.localappApps.registerAdministratorApplications(scope, createAdministratorApplicationsHost(app.config.dataDir));
+      if (development) scope.register(async environmentScope => pluginContext.localappDevelopment.registerEnvironment(environmentScope, createBuildOperations().createExecutor));
+    },
+  });
 
-  app.addHook("onResponse", async (req, reply) => {
-    const url = req.routeOptions?.url ?? req.url;
-    if (url.startsWith("/api/") || url.includes("/api/")) {
-      pushRequestLog({
-        path: req.url.split("?")[0],
-        method: req.method,
-        status: reply.statusCode,
-        durationMs: reply.elapsedTime ? Math.round(reply.elapsedTime) : 0,
-        userId: req.userId || null,
-        visitorId: req.visitorId || null,
-      }, app.config.dataDir);
-    }
+  if (platform) pluginContext.localappApps.registerRequestLogging(app, {
+    scope: app.config.dataDir,
+    identity: request => ({ userId: request.userId || null, visitorId: request.visitorId || null }),
   });
 
-  const idleConnectionTimer = setInterval(guardTimerCallback("idle database close", closeIdleConnections), 60_000);
-  idleConnectionTimer.unref();
-  app.addHook("onListen", async () => {
-    startRequestLogger();
-    cleanOldLogs();
-  });
-  app.addHook("onClose", async () => {
-    clearInterval(idleConnectionTimer);
-    stopRequestLogger();
-    closeAllConnections();
-  });
+  if (platform) pluginContext.localappApps.registerDatabaseMaintenance(app, app.config.dataDir);
 }

@@ -1,59 +1,11 @@
-import type { FastifyInstance } from "fastify";
-import { insertRequestLogs, insertPageViews, type RequestLogEntry, type PageViewEntry } from "./meta-sqlite.js";
+import { RequestLogger } from "@localapp/dsh-app-platform/request-logger";
+import { insertRequestLogs, insertPageViews } from "./meta-sqlite.js";
 import { guardTimerCallback } from "./timer-guard.js";
-
-const FLUSH_INTERVAL_MS = 5_000;
-const MAX_BUFFER_SIZE = 100;
-
-let requestBuffer: RequestLogEntry[] = [];
-let pageViewBuffer: PageViewEntry[] = [];
-const recentRequestBuffer: Array<{ scope: string | null; entry: RequestLogEntry }> = [];
-let timer: ReturnType<typeof setInterval> | null = null;
-
-function flush(): void {
-  const requests = requestBuffer;
-  const views = pageViewBuffer;
-  requestBuffer = [];
-  pageViewBuffer = [];
-  try {
-    insertRequestLogs(requests);
-    insertPageViews(views);
-  } catch (error) {
-    // Logging should never crash the server, but swallowing a terminal SQLite
-    // trap here is how a single trap stayed invisible while every database
-    // request failed for the next 46 minutes.
-    guardTimerCallback("request log flush", () => { throw error; })();
-  }
-}
-
-export function pushRequestLog(entry: RequestLogEntry, scope?: string): void {
-  requestBuffer.push(entry);
-  recentRequestBuffer.push({ scope: scope ?? null, entry });
-  if (recentRequestBuffer.length > 200) recentRequestBuffer.splice(0, recentRequestBuffer.length - 200);
-  if (requestBuffer.length >= MAX_BUFFER_SIZE) flush();
-}
-
-export function listRecentRequestLogs(scope?: string): RequestLogEntry[] {
-  return recentRequestBuffer
-    .filter((item) => scope === undefined || item.scope === scope)
-    .map((item) => item.entry)
-    .reverse();
-}
-
-export function pushPageView(entry: PageViewEntry): void {
-  pageViewBuffer.push(entry);
-  if (pageViewBuffer.length >= MAX_BUFFER_SIZE) flush();
-}
-
-export function startRequestLogger(): void {
-  if (timer) return;
-  timer = setInterval(guardTimerCallback("request log flush", flush), FLUSH_INTERVAL_MS);
-}
-
-export function stopRequestLogger(): void {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
-  }
-  flush();
-}
+export const requestLogger = new RequestLogger({ insertRequestLogs, insertPageViews,
+  onError: error => guardTimerCallback("request log flush", () => { throw error; })(),
+});
+export const pushRequestLog = requestLogger.pushRequestLog.bind(requestLogger);
+export const listRecentRequestLogs = requestLogger.listRecentRequestLogs.bind(requestLogger);
+export const pushPageView = requestLogger.pushPageView.bind(requestLogger);
+export const startRequestLogger = requestLogger.startRequestLogger.bind(requestLogger);
+export const stopRequestLogger = requestLogger.stopRequestLogger.bind(requestLogger);

@@ -4,7 +4,7 @@ import { expect, it, vi, afterEach } from "vitest";
 const root = path.resolve(__dirname, "../../../../../tmp/dsh-capabilities-test", String(process.pid));
 it("mounts the application capability set and persists a real Harness conversation", async () => {
   const { DeepSeekHarness } = await import("../deepseek-harness.mjs");
-  const harness = new DeepSeekHarness({ llmApiKey: "test", llmBaseUrl: "http://model.test/v1", llmModel: "model", root, capabilities: ["files", "terminal", "skills", "subagents", "jobs", "web", "workflow", "schedule"] });
+  const harness = new DeepSeekHarness({ llmApiKey: "test", llmBaseUrl: "http://model.test/v1", llmModel: "model", root, ownerId: "capability-owner", capabilities: ["files", "terminal", "skills", "subagents", "jobs", "web", "workflow", "schedule"] });
   try {
     await harness.initialize();
     const ctx = (harness as any).ctx;
@@ -14,6 +14,87 @@ it("mounts the application capability set and persists a real Harness conversati
     expect(ctx.get("jobs")).toBeDefined();
     expect(ctx.get("schedule")).toBeDefined();
     await expect(ctx.fs.resolve(path.dirname(root))).rejects.toThrow("outside");
+    const { gateway } = await harness.nativeApi();
+    const created = await gateway.invoke({ namespace: "session", method: "create", args: { request: {} } }) as { sessionId: string };
+    await fs.writeFile(path.join(root, "workspace", "native-reference.txt"), "application file");
+    const outside = path.join(root, "outside-reference");
+    await fs.mkdir(outside, { recursive: true });
+    await fs.writeFile(path.join(outside, "private-reference.txt"), "outside");
+    await fs.symlink(outside, path.join(root, "workspace", "external-link"), "dir");
+    const references = (query: string) => gateway.invoke({ namespace: "fileReferences", method: "list", args: { agentId: created.sessionId, query } });
+    expect(await references("native-reference")).toEqual([expect.objectContaining({ path: "native-reference.txt", kind: "file" })]);
+    expect(await references("../")).toEqual([]);
+    expect(await references("external-link/")).toEqual([]);
+    expect(await references("private-reference")).toEqual([]);
+    expect(await gateway.invoke({ namespace: "goals", method: "get", args: { agentId: created.sessionId } })).toBeUndefined();
+    expect(await gateway.invoke({ namespace: "schedule", method: "catalog", args: {} })).toEqual([]);
+    const jobs = await gateway.stream({ namespace: "job", method: "list", args: { request: { sessionId: created.sessionId } } });
+    const iterator = jobs[Symbol.asyncIterator]();
+    try { expect((await iterator.next()).value).toEqual({ type: "rows", jobs: [] }); }
+    finally { await iterator.return?.(); }
+    await expect(gateway.invoke({ namespace: "job", method: "kill", args: { request: { sessionId: created.sessionId, jobId: "missing-job" } } })).rejects.toThrow();
+    let cancelled = false;
+    let finish!: (result: { status: string; detail: string }) => void;
+    const done = new Promise(resolve => { finish = resolve; });
+    const jobId = ctx.jobs.start({ kind: "bash", label: "Native job output", owner: created.sessionId, run: (job: any) => {
+      job.append("native background output");
+      return { done, cancel: () => { cancelled = true; finish({ status: "cancelled", detail: "cancelled by the user" }); } };
+    } });
+    const other = await gateway.invoke({ namespace: "session", method: "create", args: { request: {} } }) as { sessionId: string };
+    await expect(gateway.invoke({ namespace: "job", method: "kill", args: { request: { sessionId: other.sessionId, jobId } } })).rejects.toThrow();
+    expect(cancelled).toBe(false);
+    expect(await gateway.invoke({ namespace: "job", method: "kill", args: { request: { sessionId: created.sessionId, jobId } } })).toEqual({ outcome: "requested" });
+    expect(cancelled).toBe(true);
+    const frames: any[] = [];
+    for await (const frame of await gateway.stream({ namespace: "job", method: "follow", args: { request: { sessionId: created.sessionId, jobId } } })) frames.push(frame);
+    expect(JSON.stringify(frames)).toContain("native background output");
+    expect(frames.at(-1)).toMatchObject({ type: "status" });
+
+
+  } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
+}, 30_000);
+
+it("uses native goal lifecycle with session isolation and rejects stale changes", async () => {
+  const { DeepSeekHarness } = await import("../deepseek-harness.mjs");
+  const harness = new DeepSeekHarness({ llmApiKey: "test", llmBaseUrl: "http://model.test/v1", llmModel: "model", root, ownerId: "goal-owner", capabilities: [] });
+  try {
+    const { gateway } = await harness.nativeApi();
+    const createSession = async () => await gateway.invoke({ namespace: "session", method: "create", args: { request: {} } }) as { sessionId: string };
+    const first = await createSession();
+    const second = await createSession();
+    const invoke = (method: string, args: Record<string, unknown> = {}) => gateway.invoke({ namespace: "goals", method, args: { agentId: first.sessionId, ...args } });
+    const created = await invoke("create", { request: { objective: "Native application goal", maxGoalRounds: 3 } }) as { ref: { id: string; revision: number } };
+    expect(await invoke("get")).toMatchObject({ objective: "Native application goal", phase: "active", activation: "armed", maxGoalRounds: 3 });
+    expect(await gateway.invoke({ namespace: "goals", method: "get", args: { agentId: second.sessionId } })).toBeUndefined();
+    const paused = await invoke("pause", { ref: created.ref }) as { id: string; revision: number };
+    expect(paused).toMatchObject({ phase: "paused", activation: "disarmed" });
+    await expect(invoke("resume", { ref: created.ref })).rejects.toThrow();
+    const resumed = await invoke("resume", { ref: { id: paused.id, revision: paused.revision } }) as { id: string; revision: number };
+    expect(resumed).toMatchObject({ phase: "active", activation: "armed" });
+    const completed = await invoke("complete", { ref: { id: resumed.id, revision: resumed.revision } }) as { id: string; revision: number };
+    expect(completed).toMatchObject({ phase: "complete", activation: "disarmed" });
+    await invoke("clear", { ref: { id: completed.id, revision: completed.revision } });
+    expect(await invoke("get")).toBeUndefined();
+    await expect(gateway.invoke({ namespace: "goals", method: "get", args: { agentId: "foreign-session" } })).rejects.toThrow();
+  } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
+}, 30_000);
+
+it("restores native session titles and paused goals after the full Harness closes", async () => {
+  const { DeepSeekHarness } = await import("../deepseek-harness.mjs");
+  const options = { llmApiKey: "test", llmBaseUrl: "http://model.test/v1", llmModel: "model", root, ownerId: "restart-owner", capabilities: [] };
+  let harness = new DeepSeekHarness(options);
+  try {
+    let { gateway } = await harness.nativeApi();
+    const created = await gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId: "native-restart-session" } } }) as { sessionId: string };
+    await gateway.invoke({ namespace: "session", method: "rename", args: { request: { sessionId: created.sessionId, title: "Persisted native session" } } });
+    const goal = await gateway.invoke({ namespace: "goals", method: "create", args: { agentId: created.sessionId, request: { objective: "Persistent native goal", maxGoalRounds: 5 } } }) as { ref: { id: string; revision: number } };
+    const paused = await gateway.invoke({ namespace: "goals", method: "pause", args: { agentId: created.sessionId, ref: goal.ref } }) as { id: string; revision: number };
+    await harness.close();
+    harness = new DeepSeekHarness(options);
+    ({ gateway } = await harness.nativeApi());
+    expect(await harness.listSessions()).toEqual(expect.arrayContaining([expect.objectContaining({ id: created.sessionId, title: "Persisted native session" })]));
+    await gateway.invoke({ namespace: "session", method: "create", args: { request: { sessionId: created.sessionId } } });
+    expect(await gateway.invoke({ namespace: "goals", method: "get", args: { agentId: created.sessionId } })).toMatchObject({ id: paused.id, revision: paused.revision, objective: "Persistent native goal", phase: "paused", activation: "disarmed" });
   } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
 }, 30_000);
 
@@ -68,8 +149,8 @@ it("delegates to a real child Agent that uses the registered application tool", 
   vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
     const request = JSON.parse(init.body); requests.push(request);
     const child = request.messages.some((m: any) => m.role === "user" && m.content?.includes("child task"));
-    const call = request.messages.at(-1)?.role !== "tool";
     const name = child ? "pageAction" : "subagent";
+    const call = !request.messages.some((message: any) => message.role === "assistant" && message.tool_calls?.some((tool: any) => tool.function?.name === name));
     const args = child ? {} : { description: "Do child task", prompt: "child task", run_in_background: false };
     const delta = call ? { tool_calls: [{ index: 0, id: `delegate-${requests.length}`, function: { name, arguments: JSON.stringify(args) } }] } : { content: "finished" };
     return new Response(`data: ${JSON.stringify({ choices: [{ delta, finish_reason: call ? "tool_calls" : "stop" }] })}\n\ndata: [DONE]\n\n`);
@@ -80,7 +161,7 @@ it("delegates to a real child Agent that uses the registered application tool", 
     await harness.run("user", { sessionId: "delegate", prompt: "delegate", systemPrompt: "App prompt", tools: [{ name: "pageAction", description: "Application action", parameters: { type: "object", properties: {} } }] }, (event: any) => {
       if (event.type === "tool_call") { actions++; harness.result("user", event.token, { appSaved: true }); }
     }, new AbortController().signal);
-    expect(actions, JSON.stringify(requests.map((r) => ({messages:r.messages,tools:r.tools.map((t: any) => t.function.name)})))).toBe(1);
+    await expect.poll(() => actions).toBe(1);
     expect(requests.every((request) => request.model === "user-model")).toBe(true);
     expect(requests.some((request) => request.messages.some((m: any) => m.role === "tool" && m.content.includes("appSaved")))).toBe(true);
   } finally { await harness.close(); await fs.rm(root, { recursive: true, force: true }); }
@@ -105,9 +186,10 @@ it("searches application files with a confined ripgrep process", async () => {
 }, 30_000);
 it.each([
   { name: "workflow", capabilities: ["workflow"], args: { script: "return { answer: 42 };", meta: { name: "test-workflow", description: "Verify isolated workflow" } }, expected: "42" },
+  { name: "workflow", capabilities: ["workflow"], development: true, args: { script: "return { answer: 43 };", meta: { name: "development-workflow", description: "Verify project workflow" } }, expected: "43" },
   { name: "skill", capabilities: ["skills"], args: { name: "test-skill" }, expected: "skill-instructions-marker" },
   { name: "ask_user_question", capabilities: [], args: { questions: [{ id: "choice", question: "Choose", options: [{ label: "yes" }] }] }, expected: "yes" },
-])("executes the real $name tool", async ({ name, capabilities, args, expected }) => {
+])("executes the real $name tool ($expected)", async ({ name, capabilities, args, expected, ...options }) => {
   const { DeepSeekHarness } = await import("../deepseek-harness.mjs");
   await fs.mkdir(path.join(root, "workspace/skills/test-skill"), { recursive: true });
   await fs.writeFile(path.join(root, "workspace/skills/test-skill/SKILL.md"), "---\nname: test-skill\ndescription: Test skill\n---\nskill-instructions-marker\n");
@@ -118,7 +200,8 @@ it.each([
     const delta = call ? { tool_calls: [{ index: 0, id: "capability-call", function: { name, arguments: JSON.stringify(args) } }] } : { content: "done" };
     return new Response(`data: ${JSON.stringify({ choices: [{ delta, finish_reason: call ? "tool_calls" : "stop" }] })}\n\ndata: [DONE]\n\n`);
   }));
-  const harness = new DeepSeekHarness({ llmApiKey: "test", llmBaseUrl: "http://model.test/v1", llmModel: "test", root, capabilities: capabilities as any });
+  const development = "development" in options && options.development;
+  const harness = new DeepSeekHarness({ llmApiKey: "test", llmBaseUrl: "http://model.test/v1", llmModel: "test", root, capabilities: capabilities as any, ...(development ? { workspaceRoot: path.join(root, "workspace"), dataRoot: root, networkBlocked: true } : {}) });
   try {
     await harness.run("user", { sessionId: "capability-session", prompt: "execute capability", systemPrompt: "", tools: [] }, (event: any) => {
       if (event.type === "interaction") harness.result("user", event.token, { answers: [{ id: "choice", selected: ["yes"], custom: "" }] });

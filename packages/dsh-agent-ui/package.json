@@ -1,0 +1,85 @@
+{
+  "name": "@localapp/dsh-agent-ui",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./client-host": {
+      "types": "./dist/client-host.d.mts",
+      "default": "./dist/client-host.mjs"
+    },
+    "./client": {
+      "default": "./dist/client.cjs"
+    },
+    "./ui/conversation-dock": {
+      "default": "./ui/conversation-dock.tsx",
+      "types": "./ui/conversation-dock.tsx"
+    },
+    "./ui/conversation-dock.css": {
+      "default": "./ui/conversation-dock.css"
+    },
+    "./ui/conversation-types": {
+      "default": "./ui/conversation-types.ts",
+      "types": "./ui/conversation-types.ts"
+    },
+    "./ui/native-conversation-frame": {
+      "default": "./ui/native-conversation-frame.tsx",
+      "types": "./ui/native-conversation-frame.tsx"
+    },
+    "./ui/native-composer-transport": {
+      "default": "./ui/native-composer-transport.ts",
+      "types": "./ui/native-composer-transport.ts"
+    },
+    "./native-composer-bridge": {
+      "types": "./dist/native-composer-bridge.d.ts",
+      "default": "./dist/native-composer-bridge.js"
+    },
+    "./native-navigation-bridge": {
+      "types": "./dist/native-navigation-bridge.d.ts",
+      "default": "./dist/native-navigation-bridge.js"
+    },
+    "./native-attachment-intake": {
+      "types": "./dist/native-attachment-intake.d.ts",
+      "default": "./dist/native-attachment-intake.js"
+    },
+    "./native-attachment-observer": {
+      "types": "./dist/native-attachment-observer.d.ts",
+      "default": "./dist/native-attachment-observer.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && node scripts/build-client.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@localapp/sdk-agent": "workspace:*",
+    "react": "^18.3.0",
+    "lucide-react": "^0.556.0",
+    "@deepseek-ai/dsh-api-session-controller": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-workspace": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-workspace-controller": "0.2.1-alpha.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "18.3.29",
+    "typescript": "5.6.3",
+    "fastify": "^4.26.0"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-api-workspace-controller"
+      ]
+    }
+  }
+}

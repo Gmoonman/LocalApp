@@ -146,6 +146,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
   const { openLogin } = useAuthModals();
   const [user, setUser] = useState<UserData | null>(null);
   const [ready, setReady] = useState(false);
+  const [developmentEnabled, setDevelopmentEnabled] = useState<boolean | null>(null);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [favCount, setFavCount] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -171,6 +172,16 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
   const appOnline = metaMatchesCurrentApp && meta.lifecycleStatus === "online";
   const appOffline = metaMatchesCurrentApp && meta.lifecycleStatus === "offline";
   const isOwner = user?.id === userId;
+  useEffect(() => {
+    let active = true;
+    fetch("/api/system/plugins").then(response => {
+      if (!response.ok) throw new Error("Plugin status unavailable");
+      return response.json();
+    }).then(result => {
+      if (active) setDevelopmentEnabled(result.success === true && result.data?.development === true);
+    }).catch(() => { if (active) setDevelopmentEnabled(false); });
+    return () => { active = false; };
+  }, []);
   const editingPeers = Object.values(editingSources).flat();
 
   const [aiMode, setAiMode] = useState<AiMode>(null);
@@ -263,7 +274,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
       });
   }, []);
 
-  const { harness, agentSend, handleToolResult } = usePlatformAgent({
+  const { harness, agentSend, handleToolResult, synchronizeContext } = usePlatformAgent({
     appName: name,
     userName: user?.name,
     pagePath,
@@ -297,12 +308,14 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
         registerAgentToolCatalog(pagePath, tools);
         executeToolsRef.current = new Map(Object.entries(executeFns));
         systemHintRef.current = systemHint || "";
+        synchronizeContext();
         setAiMode("system");
 
         return () => {
           registeredToolsRef.current = [];
           executeToolsRef.current = new Map();
           systemHintRef.current = "";
+          synchronizeContext();
         };
       },
     };
@@ -310,7 +323,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
     return () => {
       global[NATIVE_TOOL_REGISTRY_KEY] = previousRegistry ?? null;
     };
-  }, []);
+  }, [synchronizeContext]);
 
   useEffect(() => {
     const global = globalThis as NativeRegistryGlobal;
@@ -658,6 +671,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
         registeredToolsRef.current = event.data.tools;
         registerAgentToolCatalog(pagePath, event.data.tools);
         systemHintRef.current = event.data.systemHint || "";
+        synchronizeContext();
       } else if (isAiCustomModeMessage(event.data)) {
         setAiMode("custom");
       } else if (isToolResultMessage(event.data)) {
@@ -679,7 +693,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
       window.removeEventListener("message", onMessage);
       window.removeEventListener("localapp:platform_request", onPlatformRequest);
     };
-  }, [handlePlatformRequest, handleToolResult]);
+  }, [handlePlatformRequest, handleToolResult, synchronizeContext]);
 
   const toggleFavorite = useCallback(async () => {
     if (!user) { openLogin(); return; }
@@ -788,8 +802,8 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
             )}
           </div>
         </div>
-        {metaMatchesCurrentApp && !meta?.developmentPreview && !showIssues && !!user && (
-          <AppConversationDock key={`${pagePath}:${user?.id}`} application={{ owner: userId, name }} isOwner={isOwner}
+        {metaMatchesCurrentApp && !meta?.developmentPreview && !showIssues && !!user && developmentEnabled !== null && (
+          <AppConversationDock key={`${pagePath}:${user?.id}:${developmentEnabled}`} application={{ owner: userId, name }} isOwner={isOwner && developmentEnabled}
             onPreview={setDevelopmentPreviewUrl} agent={harness} onSend={agentSend} reveal={agentReveal} minimize={agentMinimize}
             onVisibilityChange={visible => { aiVisible.current = visible; setAiOpen(visible); }} />
         )}

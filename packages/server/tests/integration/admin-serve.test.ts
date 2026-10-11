@@ -40,4 +40,18 @@ describe("admin serve routes (deprecated)", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/");
   });
+
+  it("rejects encoded personal page paths before reading static files", async () => {
+    const cookie = await registerAndLogin(baseUrl, "encodedpageuser");
+    for (const pathname of [
+      "/my/%73ettings.txt",
+      "/my/apps%2fplaceholder%2fsettings.txt",
+      "/my/apps%5cplaceholder%5csettings.txt",
+    ]) {
+      const response = await fetch(`${baseUrl}${pathname}?_rsc=1`, {
+        headers: { cookie }, redirect: "manual",
+      });
+      expect(response.status, pathname).toBe(404);
+    }
+  });
 });

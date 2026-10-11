@@ -1,32 +1,81 @@
 import { Context, Service } from "@deepseek-ai/cordis";
 import WebServer, { type WebRoute, type WebUpgradeRoute, type Config } from "@deepseek-ai/dsh-host-webserver";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse, type RequestListener, type Server } from "node:http";
 import type { Duplex } from "node:stream";
 
 /**
  * dsh route carrier inside the existing LocalApp Server. The caller must select
  * this user's Context after authentication, before dispatching HTTP or upgrades.
- * dsh owns the RPC, event and WebSocket protocols; this service opens no listener.
+ * dsh owns the RPC, event and WebSocket protocols. Initialization opens no
+ * listener; the composing host can request the one shared listener explicitly.
  */
 export default class EmbeddedWebServer extends WebServer {
   private readonly httpRoutes = new Map<string, WebRoute>();
   private readonly upgradeRoutes = new Map<string, WebUpgradeRoute>();
   private readonly fallbackRoutes = new Map<string, WebRoute["handler"]>();
   private readonly embeddedPort: number;
+  private active = true;
+  private listener?: Server;
+
+  /** The host owns listen/close; this creates the one socket used by its adapter. */
+  createListener(compatibility: RequestListener): Server {
+    this.assertActive();
+    if (this.listener) throw new Error("dsh HTTP listener already created");
+    const removeFallback = this.registerFallback((request, response) => { compatibility(request, response); });
+    this.ctx.effect(() => removeFallback);
+    this.listener = createServer((request, response) => {
+      if (!this.active) {
+        response.writeHead(503);
+        response.end("Server is stopped");
+        return;
+      }
+      void this.dispatchHttp(request, response).catch(error => {
+        this.ctx.logger.warn(error instanceof Error ? error : new Error(String(error)));
+        if (response.headersSent) { response.destroy(); return; }
+        response.writeHead(500);
+        response.end("Internal Server Error");
+      });
+    });
+    // Select one upgrade owner before EventEmitter invokes compatibility listeners.
+    const emit = this.listener.emit.bind(this.listener);
+    this.listener.emit = (event: string | symbol, ...args: unknown[]) => {
+      if (event !== "upgrade") return emit(event, ...args);
+      const [request, socket, head] = args as [IncomingMessage, Duplex, Buffer];
+      if (!this.active) { socket.destroy(); return true; }
+      if (!this.hasUpgradeRoute(request.url ?? "/")) return emit(event, ...args);
+      void this.dispatchUpgrade(request, socket, head).catch(error => {
+        this.ctx.logger.warn(error instanceof Error ? error : new Error(String(error)));
+        socket.destroy();
+      });
+      return true;
+    };
+    return this.listener;
+  }
+
+  private assertActive(): void {
+    if (!this.active) throw new Error("dsh HTTP carrier is stopped");
+  }
 
   constructor(ctx: Context, config: Config) {
     super(ctx, config);
     this.embeddedPort = config.port;
   }
 
-  override get port(): number { return this.embeddedPort; }
+  override get port(): number {
+    const address = this.listener?.address();
+    return address && typeof address === "object" ? address.port : this.embeddedPort;
+  }
 
   override async [Service.init](): Promise<void> {
     // The composing Server already owns node:http and its listening socket.
-    this.ctx.effect(() => () => { this.httpRoutes.clear(); this.upgradeRoutes.clear(); this.fallbackRoutes.clear(); });
+    this.ctx.effect(() => () => {
+      this.active = false;
+      this.httpRoutes.clear(); this.upgradeRoutes.clear(); this.fallbackRoutes.clear();
+    });
   }
 
   override register(route: WebRoute): () => void {
+    this.assertActive();
     const key = `${route.kind}:${route.path}`;
     if (this.httpRoutes.has(key)) throw new Error(`Duplicate dsh route ${route.path}`);
     this.httpRoutes.set(key, route);
@@ -34,12 +83,14 @@ export default class EmbeddedWebServer extends WebServer {
   }
 
   override registerUpgrade(route: WebUpgradeRoute): () => void {
+    this.assertActive();
     if (this.upgradeRoutes.has(route.path)) throw new Error(`Duplicate dsh upgrade ${route.path}`);
     this.upgradeRoutes.set(route.path, route);
     return () => { if (this.upgradeRoutes.get(route.path) === route) this.upgradeRoutes.delete(route.path); };
   }
 
   override registerFallback(handler: WebRoute["handler"]): () => void {
+    this.assertActive();
     if (this.fallbackRoutes.has("fallback")) throw new Error("dsh fallback already registered");
     this.fallbackRoutes.set("fallback", handler);
     return () => { if (this.fallbackRoutes.get("fallback") === handler) this.fallbackRoutes.delete("fallback"); };

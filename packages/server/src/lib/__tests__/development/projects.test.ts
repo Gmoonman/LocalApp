@@ -63,3 +63,15 @@ it("source sync respects locks and leaves the workspace unchanged on invalid upl
  expect(store.read(p.id, "alice", "old.txt").content).toBe("original");
  expect(store.versions(p.id, "alice")).toHaveLength(1);
 });
+
+it("exports source with an isolated digest and releases its lock",()=>{
+ const files={"manifest.json":'{"name":"export-app"}',"package.json":'{"scripts":{"test":"test","build":"build"}}',"public/image.bin":{encoding:"base64" as const,content:Buffer.from([0,255,128]).toString("base64")}};
+ const p=store.create("alice","export-app",files);
+ expect(()=>store.exportSource(p.id,"bob")).toThrow();
+ const exported=store.exportSource(p.id,"alice");
+ expect(exported.files["public/image.bin"]).toEqual(files["public/image.bin"]);
+ expect(exported.digest).toBe(store.versions(p.id,"alice")[0].digest);
+ store.replaceSource(p.id,"alice",{...files,"new.txt":"new"},exported.digest);
+ expect(()=>store.replaceSource(p.id,"alice",files,exported.digest)).toThrow();
+ expect(store.exportSource(p.id,"alice").files["new.txt"]).toBe("new");
+});

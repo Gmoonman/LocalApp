@@ -33,15 +33,42 @@ export async function buildServerPackage(options = {}) {
   await fs.copyFile(path.join(serverDirectory, "THIRD_PARTY_NOTICES.txt"), path.join(outputDirectory, "THIRD_PARTY_NOTICES.txt"));
   await fs.cp(webOutput, webDirectory, { recursive: true });
   await buildNativeClient(path.join(outputDirectory, "native-client"));
-  await fs.cp(path.join(serverDirectory, "skills"), path.join(outputDirectory, "skills"), { recursive: true });
+  await fs.cp(path.join(projectDirectory, "packages/dsh-document-tools/skills"), path.join(outputDirectory, "skills"), { recursive: true });
   await fs.mkdir(runnerDirectory, { recursive: true, mode: 0o755 });
   await fs.cp(path.join(serverDirectory, "runner/localapp-runner.mjs"), path.join(runnerDirectory, "localapp-runner.mjs"));
+  await fs.cp(path.join(serverDirectory, "runner/task-supervisor.mjs"), path.join(runnerDirectory, "task-supervisor.mjs"));
 
   const bundleOptions = {
     alias: {
+      "@localapp/dsh-multiuser/native-server": path.join(projectDirectory, "packages/dsh-multiuser/src/native-server.mts"),
       "@localapp/dsh-multiuser/native-scope": path.join(projectDirectory, "packages/dsh-multiuser/src/native-scope.cts"),
       "@localapp/dsh-multiuser/native-session": path.join(projectDirectory, "packages/dsh-multiuser/src/native-session.mts"),
       "@localapp/dsh-multiuser": path.join(projectDirectory, "packages/dsh-multiuser/src/index.mts"),
+      "@localapp/dsh-multiuser/auth-cookies": path.join(projectDirectory, "packages/dsh-multiuser/src/auth-cookies.cts"),
+      "@localapp/dsh-multiuser/browser-sessions": path.join(projectDirectory, "packages/dsh-multiuser/src/browser-sessions.cts"),
+      "@localapp/dsh-multiuser/profile-routes": path.join(projectDirectory, "packages/dsh-multiuser/src/profile-routes.cts"),
+      "@localapp/dsh-multiuser/keys-routes": path.join(projectDirectory, "packages/dsh-multiuser/src/keys-routes.cts"),
+      "@localapp/dsh-multiuser/auth-sessions": path.join(projectDirectory, "packages/dsh-multiuser/src/auth-sessions.cts"),
+      "@localapp/dsh-multiuser/auth-routes": path.join(projectDirectory, "packages/dsh-multiuser/src/auth-routes.cts"),
+      "@localapp/dsh-multiuser/api-keys": path.join(projectDirectory, "packages/dsh-multiuser/src/api-keys.cts"),
+      "@localapp/dsh-multiuser/account-schema": path.join(projectDirectory, "packages/dsh-multiuser/src/account-schema.cts"),
+      "@localapp/dsh-multiuser/account-services": path.join(projectDirectory, "packages/dsh-multiuser/src/account-services.cts"),
+      "@localapp/dsh-multiuser/admin-accounts-routes": path.join(projectDirectory, "packages/dsh-multiuser/src/admin-accounts-routes.cts"),
+      "@localapp/dsh-multiuser/setup-token-store": path.join(projectDirectory, "packages/dsh-multiuser/src/setup-token-store.cts"),
+      "@localapp/dsh-multiuser/loopback": path.join(projectDirectory, "packages/dsh-multiuser/src/loopback.cts"),
+      "@localapp/dsh-multiuser/setup-routes": path.join(projectDirectory, "packages/dsh-multiuser/src/setup-routes.cts"),
+      "@localapp/dsh-multiuser/environment-routes": path.join(projectDirectory, "packages/dsh-multiuser/src/environment-routes.cts"),
+      "@localapp/dsh-multiuser/system-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/system-environment.cts"),
+      "@localapp/dsh-multiuser/public-skills": path.join(projectDirectory, "packages/dsh-multiuser/src/public-skills.cts"),
+      "@localapp/dsh-multiuser/harness-capabilities": path.join(projectDirectory, "packages/dsh-multiuser/src/harness-capabilities.mts"),
+      "@localapp/dsh-multiuser/harness": path.join(projectDirectory, "packages/dsh-multiuser/src/harness.mts"),
+      "@localapp/dsh-multiuser/llm-adapter": path.join(projectDirectory, "packages/dsh-multiuser/src/llm-adapter.mts"),
+      "@localapp/dsh-multiuser/accounts": path.join(projectDirectory, "packages/dsh-multiuser/src/accounts.cts"),
+      "@localapp/dsh-multiuser/groups": path.join(projectDirectory, "packages/dsh-multiuser/src/groups.cts"),
+      "@localapp/dsh-multiuser/groups-routes": path.join(projectDirectory, "packages/dsh-multiuser/src/groups-routes.cts"),
+      "@localapp/dsh-multiuser/personal-pages": path.join(projectDirectory, "packages/dsh-multiuser/src/personal-pages.cts"),
+      "@localapp/dsh-multiuser/llm-routes": path.join(projectDirectory, "packages/dsh-multiuser/src/llm-routes.cts"),
+      "@localapp/dsh-multiuser/request-identity": path.join(projectDirectory, "packages/dsh-multiuser/src/request-identity.cts"),
       "@localapp/dsh-multiuser/settings": path.join(projectDirectory, "packages/dsh-multiuser/src/settings.cts"),
       "@localapp/dsh-multiuser/python-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/python-environment.cts"),
       "@localapp/dsh-multiuser/agent-environment": path.join(projectDirectory, "packages/dsh-multiuser/src/agent-environment.cts"),
@@ -51,6 +78,9 @@ export async function buildServerPackage(options = {}) {
       name: "localapp-native-harness-entry",
       setup(build) {
         build.onResolve({ filter: /(?:^|\/)deepseek-harness\.mjs$/ }, () => ({ path: "./harness.mjs", external: true }));
+        // Keep the default WebServer import in ESM; CJS wrapping changes it
+        // into a namespace object and prevents the carrier from extending it.
+        build.onResolve({ filter: /(?:^|\/)native-server(?:\.m[jt]s)?$/ }, () => ({ path: "@localapp/dsh-multiuser/native-server", external: true }));
       },
     }],
     platform: "node",
@@ -58,7 +88,7 @@ export async function buildServerPackage(options = {}) {
     target: "node24",
     sourcemap: false,
     legalComments: "none",
-    external: ["sql.js", "@deepseek-ai/*", "@localapp/dsh-app-platform", "@localapp/dsh-app-platform/*"],
+    external: ["@localapp/dsh-agent-ui", "@localapp/dsh-agent-ui/*", "sql.js", "@deepseek-ai/*", "@localapp/dsh-multiuser/native-server", "@localapp/dsh-document-tools", "@localapp/dsh-document-tools/*", "@localapp/dsh-app-platform", "@localapp/dsh-app-platform/*", "@localapp/dsh-app-development", "@localapp/dsh-app-development/*"],
     define: { "process.env.LOCALAPP_PACKAGE_ENTRY": '"1"' },
     absWorkingDir: projectDirectory,
     logLevel: "warning",

@@ -8,7 +8,6 @@ vi.mock("./dsh-view", () => ({
   DshDiff: () => null,
   DshTerminal: () => null,
 }));
-vi.mock("./dsh-development-shell", () => ({ DshDevelopmentShell: () => null }));
 it("connects app source without a configured model", async () => {
   const fetcher = vi.fn(async (url: string) => {
     const data =
@@ -71,10 +70,13 @@ it("invalidates the old build after an agent turn and compares changes with its 
   fireEvent.change(screen.getByLabelText("应用修改需求"), {
     target: { value: "Change the page" },
   });
-  fireEvent.click(screen.getByLabelText("发送修改需求"));
+  const nativeFrame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+  const nativeState=(running:boolean)=>fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:nativeFrame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"session",title:"修改页面",running}}}));
+  nativeState(true);
   await waitFor(() =>
     expect(screen.getByRole("button", { name: /^上线$/ })).toBeDisabled(),
   );
+  nativeState(false);
   await waitFor(() =>
     expect(screen.getByLabelText("应用修改需求")).not.toBeDisabled(),
   );
@@ -89,7 +91,9 @@ it("invalidates the old build after an agent turn and compares changes with its 
 it("continues the creation session and starts an inline preview build after the turn", async () => {
   window.history.replaceState({}, "", "/alice/new-app/?creation=new-project");
   HTMLElement.prototype.scrollTo = vi.fn();
+  let continued=false;
   const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+    if(url.endsWith("/continue")){continued=true;return new Response(JSON.stringify({success:true,data:{accepted:true}}));}
     if (url.endsWith("/agent/run")) return new Response('data: {"type":"session","sessionId":"creation-session"}\n\n');
     const data = url === "/api/agent/settings" ? {providers: [{id: "provider", name: "Provider", model: "model"}], defaultProviderId: "provider"}
       : url.includes("/apps/") ? {id: "new-project", name: "new-app"}
@@ -97,27 +101,28 @@ it("continues the creation session and starts an inline preview build after the 
       : url.endsWith("/agent/sessions") ? [{id: "creation-session", title: "新应用", createdAt: new Date().toISOString()}]
       : url.includes("/agent/history") ? [{role: "user", content: "最初的需求"}]
       : url.endsWith("/builds") && init?.method === "POST" ? {id: "preview-build", purpose: "preview", status: "succeeded"}
+      : url.endsWith("/builds") ? (continued?[{id:"preview-build",purpose:"preview",status:"succeeded",createdAt:"2026-10-11"}]:[])
       : url.endsWith("/previews") ? {url: "http://preview.localhost/new-app/"}
       : [];
     return new Response(JSON.stringify({success: true, data}));
   });
   vi.stubGlobal("fetch", fetcher); const onPreview = vi.fn();
   const view = render(<DevelopmentPage application={{owner: "alice", name: "new-app"}} dock={{onPreview} as any}/>);
-  await waitFor(() => expect(onPreview).toHaveBeenCalledWith("http://preview.localhost/new-app/"));
-  const run = fetcher.mock.calls.find(([url]) => url.endsWith("/agent/run"));
-  expect(JSON.parse(run![1]!.body as string)).toMatchObject({sessionId: "creation-session", continueCreation: true});
-  const build = fetcher.mock.calls.find(([url, init]) => url.endsWith("/builds") && init?.method === "POST");
-  expect(JSON.parse(build![1]!.body as string)).toEqual({purpose: "preview"});
-  expect(fetcher.mock.calls.filter(([url]) => url.endsWith("/agent/run"))).toHaveLength(1);
+  await waitFor(() => expect(onPreview).toHaveBeenCalledWith("http://preview.localhost/new-app/"),{timeout:3000});
+  expect(fetcher.mock.calls.filter(([url])=>url.endsWith("/continue"))).toHaveLength(1);
+  expect(fetcher.mock.calls.filter(([url]) => url.endsWith("/agent/run"))).toHaveLength(0);
+  expect(fetcher.mock.calls.some(([url,init])=>url.endsWith("/builds")&&init?.method==="POST")).toBe(false);
   view.unmount(); window.history.replaceState({}, "", "/");
 });
 it("feeds preview compiler errors into the same session twice, then reports failure", async () => {
   HTMLElement.prototype.scrollTo = vi.fn();
   let builds = 0;
+  let edited=0;
   const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.endsWith("/agent/run")) return new Response('data: {"type":"session","sessionId":"repair-session"}\n\n');
     const data = url === "/api/agent/settings" ? {providers: [{id: "provider", name: "Provider", model: "model"}], defaultProviderId: "provider"}
       : url.includes("/apps/") ? {id: "repair-project", name: "repair-app"}
+      : url.endsWith("/versions") ? [{id:`source-${edited}`}]
       : url.endsWith("/builds") && init?.method === "POST" ? {id: `build-${++builds}`, purpose: "preview", status: "failed", log: "error TS2552: Cannot find name 'toNumber'"}
       : [];
     return new Response(JSON.stringify({success: true, data}));
@@ -126,13 +131,45 @@ it("feeds preview compiler errors into the same session twice, then reports fail
   render(<DevelopmentPage application={{owner: "alice", name: "repair-app"}}/>);
   await waitFor(() => expect(screen.getByLabelText("应用修改需求")).not.toBeDisabled());
   fireEvent.change(screen.getByLabelText("应用修改需求"), {target: {value: "实现应用"}});
-  fireEvent.click(screen.getByLabelText("发送修改需求"));
+  const nativeFrame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+  const nativeState=(running:boolean)=>fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:nativeFrame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"repair-session",title:"实现应用",running}}}));
+  const nativeRepairs:string[]=[];
+  vi.spyOn(nativeFrame.contentWindow!,"postMessage").mockImplementation((message:any)=>{
+    if(message.type!=="localapp:native-composer"||message.action!=="submit")return;
+    nativeRepairs.push(message.prompt);
+    queueMicrotask(()=>{
+      fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:nativeFrame.contentWindow,data:{type:"localapp:native-composer-result",requestId:message.requestId}}));
+      nativeState(true);
+      setTimeout(()=>{edited++;nativeState(false);},0);
+    });
+  });
+  nativeState(true);edited++;nativeState(false);
   await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("预览编译失败，应用尚未更新"));
   const runs = fetcher.mock.calls.filter(([url]) => url.endsWith("/agent/run")).map(([, init]) => JSON.parse(init!.body as string));
-  expect(runs).toHaveLength(3);
-  expect(runs[1]).toMatchObject({sessionId: "repair-session"});
-  expect(runs[1].prompt).toContain("error TS2552");
-  expect(runs[2].prompt).toContain("自动修复 2/2");
+  expect(runs).toHaveLength(0);
+  expect(nativeRepairs).toHaveLength(2);
+  expect(nativeRepairs[0]).toContain("error TS2552");
+  expect(nativeRepairs[1]).toContain("自动修复 2/2");
   fireEvent.click(screen.getByRole("button", {name: "查看构建日志"}));
   expect(screen.getByText("构建失败，请查看日志")).toBeVisible();
+});
+it("observes a server-created preview without submitting a legacy agent turn", async () => {
+  window.history.replaceState({}, "", "/alice/server-preview/");
+  let completed = false;
+  const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+    const data = url === "/api/agent/settings" ? { providers: [], defaultProviderId: "" }
+      : url.includes("/apps/") ? { id: "server-project", name: "server-preview" }
+      : url.endsWith("/builds") ? (completed ? [{ id: "server-build", purpose: "preview", status: "succeeded", createdAt: "2026-10-10" }] : [])
+      : url.endsWith("/previews") ? { url: "http://preview.localhost/server-preview/" } : [];
+    return new Response(JSON.stringify({ success: true, data }));
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const onPreview = vi.fn();
+  const view = render(<DevelopmentPage application={{ owner: "alice", name: "server-preview" }} dock={{ onPreview } as any} />);
+  await waitFor(() => expect(fetcher.mock.calls.some(([url]) => url.endsWith("/builds"))).toBe(true));
+  completed = true;
+  await waitFor(() => expect(onPreview).toHaveBeenCalledWith("http://preview.localhost/server-preview/"), { timeout: 3000 });
+  expect(fetcher.mock.calls.some(([url]) => url.endsWith("/agent/run"))).toBe(false);
+  expect(fetcher.mock.calls.some(([url, init]) => url.endsWith("/builds") && init?.method === "POST")).toBe(false);
+  view.unmount();
 });

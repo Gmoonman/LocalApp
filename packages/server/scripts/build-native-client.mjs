@@ -1,11 +1,16 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { buildLocalappClient } from "./build-localapp-client.mjs";
 
 const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 /** Compile the upstream web boot kernel and its shared module table. */
 export async function buildNativeClient(outputDirectory) {
+  await buildLocalappClient(path.join(projectDirectory, "packages/dsh-multiuser"), path.join(projectDirectory, "packages/dsh-multiuser/dist/client.cjs"));
+  await buildLocalappClient(path.join(projectDirectory, "packages/dsh-agent-ui"), path.join(projectDirectory, "packages/dsh-agent-ui/dist/client.cjs"), "@localapp/dsh-agent-ui");
+  await buildLocalappClient(path.join(projectDirectory, "packages/dsh-app-platform"), path.join(projectDirectory, "packages/dsh-app-platform/dist/client.cjs"), "@localapp/dsh-app-platform");
+  await buildLocalappClient(path.join(projectDirectory, "packages/dsh-app-development"), path.join(projectDirectory, "packages/dsh-app-development/dist/client.cjs"), "@localapp/dsh-app-development");
   await build({
     entryPoints: [path.join(projectDirectory, "packages/dsh-multiuser/src/native-web-entry.ts")],
     outdir: outputDirectory,

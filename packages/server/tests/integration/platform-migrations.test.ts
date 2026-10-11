@@ -17,6 +17,7 @@ describe("platform migrations", () => {
       fs.writeFileSync(path.join(migrationsDir, "001_add_user_bio.sql"), "ALTER TABLE users ADD COLUMN bio TEXT;");
 
       await applyPlatformMigrationsToAllApps({ dataDir: tmpDir, migrationsDir });
+      await applyPlatformMigrationsToAllApps({ dataDir: tmpDir, migrationsDir });
 
       const SQL = await initSqlJs();
       const db = new SQL.Database(fs.readFileSync(path.join(pageDir, "app.db")));
@@ -26,6 +27,17 @@ describe("platform migrations", () => {
 
       expect(columns).toContain("bio");
       expect(applied).toEqual([["001_add_user_bio.sql"]]);
+
+      fs.writeFileSync(path.join(migrationsDir, "001_add_user_bio.sql"), "ALTER TABLE users ADD COLUMN changed_bio TEXT;");
+      await applyPlatformMigrationsToAllApps({ dataDir: tmpDir, migrationsDir });
+      expect(JSON.parse(fs.readFileSync(path.join(pageDir, "meta.json"), "utf8")).status).toBe("needs-migration-repair");
+      const unchanged = new SQL.Database(fs.readFileSync(path.join(pageDir, "app.db")));
+      try {
+        const finalColumns = unchanged.exec("PRAGMA table_info(users)")[0]?.values.map(row => row[1]);
+        expect(finalColumns).toContain("bio");
+        expect(finalColumns).not.toContain("changed_bio");
+        expect(unchanged.exec("SELECT filename FROM _localapp_applied_platform_migrations")[0]?.values).toEqual(applied);
+      } finally { unchanged.close(); }
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }

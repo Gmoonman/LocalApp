@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import type { HarnessAgent } from "@localapp/sdk-agent/harness-client";
 import { InteractionCard } from "@localapp/sdk-agent/agent-controls";
-import { DevelopmentPage } from "./development-page";
+const DevelopmentPage = lazy(() => import("./development-page").then(module => ({ default: module.DevelopmentPage })));
 import { AppDevelopmentDock } from "./app-development-dock";
-import type { DevelopmentShellProps } from "./dsh-development-shell";
+import type { DevelopmentShellProps } from "@localapp/dsh-agent-ui/ui/conversation-types";
 
 /** Both identities retain their own transport, messages, draft and history. */
 export function AppConversationDock({ application, isOwner, agent, onSend, reveal = 0, minimize = 0, onVisibilityChange, onPreview }: {
@@ -17,6 +17,16 @@ export function AppConversationDock({ application, isOwner, agent, onSend, revea
   minimize?: number;
   onVisibilityChange?: (visible: boolean) => void;
 }) {
+  const [ui, setUI] = useState<{enabled:boolean;developer:boolean} | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/agent/ui", {credentials:"include",signal:controller.signal})
+      .then(response => response.ok ? response.json() : null)
+      .then(result => {if(!controller.signal.aborted)setUI({enabled:result?.data?.enabled === true,developer:result?.data?.identities?.some((item:{id:string})=>item.id === "developer") === true});})
+      .catch(() => {if(!controller.signal.aborted)setUI({enabled:false,developer:false});});
+    return () => controller.abort();
+  }, []);
+  const canDevelop = isOwner && ui?.developer === true;
   const [identity, setIdentity] = useState<"developer" | "user">(isOwner ? "developer" : "user");
   const [prompt, setPrompt] = useState("");
   const [providers, setProviders] = useState<DevelopmentShellProps["providers"]>([]);
@@ -74,11 +84,12 @@ export function AppConversationDock({ application, isOwner, agent, onSend, revea
       setAnswer: noop, respond: noop,
     },
   };
-  const dock = { identity: isOwner ? identity : "user" as const, userConversation: conversation,
-    onIdentityChange: isOwner ? setIdentity : undefined, reveal, minimize, onVisibilityChange, onPreview,
+  const dock = { identity: canDevelop ? identity : "user" as const, userConversation: conversation, nativeUserAgent:agent??undefined,
+    onIdentityChange: canDevelop ? setIdentity : undefined, reveal, minimize, onVisibilityChange, onPreview,
     userInteractions: agent?.state.interactions.map(interaction => <InteractionCard key={interaction.token} interaction={interaction}
       answer={result => void act(() => agent.answerInteraction(interaction.token, result))} />) };
-  return isOwner
-    ? <DevelopmentPage application={application} dock={dock} />
+  if(!ui?.enabled) return null;
+  return canDevelop
+    ? <Suspense fallback={<p role="status">正在打开开发工作区…</p>}><DevelopmentPage application={application} dock={dock} /></Suspense>
     : <AppDevelopmentDock {...conversation} {...dock} application={application} />;
 }

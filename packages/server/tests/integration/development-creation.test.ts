@@ -32,6 +32,9 @@ it("keeps drafts private, requires the proposed name, installs a starter and ret
         ...(body ? { body: JSON.stringify(body) } : {}),
       },
     );
+  const list = async (cookie: string) => (await (await fetch(server.baseUrl + "/api/development/creations", { headers: { Cookie: cookie } })).json()).data;
+  expect(await list(owner)).toEqual([expect.objectContaining({ projectId: draft.projectId, sessionId: draft.sessionId })]);
+  expect(await list(other)).toEqual([]);
   expect(store.list("creator")).toEqual([]);
   expect(readPageMeta(server.dataDir, "creator", "created-app")).toBeNull();
   expect((await call(other, "")).status).toBe(404);
@@ -48,6 +51,7 @@ it("keeps drafts private, requires the proposed name, installs a starter and ret
   const response = await call(owner, "/confirm", { name: "created-app" });
   expect(response.status, await response.clone().text()).toBe(200);
   const ready = (await response.json()).data;
+  expect(await list(owner)).toEqual([]);
   expect(ready.projectId).toBe(draft.projectId);
   expect(ready.sessionId).toBe(draft.sessionId);
   expect(ready.url).toBe(`/creator/created-app/?creation=${draft.projectId}`);

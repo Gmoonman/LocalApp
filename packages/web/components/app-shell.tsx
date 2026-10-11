@@ -66,6 +66,18 @@ const adminNavItems = [
   { href: "/my/peers", label: "对端连接", icon: Cable },
 ];
 
+interface PluginFeatures { applications: boolean; development: boolean; }
+const applicationNavigation = new Set([
+  "/my/device-actions", "/my/device-notifications", "/my/apps", "/my/favorites", "/my/recent",
+  "/my/dashboard", "/my/analytics", "/my/pages", "/my/peers", "/my/subscriptions", "/inbox",
+]);
+const developmentNavigation = new Set(["/my/development", "/my/tasks", "/my/studio"]);
+function availableNavigation(href: string, plugins: PluginFeatures | null) {
+  if ([...developmentNavigation].some(route => href === route || href.startsWith(route + "/"))) return plugins?.development === true;
+  if ([...applicationNavigation].some(route => href === route || href.startsWith(route + "/"))) return plugins?.applications === true;
+  return true;
+}
+
 function NavItem({ item, pathname, collapsed, onClose }: { item: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }; pathname: string; collapsed: boolean; onClose: () => void }) {
   const active = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/");
   const Icon = item.icon;
@@ -93,6 +105,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [plugins, setPlugins] = useState<PluginFeatures | null>(null);
+  useEffect(() => {
+    let disposed = false;
+    fetch("/api/system/plugins", { credentials: "include" })
+      .then(res => { if (!res.ok) throw new Error("Plugin status unavailable"); return res.json(); })
+      .then(body => {
+        if (disposed) return;
+        if (body.success && typeof body.data?.applications === "boolean" && typeof body.data?.development === "boolean") {
+          setPlugins(body.data);
+        } else {
+          setPlugins({ applications: false, development: false });
+        }
+      })
+      .catch(() => { if (!disposed) setPlugins({ applications: false, development: false }); });
+    return () => { disposed = true; };
+  }, []);
 
   useEffect(() => {
     fetch("/api/me", { credentials: "include" })
@@ -138,7 +166,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (checkingSession) return null;
   if (!user) return isPublicHome ? <>{children}</> : null;
 
-  if (pathname === "/my/development") return <main className="h-dvh overflow-hidden">{children}</main>;
+  if (!plugins) return null;
+  const routeAvailable = availableNavigation(pathname, plugins);
+  if (!routeAvailable) return (
+    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-4 p-6">
+      <h1 className="text-xl font-semibold">此功能未启用</h1>
+      <p className="text-sm text-muted-foreground">当前 Server 的插件组合不包含此功能。</p>
+      <Button asChild variant="outline"><Link href="/my/models">返回模型与 Agent</Link></Button>
+    </main>
+  );
+
+  if (pathname === "/my/development" && plugins?.development) return <main className="h-dvh overflow-hidden">{children}</main>;
 
   const sidebar = (
     <aside
@@ -176,7 +214,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Personal section */}
         <div className="mt-2 space-y-1">
           {!collapsed && <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">个人</p>}
-          {profileNavItems.map((item) => (
+          {profileNavItems.filter(item => availableNavigation(item.href, plugins)).map((item) => (
             <NavItem key={item.href} item={item} pathname={pathname} collapsed={collapsed} onClose={closeMobile} />
           ))}
         </div>
@@ -185,7 +223,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {isAdmin && (
           <div className="mt-2 space-y-1">
             {!collapsed && <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">管理</p>}
-            {adminNavItems.map((item) => (
+            {adminNavItems.filter(item => availableNavigation(item.href, plugins)).map((item) => (
               <NavItem key={item.href} item={item} pathname={pathname} collapsed={collapsed} onClose={closeMobile} />
             ))}
           </div>

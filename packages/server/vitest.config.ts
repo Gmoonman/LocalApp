@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     // Keep one Node module instance for database connections and error classes.
-    server: { deps: { external: [/\/dsh-app-platform\/dist\//] } },
+    server: { deps: { external: [/\/dsh-app-platform\/dist\//, /\/dsh-app-development\/dist\//] } },
     pool: "forks",
     fileParallelism: false,
     testTimeout: 20_000,

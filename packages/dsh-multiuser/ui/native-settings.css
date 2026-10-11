@@ -1,0 +1,5 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+@import "./shadcn/theme.css";
+@source "./";

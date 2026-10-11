@@ -27,6 +27,7 @@ export class HarnessAgent {
   private controller?: AbortController;
   private backgroundController?: AbortController;
   private backgroundEnabled = false;
+  private backgroundConnection?: Promise<boolean>;
   constructor(options: { initialState: { systemPrompt: string }; proxyUrl?: string; appId?: string }) {
     this.state = { ...options.initialState, tools: [], messages: [], isStreaming: false, interactions: [] };
     this.proxyUrl = options.proxyUrl ?? "";
@@ -45,6 +46,24 @@ export class HarnessAgent {
   async registerTools() {
     if (this.appId === "platform") return;
     await this.api("app-tools", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appId: this.appId, tools: this.state.tools.map(({ name, description }) => ({ name, description })) }) });
+  }
+  /** Adopt this application's session in dsh and attach its browser tools. */
+  async connectNativeSession(sessionId = this.sessionId): Promise<{ sessionId: string; url: string }> {
+    if (this.state.isStreaming) throw new Error("请先停止当前会话");
+    if (!/^[a-zA-Z0-9_-]{1,128}$/.test(sessionId)) throw new Error("会话 ID 无效");
+    if (!this.providerId) this.providerId = (await this.settings()).defaultProviderId;
+    if (!this.providerId) throw new Error("请先配置模型供应商");
+    const scope = btoa(JSON.stringify({ appId: this.appId, providerId: this.providerId })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const url = `${this.proxyUrl}/api/agent/native/${scope}/`;
+    const response = await fetch(url + "api/session/create", { credentials: "include", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "client-request", rpcId: crypto.randomUUID(), method: "session/create", payload: { args: { request: { sessionId } } } }) });
+    const created = await response.json();
+    if (!response.ok || !created.result?.ok || created.result.value?.sessionId !== sessionId) throw new Error(created.result?.error?.message || "原生会话连接失败");
+    await this.api("native-context", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId, appId: this.appId, providerId: this.providerId, systemPrompt: this.state.systemPrompt, tools: this.state.tools.map(({ name, description, parameters }) => ({ name, description, parameters })) }) });
+    this.sessionId = sessionId;
+    this.state.interactions = [];
+    this.startBackgroundEvents();
+    if (!await this.backgroundConnection) throw new Error(this.state.errorMessage || "应用工具连接失败");
+    return { sessionId, url };
   }
   settings(): Promise<{ providers: Array<{ id: string; name: string; model: string }>; defaultProviderId: string; settingsUrl?: string }> { return this.api("settings"); }
   listSessions(): Promise<Array<{ id: string; createdAt: number; title?: string }>> { return this.api(`sessions?${new URLSearchParams({ appId: this.appId, ...(this.providerId ? { providerId: this.providerId } : {}) })}`); }
@@ -84,15 +103,18 @@ export class HarnessAgent {
     this.backgroundController?.abort();
     const controller = new AbortController();
     this.backgroundController = controller;
-    void this.readBackgroundEvents(controller).catch((error) => {
+    let connected!: (ready: boolean) => void;
+    this.backgroundConnection = new Promise<boolean>(resolve => { connected = resolve; });
+    void this.readBackgroundEvents(controller, () => connected(true)).catch((error) => {
       if (!controller.signal.aborted) { this.state.errorMessage = error instanceof Error ? error.message : String(error); this.emit("message_update"); }
-    });
+    }).finally(() => connected(false));
   }
-  private async readBackgroundEvents(controller: AbortController) {
+  private async readBackgroundEvents(controller: AbortController, connected?: () => void) {
     const query = new URLSearchParams({ sessionId: this.sessionId, appId: this.appId, ...(this.providerId ? { providerId: this.providerId } : {}) });
     const response = await fetch(`${this.proxyUrl}/api/agent/events?${query}`, { credentials: "include", signal: controller.signal });
     if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Agent 连接失败: ${response.status}`);
     if (!response.body) throw new Error("Agent response body is empty");
+    connected?.();
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";

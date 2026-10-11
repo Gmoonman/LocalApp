@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SecretBox } from "../src/lib/secret-box.js";
@@ -7,7 +6,9 @@ import { SecretBox } from "../src/lib/secret-box.js";
 const directories: string[] = [];
 
 function createKeyFile(): string {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "localapp-secret-box-"));
+  const parent = path.resolve(__dirname, "../../../tmp/secret-box-tests");
+  fs.mkdirSync(parent, { recursive: true });
+  const directory = fs.mkdtempSync(path.join(parent, "keys-"));
   directories.push(directory);
   return path.join(directory, "master.key");
 }

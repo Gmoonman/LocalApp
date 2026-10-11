@@ -1,8 +1,11 @@
 packages:
   - "packages/localapp"
   - "packages/server"
+  - "packages/dsh-document-tools"
   - "packages/dsh-multiuser"
+  - "packages/dsh-agent-ui"
   - "packages/dsh-app-platform"
+  - "packages/dsh-app-development"
   - "packages/server-core"
   - "packages/backend"
   - "packages/sdk-core"

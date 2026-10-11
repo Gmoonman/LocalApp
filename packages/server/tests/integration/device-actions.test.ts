@@ -91,9 +91,34 @@ describe("generic device action source protocol", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ protocolVersion: 2, installationId, callbackToken: claimed.callbackToken, status: value }),
     });
-    expect((await status("preparing")).status).toBe(200);
-    expect((await status("running")).status).toBe(200);
-    expect((await status("succeeded")).status).toBe(200);
+    const disconnect = new AbortController();
+    const stream = await fetch(`${baseUrl}/api/device-actions/${created.requestId}/events`, {
+      headers: { cookie: user.cookie },
+      signal: AbortSignal.any([disconnect.signal, AbortSignal.timeout(5000)]),
+    });
+    expect(stream.status).toBe(200);
+    expect(stream.headers.get("content-type")).toContain("text/event-stream");
+    const reader = stream.body!.getReader();
+    const decoder = new TextDecoder();
+    let events = "";
+    try {
+      events += decoder.decode((await reader.read()).value);
+      expect(events).toContain('"status":"claimed"');
+      expect((await status("preparing")).status).toBe(200);
+      expect((await status("running")).status).toBe(200);
+      while (!events.includes('"status":"running"')) {
+        const chunk = await reader.read();
+        expect(chunk.done).toBe(false);
+        events += decoder.decode(chunk.value);
+      }
+      expect(events).toContain("event: device:action-updated");
+      expect(events).not.toContain('"nonce":');
+      expect(events).not.toContain('"script":');
+      expect((await status("succeeded")).status).toBe(200);
+    } finally {
+      disconnect.abort();
+      await reader.cancel().catch(() => {});
+    }
 
     const completed = await fetch(`${baseUrl}/api/device-actions/${created.requestId}`, { headers: { cookie: user.cookie } });
     expect((await completed.json()).data).toMatchObject({ status: "succeeded" });

@@ -1,9 +1,9 @@
-import { developmentEnvironment, saveDevelopmentSettings, type DevelopmentSettings } from "../lib/development/environment.js";
-import { readPythonEnvironment, selectPythonEnvironment, createPythonEnvironment, installDocumentPythonDependencies } from "../lib/python-environment.js";
-import { systemAgentEnvironment } from "../lib/system-agent-environment.js";
 import type { FastifyInstance } from "fastify";
 import { adminAuth } from "../plugins/auth.js";
-import type { ServerConfig } from "../lib/config.js";
+import path from "node:path";
+import fs from "node:fs/promises";
+import { writeJsonAtomically } from "../lib/server-config-store.js";
+import type { PluginCombination, ServerConfig } from "../lib/config.js";
 import type { ServerConfigStore } from "../lib/server-config-store.js";
 
 export type PublicSystemSettings = Pick<ServerConfig,
@@ -26,7 +26,7 @@ function publicSettings(config: ServerConfig): PublicSystemSettings {
 
 export async function systemRoutes(
   app: FastifyInstance,
-  options: { configStore: ServerConfigStore; restartController: RestartController },
+  options: { configStore: ServerConfigStore; restartController: RestartController; pluginCombination?: PluginCombination; pluginCombinationControlled?: boolean; documentsEnabled?: boolean; documentsControlled?: boolean },
 ): Promise<void> {
   app.get("/api/system/status", async () => ({
     success: true,
@@ -36,22 +36,24 @@ export async function systemRoutes(
   await app.register(async (adminScope) => {
     await adminAuth(adminScope);
 
-    adminScope.get("/api/system/development-environment", async () => ({success:true,data:await developmentEnvironment(adminScope.config.dataDir)}));
-    adminScope.put<{Body:DevelopmentSettings}>("/api/system/development-environment",async(req,reply)=>{try{return {success:true,data:saveDevelopmentSettings(adminScope.config.dataDir,req.body??{})};}catch(e){return reply.code(400).send({success:false,error:(e as Error).message});}});
-    adminScope.get("/api/system/agent-environment", async () => ({ success: true, data: await systemAgentEnvironment(adminScope.config.dataDir) }));
-
-    adminScope.get("/api/system/python-environment", async () => ({ success: true, data: { environment: readPythonEnvironment(adminScope.config.dataDir) ?? null } }));
-    adminScope.put<{ Body: { executable: string } }>("/api/system/python-environment", async (req, reply) => {
-      try { return { success: true, data: { environment: await selectPythonEnvironment(adminScope.config.dataDir, req.body?.executable) } }; }
-      catch(error) { return reply.status(400).send({ success: false, error: error instanceof Error ? error.message.slice(0,2000) : "选择 Python 环境失败" }); }
-    });
-    adminScope.post<{ Body: { baseExecutable: string; installDocuments?: boolean } }>("/api/system/python-environment/create", async (req, reply) => {
-      try { return { success: true, data: { environment: await createPythonEnvironment(adminScope.config.dataDir, req.body?.baseExecutable, req.body?.installDocuments === true) } }; }
-      catch(error) { return reply.status(400).send({ success: false, error: error instanceof Error ? error.message.slice(0,2000) : "创建 Python 环境失败" }); }
-    });
-    adminScope.post("/api/system/python-environment/install-document-dependencies", async (_req, reply) => {
-      try { return { success: true, data: { environment: await installDocumentPythonDependencies(adminScope.config.dataDir) } }; }
-      catch(error) { return reply.status(400).send({ success: false, error: error instanceof Error ? error.message.slice(0,2000) : "安装依赖失败" }); }
+    adminScope.get("/api/system/settings/plugins", async () => ({
+      success: true,
+      data: { combination: options.pluginCombination ?? adminScope.config.pluginCombination ?? "full", controlledByEnvironment: options.pluginCombinationControlled ?? false, documentsEnabled: options.documentsEnabled ?? true, documentsControlled: options.documentsControlled ?? false },
+    }));
+    adminScope.put<{ Body: { combination?: PluginCombination; documentsEnabled?: boolean } }>("/api/system/settings/plugins", async (req, reply) => {
+      const combination = req.body?.combination;
+      if (!combination || !["multiuser", "platform", "full"].includes(combination)) return reply.code(400).send({ success: false, error: "Invalid plugin combination" });
+      if (options.pluginCombinationControlled && combination !== (options.pluginCombination ?? adminScope.config.pluginCombination ?? "full")) return reply.code(409).send({ success: false, error: "Plugin combination is controlled by startup configuration" });
+      const documentsEnabled = Object.hasOwn(req.body, "documentsEnabled") ? req.body.documentsEnabled : options.documentsEnabled ?? true;
+      if (typeof documentsEnabled !== "boolean") return reply.code(400).send({ success: false, error: "Invalid document extension setting" });
+      if (options.documentsControlled && documentsEnabled !== options.documentsEnabled) return reply.code(409).send({ success: false, error: "Document extension is controlled by startup configuration" });
+      const filename = path.join(adminScope.config.dataDir, "plugins.json");
+      let stored = {};
+      try { stored = JSON.parse(await fs.readFile(filename, "utf8")); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+      await writeJsonAtomically(filename, { ...stored, ...(!options.pluginCombinationControlled ? { combination } : {}), ...(!options.documentsControlled ? { documentsEnabled } : {}) });
+      reply.raw.once("finish", () => options.restartController.requestRestart(75));
+      return reply.code(202).send({ success: true, data: { restarting: true, combination } });
     });
 
     adminScope.get("/api/system/settings", async () => ({

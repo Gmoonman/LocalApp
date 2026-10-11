@@ -212,7 +212,7 @@ it("minimizes without stopping work, shows a spinner, then previews only the fin
   ];
   const view = render(<AppDevelopmentDock {...p} running />);
   fireEvent.click(screen.getByLabelText("最小化开发对话"));
-  expect(screen.queryByLabelText("应用修改需求")).toBeNull();
+  expect(screen.getByLabelText("应用修改需求")).not.toBeVisible();
   expect(
     screen
       .getByLabelText("任务进行中，恢复对话")
@@ -311,4 +311,102 @@ it("allows an owner without imported source to switch to user conversations", ()
   expect(screen.getByLabelText("切换历史对话")).toBeEnabled();
   fireEvent.keyDown(screen.getByLabelText("切换历史对话"), {key: "Enter"});
   expect(screen.getByLabelText("切换对话身份")).toBeEnabled();
+});
+
+it("mounts the native developer client and retains it while collapsed or minimized",()=>{
+  const p=props();
+  render(<AppDevelopmentDock {...p} identity="developer" application={{owner:"owner",name:"my-app"}}/>);
+  const frame=screen.getByTitle("原生应用开发对话");
+  expect(frame).toHaveAttribute("src","/api/development/projects/project/native/model/");
+  fireEvent.click(screen.getByRole("button",{name:"展开开发对话"}));
+  expect(screen.getByLabelText("应用修改需求")).not.toBeVisible();
+  fireEvent.click(screen.getByRole("button",{name:"收起开发对话"}));
+  expect(screen.getByTitle("原生应用开发对话")).toBe(frame);
+  fireEvent.click(screen.getByRole("button",{name:"最小化开发对话"}));
+  expect(screen.getByTitle("原生应用开发对话")).toBe(frame);
+  fireEvent.click(screen.getByRole("button",{name:"恢复开发对话"}));
+  expect(screen.getByTitle("原生应用开发对话")).toBe(frame);
+});
+
+it("updates the outer history menu from the current native client's catalog",async()=>{
+  const p=props();
+  render(<AppDevelopmentDock {...p} identity="developer" application={{owner:"owner",name:"my-app"}}/>);
+  const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+  fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-catalog",sessions:[{id:"new-native",title:"构建日历应用",updatedAt:1000}]}}));
+  fireEvent.keyDown(screen.getByRole("button",{name:"切换历史对话"}),{key:"Enter"});
+  expect(await screen.findByText("构建日历应用")).toBeVisible();
+  fireEvent.click(screen.getByText("构建日历应用"));
+  expect(p.actions.selectSession).toHaveBeenCalledWith("new-native");
+});
+
+it("cancels the selected native session and surfaces native refusal without using legacy stop",async()=>{
+ const p=props();render(<AppDevelopmentDock {...p} application={{owner:"owner",name:"my-app"}} />);
+ const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"native-one",title:"当前开发",running:true}}}));
+ const post=vi.spyOn(frame.contentWindow!,"postMessage");
+ fireEvent.click(screen.getByLabelText("停止开发"));
+ expect(p.actions.stop).not.toHaveBeenCalled();
+ const request=post.mock.calls.at(-1)![0];expect(request).toMatchObject({type:"localapp:native-composer",sessionId:"native-one",action:"cancel"});
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-composer-result",requestId:request.requestId,error:"取消失败，请重试"}}));
+ await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("取消失败，请重试"));
+});
+
+it("submits a collapsed draft to the selected native conversation and keeps it on refusal",async()=>{
+ const p=props();render(<AppDevelopmentDock {...p} application={{owner:"owner",name:"my-app"}} />);
+ const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"native-one",title:"当前开发",running:false}}}));
+ const post=vi.spyOn(frame.contentWindow!,"postMessage");
+ fireEvent.click(screen.getByLabelText("发送修改需求"));
+ expect(p.actions.run).not.toHaveBeenCalled();
+ const request=post.mock.calls.at(-1)![0];expect(request).toMatchObject({type:"localapp:native-composer",sessionId:"native-one",action:"submit",prompt:p.prompt});
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-composer-result",requestId:request.requestId,error:"会话已切换"}}));
+ await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("会话已切换"));
+ expect(p.actions.setPrompt).not.toHaveBeenCalledWith("");
+});
+
+it("continues workspace attachment receipts through the native composer",async()=>{
+ const p=props();const remove=vi.fn();const attachment={id:"receipt",name:"brief.pdf",size:10,path:".localapp-attachments/receipt/brief.pdf"};
+ render(<AppDevelopmentDock {...p} attachments={[attachment]} actions={{...p.actions,removeAttachment:remove}} application={{owner:"owner",name:"my-app"}}/>);
+ const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"native-one",title:"当前开发",running:false}}}));
+ const post=vi.spyOn(frame.contentWindow!,"postMessage");fireEvent.click(screen.getByLabelText("发送修改需求"));
+ const request=post.mock.calls.at(-1)![0];expect(request.prompt).toContain(JSON.stringify(attachment.path));expect(p.actions.run).not.toHaveBeenCalled();expect(remove).not.toHaveBeenCalled();
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-composer-result",requestId:request.requestId}}));
+ await waitFor(()=>expect(remove).toHaveBeenCalledWith(attachment.id));
+});
+
+it("retains attachment receipts with invalid workspace paths without calling a legacy agent",async()=>{
+ const p=props();const remove=vi.fn();
+ render(<AppDevelopmentDock {...p} attachments={[{id:"receipt",name:"brief.pdf",size:10,path:".localapp-attachments/receipt/../brief.pdf"}]} actions={{...p.actions,removeAttachment:remove}} application={{owner:"owner",name:"my-app"}}/>);
+ fireEvent.click(screen.getByLabelText("发送修改需求"));
+ await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("附件缺少工作区路径"));
+ expect(p.actions.run).not.toHaveBeenCalled();expect(remove).not.toHaveBeenCalled();expect(p.actions.setPrompt).not.toHaveBeenCalledWith("");
+ expect(screen.getByLabelText("待发送附件")).toHaveTextContent("brief.pdf");
+});
+
+it("notifies the development controller of native turn transitions without treating history selection as a turn",()=>{
+ const p=props();const activity=vi.fn();render(<AppDevelopmentDock {...p} actions={{...p.actions,nativeActivity:activity}} application={{owner:"owner",name:"my-app"}}/>);
+ const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+ const announce=(running:boolean,sessionId="native-one")=>fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId,title:"修改应用",running}}}));
+ announce(false);expect(activity).not.toHaveBeenCalled();announce(true);announce(true);announce(false);
+ expect(activity.mock.calls).toEqual([["native-one",true],["native-one",false]]);
+ activity.mockClear();announce(true);announce(true,"native-two");announce(true,"native-two");announce(false,"native-two");
+ expect(activity.mock.calls).toEqual([["native-one",true],["native-two",true],["native-two",false]]);
+});
+
+it("reports default visibility and synchronizes minimize and reveal with the platform", () => {
+  const p = props();
+  const onVisibilityChange = vi.fn();
+  const view = render(<AppDevelopmentDock {...p} onVisibilityChange={onVisibilityChange} />);
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(true);
+  view.rerender(<AppDevelopmentDock {...p} onVisibilityChange={onVisibilityChange} minimize={1} />);
+  expect(screen.getByLabelText("已最小化的开发对话")).toBeInTheDocument();
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(false);
+  view.rerender(<AppDevelopmentDock {...p} onVisibilityChange={onVisibilityChange} minimize={1} reveal={1} />);
+  expect(screen.getByLabelText("最小化开发对话")).toBeInTheDocument();
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(true);
+  fireEvent.click(screen.getByLabelText("最小化开发对话"));
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(false);
+  fireEvent.click(screen.getByLabelText("恢复开发对话"));
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(true);
 });

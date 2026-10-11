@@ -283,6 +283,27 @@ backend/
       mutations.json
 ```
 
+每条 named query 和 mutation 都必须声明 `security`，否则 `localapp check` 会拒绝。
+手写 SQL 使用 `mode: "custom"`；以下示例适用于登录用户操作自己的 notes：
+
+```json
+"security": {
+  "mode": "custom",
+  "access": "authenticated",
+  "resources": ["notes"],
+  "systemParams": ["currentUserId"],
+  "scenarios": [
+    { "identity": "anonymous", "expect": "deny" },
+    { "identity": "owner", "expect": "allow" },
+    { "identity": "member", "expect": "allow" }
+  ]
+}
+```
+
+`resources` 列出 SQL 中使用的表；`systemParams` 必须与 SQL 中实际使用的平台参数完全一致，未使用时填 `[]`，使用 `:now` 时也列出 `"now"`。顶层 `access` 与此例都为 `"authenticated"`。
+`scenarios` 是预期行为说明，不会自动过滤数据。个人数据的 SELECT、UPDATE、DELETE 必须包含 `WHERE created_by = :currentUserId`，INSERT 写入平台注入的 `:currentUserId`；前端不得传入其他用户身份。必须实际测试另一用户看不到、删不掉当前用户的记录。
+模板中的 `mode: "generated"` 带有绑定 SQL 的 digest；不要复制 digest 后修改 SQL，手写操作使用上述 custom 声明。
+
 `queries.json` 示例：
 ```json
 {
@@ -297,7 +318,18 @@ backend/
         "offset": { "type": "number", "required": true }
       },
       "result": { "mode": "page", "maxRows": 100, "maxBytes": 65536 },
-      "access": "authenticated"
+      "access": "authenticated",
+      "security": {
+        "mode": "custom",
+        "access": "authenticated",
+        "resources": ["posts"],
+        "systemParams": [],
+        "scenarios": [
+          { "identity": "anonymous", "expect": "deny" },
+          { "identity": "owner", "expect": "allow" },
+          { "identity": "member", "expect": "allow" }
+        ]
+      }
     }
   }
 }

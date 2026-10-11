@@ -26,6 +26,13 @@ afterEach(async () => {
 });
 
 describe("workspace task API", () => {
+  it("rejects new task starts after the runner shuts down", async () => {
+    const { runner, workspace, store } = await directRunnerFixture();
+    await runner.shutdown();
+    await expect(runner.start({ workspaceId: workspace.id, requestedBy: "owner", kind: "test", executable: "node", args: ["-e", "0"], timeoutMs: 1000 })).rejects.toThrow("Task runner is stopped");
+    expect(store.listRunning()).toEqual([]);
+  });
+
   it("keeps workspace files available to users but reserves every process-start entry point for admins", async () => {
     const server = await createTestServer();
     activeServerStops.push(server.stop);

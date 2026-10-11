@@ -1,3 +1,5 @@
+import { PUBLIC_SKILL_PYTHON_MODULES } from "@localapp/dsh-document-tools/catalog";
+export { PUBLIC_SKILL_PYTHON_MODULES } from "@localapp/dsh-document-tools/catalog";
 import { shellQuote } from "./python-environment.cjs";
 export type EnvironmentCheck = { id: string; name: string; status: "ready" | "missing" | "blocked"; detail: string; required: boolean };
 export type AgentEnvironment = { checkedAt: string; platform: string; ready: boolean; checks: EnvironmentCheck[] };
@@ -19,9 +21,6 @@ for executable in python3 python /Library/Developer/CommandLineTools/usr/bin/pyt
  "$executable" -c "$probe" 2>/dev/null || true
 done
 `;
-export const PUBLIC_SKILL_PYTHON_MODULES: Record<string, string[]> = {
- pdf: ["pypdf", "pdfplumber", "reportlab"], docx: ["docx"], xlsx: ["openpyxl"], markitdown: ["markitdown", "pdfminer", "mammoth", "pandas", "openpyxl"],
-};
 const packageNames: Record<string, string> = { docx: "python-docx", pdfminer: "pdfminer.six" };
 export function summarizeEnvironment(stdout: string, selected: string[], initial: EnvironmentCheck[]): AgentEnvironment {
  const probes: Array<{version:number[];python:string;modules:Record<string,boolean>;commands:Record<string,boolean>}> = [];

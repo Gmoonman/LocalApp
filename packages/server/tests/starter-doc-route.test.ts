@@ -15,6 +15,9 @@ describe("starter doc route", () => {
     expect(response.body).toContain("localapp init my-app");
     expect(response.body).toContain("localapp check");
     expect(response.body).toContain("localapp app install");
+    expect(response.body).toContain("localapp app pull --profile online");
+    expect(response.body).toContain("localapp app push --profile online");
+    expect(response.body).toContain("不会自动上线");
     await app.close();
   });
 

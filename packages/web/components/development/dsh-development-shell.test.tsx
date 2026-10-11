@@ -1,121 +1,13 @@
 import React from "react";
-import { beforeEach, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import {
-  DshDevelopmentShell,
-  type DevelopmentShellProps,
-} from "./dsh-development-shell";
-vi.mock("./dsh-view", () => ({
-  DshMessages: () => null,
-  DshMarkdown: () => null,
-  DshDiff: () => null,
-  DshTerminal: () => null,
-}));
-beforeEach(() => {
-  vi.stubGlobal(
-    "ResizeObserver",
-    class {
-      observe() {}
-      disconnect() {}
-    },
-  );
-  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
-    width: 1280,
-    height: 800,
-    top: 0,
-    left: 0,
-    right: 1280,
-    bottom: 800,
-    x: 0,
-    y: 0,
-    toJSON() {},
-  });
-});
-function props(): DevelopmentShellProps {
-  const noop = vi.fn();
-  return {
-    sessions: [],
-    selectedSession: "",
-    projects: [{ id: "project", name: "my-app" }],
-    project: { id: "project", name: "my-app" },
-    files: ["src/App.tsx"],
-    file: null,
-    text: "",
-    prompt: "Make a todo app",
-    messages: [],
-    live: "",
-    running: false,
-    pending: false,
-    error: "",
-    versions: [],
-    version: "",
-    changes: [],
-    providers: [{ id: "model", name: "My provider", model: "my-model" }],
-    provider: "model",
-    build: null,
-    log: "",
-    interaction: null,
-    answer: "",
-    actions: {
-      select: noop,
-      selectSession: noop,
-      create: vi.fn(),
-      open: vi.fn(),
-      setText: noop,
-      save: noop,
-      setPrompt: noop,
-      run: vi.fn(),
-      stop: vi.fn(),
-      setProvider: noop,
-      newSession: noop,
-      setVersion: noop,
-      diff: noop,
-      restore: noop,
-      build: noop,
-      preview: noop,
-      publish: noop,
-      cancelBuild: noop,
-      newFile: noop,
-      respond: noop,
-      setAnswer: noop,
-    },
-  };
-}
-it("uses the original collapsible dsh frame and opens source in the right panel", async () => {
-  const p = props();
-  const { container } = render(<DshDevelopmentShell {...p} />);
-  await screen.findByText("探索未至之境");
-  fireEvent.click(screen.getByLabelText("收起侧栏"));
-  await waitFor(() =>
-    expect(
-      container.querySelector('[data-sidebar-collapsed="true"]'),
-    ).not.toBeNull(),
-  );
-  fireEvent.click(screen.getAllByLabelText("源码")[0]);
-  expect(await screen.findByLabelText("源码编辑器")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "src/App.tsx" }));
-  expect(p.actions.open).toHaveBeenCalledWith("src/App.tsx");
-  fireEvent.click(screen.getByLabelText("关闭面板"));
-  expect(screen.queryByLabelText("源码编辑器")).toBeNull();
-});
-it("submits Enter, keeps Shift Enter editable and stops a running turn", async () => {
-  const p = props();
-  const view = render(<DshDevelopmentShell {...p} />);
-  const input = await screen.findByLabelText("开发需求");
-  fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
-  expect(p.actions.run).not.toHaveBeenCalled();
-  fireEvent.keyDown(input, { key: "Enter" });
-  expect(p.actions.run).toHaveBeenCalledOnce();
-  view.rerender(<DshDevelopmentShell {...p} running />);
-  expect(screen.getByLabelText("开发需求")).toBeDisabled();
-  fireEvent.click(screen.getByLabelText("停止"));
-  expect(p.actions.stop).toHaveBeenCalledOnce();
-});
-it("opens the requirement discussion instead of creating from a name field", async () => {
-  const p = props();
-  render(<DshDevelopmentShell {...p} />);
-  fireEvent.click((await screen.findAllByLabelText("创建应用"))[0]);
-  expect(await screen.findByText("我们要构建什么？")).toBeVisible();
-  expect(screen.getByLabelText("创建应用需求")).toBeVisible();
-  expect(p.actions.create).not.toHaveBeenCalled();
+import {render,screen} from "@testing-library/react";
+import {expect,it,vi} from "vitest";
+import {DshDevelopmentShell,type DevelopmentShellProps} from "./dsh-development-shell";
+vi.mock("@localapp/dsh-app-development/ui/development-entry",()=>({NativeDevelopmentEntry:()=> <div>原生开发入口</div>}));
+it("keeps the compatibility name without a copied layout or another agent loop",()=>{
+  const run=vi.fn();
+  const view=render(<DshDevelopmentShell {...({actions:{run}} as unknown as DevelopmentShellProps)}/>);
+  expect(screen.getByText("原生开发入口")).toBeVisible();
+  expect(screen.queryByLabelText("开发需求")).toBeNull();
+  expect(run).not.toHaveBeenCalled();
+  view.unmount();
 });

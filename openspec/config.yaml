@@ -61,8 +61,10 @@ rules:
     - REFACTOR 任务格式, `- [ ] X.Y [REFACTOR] xxx`
     - 每个 TDD 大阶段（RED/GREEN/REFACTOR）结束时必须 commit；非 TDD 任务组完成后也需 commit
     - 最后一个任务组是编写e2e测试, 执行e2e测试, 集成验证, 编写e2e测试用例并执行
-    - e2e 任务组必须以 spec scenario 映射表开头，格式为表格，列：`Spec Scenario` | `E2E Test` | `Status`。Spec Scenario 列写 `spec-name > Scenario: xxx`（或引用 tasks 中的 task ID）。Status 列标 ✓（已有 e2e）或 ✗（需新增）。所有 Status 为 ✗ 的 scenario 都必须有对应的 e2e 测试用例
-    - e2e 任务必须逐 scenario 拆分，映射表中每个 ✗ 行至少对应一个独立 e2e 任务，禁止合并为一个笼统的"编写 e2e 测试"任务。格式：`- [ ] X.Y [GREEN] 为 <spec-name> > Scenario: <scenario 标题> 编写 e2e 测试`
+    - >-
+      e2e 任务组必须以 spec scenario 映射表开头，格式为表格，列：`Spec Scenario` | `E2E Test` | `Status`。Spec Scenario 列写 `spec-name > Scenario: xxx`（或引用 tasks 中的 task ID）。Status 列标 ✓（已有 e2e）或 ✗（需新增）。所有 Status 为 ✗ 的 scenario 都必须有对应的 e2e 测试用例
+    - >-
+      e2e 任务必须逐 scenario 拆分，映射表中每个 ✗ 行至少对应一个独立 e2e 任务，禁止合并为一个笼统的"编写 e2e 测试"任务。格式：`- [ ] X.Y [GREEN] 为 <spec-name> > Scenario: <scenario 标题> 编写 e2e 测试`
     - 每个 e2e 任务完成后必须在映射表中将对应行 Status 从 ✗ 更新为 ✓，实施时以此作为进度校验
     - spec 中标注 `Scenario:` 的用户可见行为（命令输入 → CLI 输出）必须通过 e2e 覆盖，单元测试不替代 e2e。纯内部逻辑（如 registry resolve 算法）可仅用单元测试
     - 不要在 tasks.md 中写测试用例的实现细节、断言代码或 commit message，这些属于 design.md；scenario 映射表和逐 scenario 任务是必需的规划内容

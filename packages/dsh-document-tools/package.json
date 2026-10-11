@@ -1,0 +1,29 @@
+{
+  "name": "@localapp/dsh-document-tools",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./catalog": {
+      "types": "./dist/catalog.d.cts",
+      "default": "./dist/catalog.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "rimraf": "^5.0.0",
+    "typescript": "5.6.3"
+  }
+}

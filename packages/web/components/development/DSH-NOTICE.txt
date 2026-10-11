@@ -2,8 +2,9 @@ DeepSeek Harness UI sources, theme and exported UI components
 https://github.com/deepseek-ai/deepseek-harness
 Theme source commit: 5badb15009ae1756c3afe0ae0cef1faafc290ccc
 Theme selectors scoped to LocalApp development surface.
-Vendored sources: ui-layout AppFrame, columns, DocumentTitle; ui-sidebar SidebarRoot; ui-conversation EmptyHero and conversation/composer styles; ui-chat message styles.
-LocalApp adaptations: local typed slot/store interfaces, authenticated project APIs, textarea draft binding, project panel controls.
+No vendored layout or message components remain.
+Layout, sidebar, messages and conversation execution use the installed dsh native client.
+The scoped theme and UI primitives used for final summaries, diffs and logs retain this attribution.
 
 MIT License
 

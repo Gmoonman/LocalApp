@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ProcessTreeController } from "../src/lib/process-tree.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { closeMetaDb, initMetaDb } from "../src/lib/meta-sqlite.js";
+import { closeMetaDb, initMetaDb, getDb, flushMetaDb } from "../src/lib/meta-sqlite.js";
 import { WorkspaceStore } from "../src/lib/workspace-store.js";
 import { createTestServer, getTestApiKey } from "./integration/helpers.js";
 
@@ -14,6 +15,37 @@ afterEach(async () => {
 });
 
 describe("managed Git clone lifecycle", () => {
+  it("terminates clones owned by the Cordis development plugin when it stops", async () => {
+    const fixture = await cloneFixture(`setInterval(() => {}, 1000);`);
+    const root = path.dirname(fixture.store.workspaceDir);
+    const { Context } = await import("@deepseek-ai/cordis");
+    const { default: ApplicationDevelopment } = await import("@localapp/dsh-app-development");
+    const context = new Context();
+    try {
+      await context.plugin(ApplicationDevelopment, { dataDir: root, persistence: { database: getDb, flush: flushMetaDb } });
+      const store = context.localappDevelopment.workspaces({ workspaceDir: path.join(root, "plugin-workspaces"), gitExecutable: path.join(root, "fixture-git"), authorizeExecution: () => true });
+      const cloning = store.clone({ name: "Plugin stop", ownerId: "owner", repositoryUrl: "https://example.invalid/plugin-stop.git" });
+      const rejected = expect(cloning).rejects.toThrow(/shutdown|terminated/i);
+      await waitFor(() => temporaryCloneEntries(store.workspaceDir).length > 0);
+      await context.fiber.dispose();
+      await rejected;
+      expect(temporaryCloneEntries(store.workspaceDir)).toEqual([]);
+    } finally { await context.fiber.dispose(); }
+  });
+  it("reports cancellation failures and retains the process for shutdown retry", async () => {
+    const controller = new ProcessTreeController();
+    const signal = vi.spyOn(controller, "signalTree").mockRejectedValueOnce(Object.assign(new Error("kill EPERM"), { code: "EPERM" }));
+    const fixture = await cloneFixture(`setInterval(() => {}, 1000);`, 2000, controller);
+    const abort = new AbortController();
+    const cloning = fixture.store.clone({ name: "Cancellation failure", ownerId: "owner", repositoryUrl: "https://example.invalid/cancel.git", signal: abort.signal });
+    const rejected = expect(cloning).rejects.toThrow("kill EPERM");
+    await waitFor(() => temporaryCloneEntries(fixture.store.workspaceDir).length > 0);
+    abort.abort();
+    await rejected;
+    await fixture.store.shutdown();
+    expect(signal).toHaveBeenCalledTimes(2);
+    expect(temporaryCloneEntries(fixture.store.workspaceDir)).toEqual([]);
+  });
   it("clones successfully with argument separation and an isolated bounded Git environment", async () => {
     const fixture = await cloneFixture(`
       const fs = require("node:fs");
@@ -111,7 +143,7 @@ describe("managed Git clone lifecycle", () => {
   });
 });
 
-async function cloneFixture(program: string, cloneTimeoutMs = 2_000) {
+async function cloneFixture(program: string, cloneTimeoutMs = 2_000, processController?: ProcessTreeController) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "localapp-clone-"));
   cleanups.push(() => fs.rmSync(root, { recursive: true, force: true }));
   await initMetaDb(root);
@@ -121,6 +153,7 @@ async function cloneFixture(program: string, cloneTimeoutMs = 2_000) {
     workspaceDir: path.join(root, "workspaces"),
     gitExecutable,
     cloneTimeoutMs,
+    processController,
     authorizeExecution: () => true,
   });
   cleanups.push(() => store.shutdown());

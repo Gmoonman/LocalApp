@@ -32,6 +32,7 @@ export async function stageBuiltinTemplate({ repositoryRoot, outputDirectory, ve
   await fs.mkdir(serverCoreDestination, { recursive: true });
   await fs.copyFile(path.join(serverCore, "package.json"), path.join(serverCoreDestination, "package.json"));
   await copyDirectory(path.join(serverCore, "dist"), path.join(serverCoreDestination, "dist"));
+  await stageServerCorePlatform(repositoryRoot, serverCoreDestination);
   await fs.copyFile(
     path.join(repositoryRoot, "packages/localapp/src/template/sync-template.cjs"),
     path.join(outputDirectory, "runtime/sync-template.cjs"),
@@ -66,4 +67,33 @@ async function preserveProjectNpmrc(outputDirectory: string): Promise<void> {
   const source = path.join(outputDirectory, ".npmrc");
   const destination = path.join(outputDirectory, "template.npmrc");
   if (await isFile(source)) await fs.rename(source, destination);
+}
+
+// The compatibility SDK delegates to the application plugin in the monorepo.
+// Generated applications must carry those implementations instead of asking npm
+// for a private workspace package.
+async function stageServerCorePlatform(repositoryRoot: string, destination: string): Promise<void> {
+  const dist = path.join(destination, "dist");
+  const platform = path.join(dist, "platform");
+  await copyDirectory(path.join(repositoryRoot, "packages/dsh-app-platform/dist"), platform);
+  async function rewrite(directory: string): Promise<void> {
+    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name);
+      if (file === platform) continue;
+      if (entry.isDirectory()) await rewrite(file);
+      else if (entry.isFile() && /\.(?:js|ts)$/.test(entry.name)) {
+        const original = await fs.readFile(file, "utf8");
+        const updated = original.replace(/@localapp\/dsh-app-platform\/([a-z-]+)/g, (_match, module: string) => {
+          const relative = path.relative(path.dirname(file), path.join(platform, `${module}.cjs`)).split(path.sep).join("/");
+          return relative.startsWith(".") ? relative : `./${relative}`;
+        });
+        if (updated !== original) await fs.writeFile(file, updated);
+      }
+    }
+  }
+  await rewrite(dist);
+  const manifestPath = path.join(destination, "package.json");
+  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+  delete manifest.dependencies["@localapp/dsh-app-platform"];
+  await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 }

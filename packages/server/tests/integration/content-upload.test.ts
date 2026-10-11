@@ -3,7 +3,8 @@ import { createTestServer, getAppUrl, createTestPage } from "./helpers.js";
 import { registerAndLogin } from "../helpers/createUser.js";
 import type { FastifyInstance } from "fastify";
 
-vi.mock("../../src/lib/s3-client.js", () => ({
+vi.mock("../../src/lib/s3-client.js", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../src/lib/s3-client.js")>(),
   initS3Client: vi.fn().mockResolvedValue(undefined),
   initContentStorage: vi.fn().mockResolvedValue(undefined),
   putObject: vi.fn().mockResolvedValue(undefined),
@@ -11,6 +12,7 @@ vi.mock("../../src/lib/s3-client.js", () => ({
   getObject: vi.fn().mockResolvedValue(null),
   openObject: vi.fn().mockResolvedValue(null),
   deleteObject: vi.fn().mockResolvedValue(undefined),
+  deleteAppObjects: vi.fn().mockResolvedValue(undefined),
   listAppObjects: vi.fn().mockResolvedValue([]),
 }));
 

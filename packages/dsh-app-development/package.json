@@ -1,0 +1,238 @@
+{
+  "name": "@localapp/dsh-app-development",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./projects": {
+      "types": "./dist/projects.d.cts",
+      "default": "./dist/projects.cjs"
+    },
+    "./template": {
+      "types": "./dist/template.d.cts",
+      "default": "./dist/template.cjs"
+    },
+    "./creation": {
+      "types": "./dist/creation.d.cts",
+      "default": "./dist/creation.cjs"
+    },
+    "./releases": {
+      "types": "./dist/releases.d.cts",
+      "default": "./dist/releases.cjs"
+    },
+    "./builds": {
+      "types": "./dist/builds.d.cts",
+      "default": "./dist/builds.cjs"
+    },
+    "./previews": {
+      "types": "./dist/previews.d.cts",
+      "default": "./dist/previews.cjs"
+    },
+    "./environment": {
+      "types": "./dist/environment.d.cts",
+      "default": "./dist/environment.cjs"
+    },
+    "./native-routes": {
+      "types": "./dist/native-routes.d.cts",
+      "default": "./dist/native-routes.cjs"
+    },
+    "./source-routes": {
+      "types": "./dist/source-routes.d.cts",
+      "default": "./dist/source-routes.cjs"
+    },
+    "./attachments": {
+      "types": "./dist/attachments.d.cts",
+      "default": "./dist/attachments.cjs"
+    },
+    "./execution-routes": {
+      "types": "./dist/execution-routes.d.cts",
+      "default": "./dist/execution-routes.cjs"
+    },
+    "./project-routes": {
+      "types": "./dist/project-routes.d.cts",
+      "default": "./dist/project-routes.cjs"
+    },
+    "./routes": {
+      "types": "./dist/routes.d.cts",
+      "default": "./dist/routes.cjs"
+    },
+    "./workspaces-routes": {
+      "types": "./dist/workspaces-routes.d.cts",
+      "default": "./dist/workspaces-routes.cjs"
+    },
+    "./process-tree": {
+      "types": "./dist/process-tree.d.cts",
+      "default": "./dist/process-tree.cjs"
+    },
+    "./task-types": {
+      "types": "./dist/task-types.d.cts",
+      "default": "./dist/task-types.cjs"
+    },
+    "./workspace-store": {
+      "types": "./dist/workspace-store.d.cts",
+      "default": "./dist/workspace-store.cjs"
+    },
+    "./task-store": {
+      "types": "./dist/task-store.d.cts",
+      "default": "./dist/task-store.cjs"
+    },
+    "./task-runner": {
+      "types": "./dist/task-runner.d.cts",
+      "default": "./dist/task-runner.cjs"
+    },
+    "./agents/opencode-agent": {
+      "types": "./dist/agents/opencode-agent.d.cts",
+      "default": "./dist/agents/opencode-agent.cjs"
+    },
+    "./agents/types": {
+      "types": "./dist/agents/types.d.cts",
+      "default": "./dist/agents/types.cjs"
+    },
+    "./agents/codex-agent": {
+      "types": "./dist/agents/codex-agent.d.cts",
+      "default": "./dist/agents/codex-agent.cjs"
+    },
+    "./agent-runner": {
+      "types": "./dist/agent-runner.d.cts",
+      "default": "./dist/agent-runner.cjs"
+    },
+    "./tasks-routes": {
+      "types": "./dist/tasks-routes.d.cts",
+      "default": "./dist/tasks-routes.cjs"
+    },
+    "./dev-toolkit-routes": {
+      "types": "./dist/dev-toolkit-routes.d.cts",
+      "default": "./dist/dev-toolkit-routes.cjs"
+    },
+    "./release-manifest": {
+      "types": "./dist/release-manifest.d.cts",
+      "default": "./dist/release-manifest.cjs"
+    },
+    "./starter-doc-routes": {
+      "types": "./dist/starter-doc-routes.d.cts",
+      "default": "./dist/starter-doc-routes.cjs"
+    },
+    "./cli-routes": {
+      "types": "./dist/cli-routes.d.cts",
+      "default": "./dist/cli-routes.cjs"
+    },
+    "./client": {
+      "types": "./dist/client.d.mts",
+      "default": "./dist/client.cjs"
+    },
+    "./client-host": {
+      "types": "./dist/client-host.d.mts",
+      "default": "./dist/client-host.mjs"
+    },
+    "./creation-client": {
+      "types": "./dist/creation-client.d.mts",
+      "default": "./dist/creation-client.mjs"
+    },
+    "./ui/creation-dialog": {
+      "types": "./ui/creation-dialog.tsx",
+      "default": "./ui/creation-dialog.tsx"
+    },
+    "./ui/development-agent-settings": {
+      "types": "./ui/development-agent-settings.tsx",
+      "default": "./ui/development-agent-settings.tsx"
+    },
+    "./ui/development-types": {
+      "types": "./ui/development-types.ts",
+      "default": "./ui/development-types.ts"
+    },
+    "./ui/app-development-dock": {
+      "types": "./ui/app-development-dock.tsx",
+      "default": "./ui/app-development-dock.tsx"
+    },
+    "./ui/app-development-dock.css": {
+      "default": "./ui/app-development-dock.css"
+    },
+    "./ui/development-page": {
+      "types": "./ui/development-page.tsx",
+      "default": "./ui/development-page.tsx"
+    },
+    "./ui/development-environment": {
+      "types": "./ui/development-environment.tsx",
+      "default": "./ui/development-environment.tsx"
+    },
+    "./ui/development-entry": {
+      "types": "./ui/development-entry.tsx",
+      "default": "./ui/development-entry.tsx"
+    },
+    "./task-supervisor": {
+      "default": "./runner/task-supervisor.mjs"
+    },
+    "./project/manifest": {
+      "types": "./dist/project/manifest.d.cts",
+      "default": "./dist/project/manifest.cjs"
+    },
+    "./project/check": {
+      "types": "./dist/project/check.d.cts",
+      "default": "./dist/project/check.cjs"
+    },
+    "./project/backend": {
+      "types": "./dist/project/backend.d.cts",
+      "default": "./dist/project/backend.cjs"
+    },
+    "./project/files": {
+      "types": "./dist/project/files.d.cts",
+      "default": "./dist/project/files.cjs"
+    },
+    "./project/package": {
+      "types": "./dist/project/package.d.cts",
+      "default": "./dist/project/package.cjs"
+    },
+    "./project-errors": {
+      "types": "./dist/project-errors.d.cts",
+      "default": "./dist/project-errors.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc && node scripts/build-client.mjs",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@localapp/dsh-app-platform": "workspace:*",
+    "@localapp/dsh-multiuser": "workspace:*",
+    "yauzl": "3.4.0",
+    "react": "^18.3.0",
+    "lucide-react": "^0.556.0",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-alpha.2",
+    "@localapp/dsh-agent-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/sql.js": "^1.4.11",
+    "typescript": "5.6.3",
+    "rimraf": "^5.0.0",
+    "fastify": "^4.26.0",
+    "@fastify/multipart": "^8.1.0",
+    "@types/yauzl": "3.4.0",
+    "@types/react": "18.3.29",
+    "@localapp/sdk-agent": "workspace:*",
+    "tailwindcss": "^4.1.18"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@localapp/dsh-multiuser",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  },
+  "localapp": {
+    "clientEntry": "./ui/client.tsx"
+  }
+}

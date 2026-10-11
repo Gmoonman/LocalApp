@@ -5,6 +5,10 @@
   "type": "module",
   "license": "MIT",
   "exports": {
+    "./legacy-history": {
+      "types": "./dist/legacy-history.d.mts",
+      "default": "./dist/legacy-history.mjs"
+    },
     ".": {
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
@@ -44,58 +48,362 @@
     "./native-client-assets": {
       "types": "./dist/native-client-assets.d.mts",
       "default": "./dist/native-client-assets.mjs"
+    },
+    "./client": {
+      "types": "./dist/client.d.mts",
+      "default": "./dist/client.cjs"
+    },
+    "./request-identity": {
+      "types": "./dist/request-identity.d.cts",
+      "default": "./dist/request-identity.cjs"
+    },
+    "./groups-routes": {
+      "types": "./dist/groups-routes.d.cts",
+      "default": "./dist/groups-routes.cjs"
+    },
+    "./auth-routes": {
+      "types": "./dist/auth-routes.d.cts",
+      "default": "./dist/auth-routes.cjs"
+    },
+    "./auth-sessions": {
+      "types": "./dist/auth-sessions.d.cts",
+      "default": "./dist/auth-sessions.cjs"
+    },
+    "./keys-routes": {
+      "types": "./dist/keys-routes.d.cts",
+      "default": "./dist/keys-routes.cjs"
+    },
+    "./auth-cookies": {
+      "types": "./dist/auth-cookies.d.cts",
+      "default": "./dist/auth-cookies.cjs"
+    },
+    "./browser-sessions": {
+      "types": "./dist/browser-sessions.d.cts",
+      "default": "./dist/browser-sessions.cjs"
+    },
+    "./profile-routes": {
+      "types": "./dist/profile-routes.d.cts",
+      "default": "./dist/profile-routes.cjs"
+    },
+    "./groups": {
+      "types": "./dist/groups.d.cts",
+      "default": "./dist/groups.cjs"
+    },
+    "./accounts": {
+      "types": "./dist/accounts.d.cts",
+      "default": "./dist/accounts.cjs"
+    },
+    "./api-keys": {
+      "types": "./dist/api-keys.d.cts",
+      "default": "./dist/api-keys.cjs"
+    },
+    "./account-schema": {
+      "types": "./dist/account-schema.d.cts",
+      "default": "./dist/account-schema.cjs"
+    },
+    "./account-services": {
+      "types": "./dist/account-services.d.cts",
+      "default": "./dist/account-services.cjs"
+    },
+    "./admin-accounts-routes": {
+      "types": "./dist/admin-accounts-routes.d.cts",
+      "default": "./dist/admin-accounts-routes.cjs"
+    },
+    "./setup-token-store": {
+      "types": "./dist/setup-token-store.d.cts",
+      "default": "./dist/setup-token-store.cjs"
+    },
+    "./loopback": {
+      "types": "./dist/loopback.d.cts",
+      "default": "./dist/loopback.cjs"
+    },
+    "./setup-routes": {
+      "types": "./dist/setup-routes.d.cts",
+      "default": "./dist/setup-routes.cjs"
+    },
+    "./environment-routes": {
+      "types": "./dist/environment-routes.d.cts",
+      "default": "./dist/environment-routes.cjs"
+    },
+    "./system-environment": {
+      "types": "./dist/system-environment.d.cts",
+      "default": "./dist/system-environment.cjs"
+    },
+    "./public-skills": {
+      "types": "./dist/public-skills.d.cts",
+      "default": "./dist/public-skills.cjs"
+    },
+    "./harness-capabilities": {
+      "types": "./dist/harness-capabilities.d.mts",
+      "default": "./dist/harness-capabilities.mjs"
+    },
+    "./harness": {
+      "types": "./dist/harness.d.mts",
+      "default": "./dist/harness.mjs"
+    },
+    "./llm-adapter": {
+      "types": "./dist/llm-adapter.d.mts",
+      "default": "./dist/llm-adapter.mjs"
+    },
+    "./llm-routes": {
+      "types": "./dist/llm-routes.d.cts",
+      "default": "./dist/llm-routes.cjs"
+    },
+    "./agent-routes": {
+      "types": "./dist/agent-routes.d.mts",
+      "default": "./dist/agent-routes.mjs"
+    },
+    "./personal-pages": {
+      "types": "./dist/personal-pages.d.cts",
+      "default": "./dist/personal-pages.cjs"
+    },
+    "./dependency-routes": {
+      "types": "./dist/dependency-routes.d.cts",
+      "default": "./dist/dependency-routes.cjs"
+    },
+    "./workspace-root": {
+      "types": "./dist/user-workspace-root.d.cts",
+      "default": "./dist/user-workspace-root.cjs"
+    },
+    "./ui/model-settings": {
+      "types": "./ui/model-settings.tsx",
+      "default": "./ui/model-settings.tsx"
+    },
+    "./model-settings-client": {
+      "types": "./dist/model-settings-client.d.mts",
+      "default": "./dist/model-settings-client.mjs"
+    },
+    "./ui/python-environment-form": {
+      "types": "./ui/python-environment-form.tsx",
+      "default": "./ui/python-environment-form.tsx"
+    },
+    "./ui/agent-capability-settings": {
+      "types": "./ui/agent-capability-settings.tsx",
+      "default": "./ui/agent-capability-settings.tsx"
+    },
+    "./capability-settings-client": {
+      "types": "./dist/capability-settings-client.d.mts",
+      "default": "./dist/capability-settings-client.mjs"
+    },
+    "./ui/shadcn/button": {
+      "types": "./ui/shadcn/button.tsx",
+      "default": "./ui/shadcn/button.tsx"
+    },
+    "./ui/shadcn/card": {
+      "types": "./ui/shadcn/card.tsx",
+      "default": "./ui/shadcn/card.tsx"
+    },
+    "./ui/shadcn/switch": {
+      "types": "./ui/shadcn/switch.tsx",
+      "default": "./ui/shadcn/switch.tsx"
+    },
+    "./ui/shadcn/badge": {
+      "types": "./ui/shadcn/badge.tsx",
+      "default": "./ui/shadcn/badge.tsx"
+    },
+    "./ui/shadcn/input": {
+      "types": "./ui/shadcn/input.tsx",
+      "default": "./ui/shadcn/input.tsx"
+    },
+    "./ui/shadcn/label": {
+      "types": "./ui/shadcn/label.tsx",
+      "default": "./ui/shadcn/label.tsx"
+    },
+    "./ui/shadcn/skeleton": {
+      "types": "./ui/shadcn/skeleton.tsx",
+      "default": "./ui/shadcn/skeleton.tsx"
+    },
+    "./ui/shadcn/utils": {
+      "types": "./ui/shadcn/utils.ts",
+      "default": "./ui/shadcn/utils.ts"
+    },
+    "./native-settings-ui": {
+      "types": "./dist/native-settings-ui.d.mts",
+      "default": "./dist/native-settings-ui.mjs"
+    },
+    "./ui/shadcn/textarea": {
+      "types": "./ui/shadcn/textarea.tsx",
+      "default": "./ui/shadcn/textarea.tsx"
+    },
+    "./ui/shadcn/theme.css": {
+      "types": "./ui/shadcn/theme.css",
+      "default": "./ui/shadcn/theme.css"
+    },
+    "./ui/shadcn/select": {
+      "types": "./ui/shadcn/select.tsx",
+      "default": "./ui/shadcn/select.tsx"
+    },
+    "./ui/shadcn/choice-select": {
+      "types": "./ui/shadcn/choice-select.tsx",
+      "default": "./ui/shadcn/choice-select.tsx"
+    },
+    "./ui/system-agent-environment": {
+      "types": "./ui/system-agent-environment.tsx",
+      "default": "./ui/system-agent-environment.tsx"
+    },
+    "./ui/shadcn/dialog": {
+      "types": "./ui/shadcn/dialog.tsx",
+      "default": "./ui/shadcn/dialog.tsx"
+    },
+    "./secret-box": {
+      "types": "./dist/secret-box.d.cts",
+      "default": "./dist/secret-box.cjs"
     }
   },
   "scripts": {
-    "build": "tsc",
-    "clean": "rimraf dist"
+    "build": "tsc && node scripts/build-client.mjs",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.5-alpha.1",
     "@deepseek-ai/cordis-plugin-loader": "1.0.6-alpha.1",
-    "@deepseek-ai/dsh-agent-default-model": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-api-gateway": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-api-session-controller": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-attachment-local": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-connection": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-file-upload": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-locale": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-modules": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-chat": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-conversation": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-session": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-trajectory": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-credentials-local": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-host-webserver": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-session-query": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-session-query-sqlite": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-typert-registry": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-workspace": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-api-remotes": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-api-workspace-controller": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-resources": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-shortcuts": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-input-trigger": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-layout": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-sidebar-right": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-theme": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-workspace": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-web": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-store": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-slots": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-client-ui-dockkit": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-agent-default-model": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-gateway": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-job-controller": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-remotes": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-session-controller": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-settings-controller": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-workspace-controller": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-attachment-local": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-connection": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-file-upload": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-modules": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-resources": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-shortcuts": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-store": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-approval": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-attachment": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-chat": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-commands": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-dockkit": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-input-trigger": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-jobs": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-model-selection": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-plan": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-session": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-sidebar-right": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-skill": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-subagent": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-theme": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-tool": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-trajectory": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-user-questions": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-workspace": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-web": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-credentials-local": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-host-webserver": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-session-query": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-session-query-sqlite": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-settings": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-typert-registry": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-workspace": "0.2.1-alpha.2",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@deepseek-ai/dsh-api-settings-controller": "0.2.1-alpha.1",
-    "@deepseek-ai/dsh-settings": "0.2.1-alpha.1"
+    "fastify": "^4.26.0",
+    "@fastify/cookie": "^9.4.0",
+    "@deepseek-ai/dsh-fs-sandbox": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-shell-env": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-ptc-runtime-node": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-fs-search": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-goal": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-bash-sandbox": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-web": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-web-fetch-http": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-subagent": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-plan-mode": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-storage-domain": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-schedule": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-working-directory": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-subagent-spawn-in-process": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-compaction-basic": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-user-questions": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-call-timeout-policy": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-skill-filesystem": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-mcp-resources": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-workflow-ptc": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-jobs-local": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-ralph": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-storage-json": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-token-meter": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-schedule": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-command-compact": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-commands": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-sandbox-policy": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-subprocess-local": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-skill": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-skill": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-subagent": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-subagent-control": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-sandbox-local": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-user-approval": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-bash": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-goal": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-subagent-fork-in-process": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-web": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-workflow": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-storage": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-jobs": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-todo": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-goal-round-driver": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-mcp-client": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-ask-user": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tool-fs": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-llm": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-agent": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-agent-loop": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-session": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-session-title-first-prompt-llm": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-session-projection": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-session-title": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-llm-pi-ai": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-goal": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-schedule": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-file-reference-local": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-reference": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-session-projection-cache": "0.2.1-alpha.2",
+    "@localapp/dsh-document-tools": "workspace:*",
+    "lucide-react": "^0.556.0",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.3.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.4.0",
+    "@deepseek-ai/dsh-client-ui-settings-general": "0.2.1-alpha.2",
+    "@radix-ui/react-select": "^2.3.8",
+    "@radix-ui/react-dialog": "^1.2.0",
+    "@fastify/static": "^7.0.4"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
     "rimraf": "^5.0.0",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "esbuild": "^0.25.12",
+    "@types/react": "18.3.29",
+    "@tailwindcss/postcss": "^4.1.18",
+    "tailwindcss": "^4.1.18",
+    "postcss": "^8.5.10"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "localapp": {
+    "clientEntry": "./ui/client.tsx"
   }
 }

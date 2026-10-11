@@ -1,24 +1,5 @@
+import { registerPeerProtocol } from "@localapp/dsh-app-platform/peer-protocol-routes";
 import type { FastifyInstance } from "fastify";
 import { findUserById, validateApiKey } from "../lib/meta-sqlite.js";
-import { MAX_APP_PACKAGE_BYTES } from "../lib/app-package.js";
-
-export const PEER_PROTOCOL_VERSION = 2;
-
-export async function peerProtocolRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/peer/capabilities", async (req, reply) => {
-    const authorization = req.headers.authorization;
-    const match = typeof authorization === "string" ? /^Bearer ([^\s]+)$/.exec(authorization) : null;
-    const userId = match ? validateApiKey(match[1]) : null;
-    if (!userId) return reply.status(401).send({ success: false, error: "Authentication required" });
-    const user = findUserById(userId);
-    if (!user) return reply.status(401).send({ success: false, error: "Authentication required" });
-    return {
-      success: true,
-      data: {
-        protocolVersion: PEER_PROTOCOL_VERSION,
-        user: { id: user.id, name: user.name, displayName: user.displayName },
-        transferLimits: { maxPackageBytes: MAX_APP_PACKAGE_BYTES },
-      },
-    };
-  });
-}
+export { PEER_PROTOCOL_VERSION } from "@localapp/dsh-app-platform/peer-protocol-routes";
+export async function peerProtocolRoutes(app: FastifyInstance) { return registerPeerProtocol(app, { keyOwner: validateApiKey, user: findUserById }); }

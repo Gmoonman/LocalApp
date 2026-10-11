@@ -65,3 +65,24 @@ it("executes background page tools after the foreground stream is complete", asy
   expect(agent.state.isStreaming).toBe(false);
   agent.dispose();
 });
+
+it("connects native sessions with application context without sending tool callbacks",async()=>{
+ const calls:Array<{url:string;body:any}>=[];
+ vi.stubGlobal("fetch",vi.fn(async(url:string,init:any)=>{
+  if(url.includes("/events?")) return new Response(new ReadableStream({start(){},cancel(){}}));
+  const body=JSON.parse(init.body);calls.push({url,body});
+  return new Response(JSON.stringify(url.endsWith("session/create")?{result:{ok:true,value:{sessionId:body.payload.args.request.sessionId}}}:{success:true}));
+ }));
+ const agent=new HarnessAgent({appId:"owner/application",initialState:{systemPrompt:"Application instruction"}});agent.providerId="model-one";
+ agent.state.tools=[{name:"app-edit",description:"Edit application data",parameters:{type:"object"},execute:async()=>({content:[]})}];
+ const connected=await agent.connectNativeSession("native-session");
+ expect(connected.url).toContain("/api/agent/native/");expect(agent.sessionId).toBe("native-session");
+ expect(calls[1].body).toEqual({sessionId:"native-session",appId:"owner/application",providerId:"model-one",systemPrompt:"Application instruction",tools:[{name:"app-edit",description:"Edit application data",parameters:{type:"object"}}]});
+ const scope=connected.url.split("/native/")[1].split("/")[0];expect(JSON.parse(atob(scope.replace(/-/g,"+").replace(/_/g,"/")))).toEqual({appId:"owner/application",providerId:"model-one"});
+ agent.dispose();
+});
+it("leaves the SDK session unchanged when native context binding fails",async()=>{
+ const agent=new HarnessAgent({appId:"owner/application",initialState:{systemPrompt:"test"}});agent.providerId="model-one";const original=agent.sessionId;
+ vi.stubGlobal("fetch",vi.fn(async(url:string,init:any)=>new Response(JSON.stringify(url.endsWith("session/create")?{result:{ok:true,value:{sessionId:JSON.parse(init.body).payload.args.request.sessionId}}}:{success:false,error:"binding refused"}),{status:url.endsWith("session/create")?200:400})));
+ await expect(agent.connectNativeSession("another-session")).rejects.toThrow("binding refused");expect(agent.sessionId).toBe(original);agent.dispose();
+});

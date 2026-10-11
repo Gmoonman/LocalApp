@@ -11,7 +11,7 @@ import { storagePlugin } from "../../src/plugins/storage.js";
 import { authPlugin } from "../../src/plugins/auth.js";
 import { sessionPlugin } from "../../src/plugins/session.js";
 import { authRoutes } from "../../src/routes/auth.js";
-import { llmRoutes } from "../../src/routes/llm.js";
+import { createLlmRoutesHost } from "../../src/routes/llm.js";
 import { closeMetaDb } from "../../src/lib/meta-sqlite.js";
 import { registerAndLogin } from "../helpers/createUser.js";
 
@@ -49,9 +49,14 @@ async function createLlmTestServer(envOverrides?: Record<string, string | undefi
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
   await app.register(sessionPlugin);
   app.register(authRoutes);
-  app.register(async (authScope) => {
-    await authPlugin(authScope);
-    authScope.register(llmRoutes);
+  const { Context } = await import("@deepseek-ai/cordis");
+  const { default: Multiuser } = await import("@localapp/dsh-multiuser");
+  const context = new Context();
+  await context.plugin(Multiuser);
+  app.addHook("onClose", () => context.fiber.dispose());
+  app.register(async scope => {
+    await authPlugin(scope);
+    await context.localappMultiuser.registerLlm(scope, createLlmRoutesHost(app, context.localappMultiuser));
   });
 
   await app.listen({ port: 0, host: "127.0.0.1" });

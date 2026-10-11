@@ -180,3 +180,35 @@ export interface User {
   avatarUrl: string | null;
   bio: string | null;
 }
+
+/** 平台管理的应用生命周期状态 */
+export type AppLifecycleStatus = "online" | "offline";
+
+export interface AppLifecycle {
+  status: AppLifecycleStatus;
+}
+
+
+export interface RecordVersionedCollaborationResourceConfig {
+  mode: "record-versioned";
+  mutation: string;
+  history?: boolean;
+}
+
+export interface CrdtCollaborationResourceConfig {
+  mode: "crdt";
+  read?: AccessLevel;
+  write?: Exclude<AccessLevel, "public">;
+  acl?: string[];
+  maxDocumentBytes?: number;
+  awareness?: boolean;
+  overlay?: boolean;
+}
+
+export type CollaborationResourceConfig = RecordVersionedCollaborationResourceConfig | CrdtCollaborationResourceConfig;
+
+export interface CollaborationConfig {
+  enabled: boolean;
+  overlay?: boolean;
+  resources?: Record<string, CollaborationResourceConfig>;
+}

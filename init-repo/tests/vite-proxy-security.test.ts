@@ -29,7 +29,10 @@ describe("credential-injecting Vite proxy security", () => {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ success: true }));
     });
-    await new Promise<void>((resolve) => backend!.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve, reject) => {
+      backend!.once("error", reject);
+      backend!.listen(Number(process.env.LOCALAPP_TEST_BACKEND_PORT || 0), "127.0.0.1", resolve);
+    });
     const backendAddress = backend.address();
     if (!backendAddress || typeof backendAddress === "string") throw new Error("backend did not listen on TCP");
 
@@ -97,7 +100,10 @@ describe("credential-injecting Vite proxy security", () => {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ success: true }));
     });
-    await new Promise<void>((resolve) => backend!.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve, reject) => {
+      backend!.once("error", reject);
+      backend!.listen(Number(process.env.LOCALAPP_TEST_BACKEND_PORT || 0), "127.0.0.1", resolve);
+    });
     const backendAddress = backend.address();
     if (!backendAddress || typeof backendAddress === "string") throw new Error("backend did not listen on TCP");
 
@@ -144,8 +150,12 @@ describe("credential-injecting Vite proxy security", () => {
 });
 
 async function freeLoopbackPort(): Promise<number> {
+  if (process.env.LOCALAPP_TEST_APP_PORT) return Number(process.env.LOCALAPP_TEST_APP_PORT);
   const server = net.createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("port probe did not listen on TCP");
   await new Promise<void>((resolve) => server.close(() => resolve()));

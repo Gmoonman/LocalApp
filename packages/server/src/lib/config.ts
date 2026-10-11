@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 
+export type PluginCombination = "multiuser" | "platform" | "full";
 export interface ServerConfig {
+  pluginCombination?: PluginCombination;
+  documentsEnabled?: boolean;
   port: number;
   dataDir: string;
   listenHost: string;
@@ -372,7 +375,13 @@ export async function loadConfig(env: NodeJS.ProcessEnv = process.env): Promise<
 
   const listenPort = pickPort(env, persisted.listenPort, toml.port);
   const jwtKeyFile = resolveDataPath(dataDir, env.JWT_KEY_FILE || DEFAULTS.jwtKeyFile);
+  const storedPlugins = readJsonFile(path.join(dataDir, "plugins.json"));
+  const pluginCombination = env.LOCALAPP_PLUGIN_COMBINATION || storedPlugins?.combination || "full";
+  if (storedPlugins?.documentsEnabled !== undefined && typeof storedPlugins.documentsEnabled !== "boolean") throw new Error("Invalid document extension setting");
+  if (typeof pluginCombination !== "string" || !["multiuser", "platform", "full"].includes(pluginCombination)) throw new Error("Invalid LocalApp plugin combination");
   const config: ServerConfig = {
+    pluginCombination: pluginCombination as PluginCombination,
+    documentsEnabled: storedPlugins?.documentsEnabled !== false,
     port: listenPort,
     // dataDir is determined before reading config.toml — toml's data_dir must not override
     dataDir: dataDir,

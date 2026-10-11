@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../../dsh-app-development/ui";
+@source "../../dsh-multiuser/ui";
 
 @custom-variant dark (&:is(.dark *));
 

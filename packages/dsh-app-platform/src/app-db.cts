@@ -155,6 +155,7 @@ interface PooledConnection {
 }
 
 const _connections = new Map<string, PooledConnection>();
+const openingConnections = new Map<string, Promise<SqlJsDatabase>>();
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 export async function getConnection(dbPath: string): Promise<SqlJsDatabase> {
@@ -163,9 +164,15 @@ export async function getConnection(dbPath: string): Promise<SqlJsDatabase> {
     entry.lastUsed = Date.now();
     return entry.db;
   }
-  const db = await openDatabase(dbPath);
-  _connections.set(dbPath, { db, lastUsed: Date.now(), dirty: false, transactionDepth: 0 });
-  return db;
+  const pending = openingConnections.get(dbPath);
+  if (pending) return pending;
+  const opening = openDatabase(dbPath).then(db => {
+    _connections.set(dbPath, { db, lastUsed: Date.now(), dirty: false, transactionDepth: 0 });
+    return db;
+  });
+  openingConnections.set(dbPath, opening);
+  try { return await opening; }
+  finally { if (openingConnections.get(dbPath) === opening) openingConnections.delete(dbPath); }
 }
 
 export async function exportDatabaseSnapshot(dbPath: string): Promise<Buffer> {
@@ -279,6 +286,7 @@ export function evictConnectionForDbPath(dbPath: string): void {
 export function closeIdleConnections(): void {
   const now = Date.now();
   for (const [dbPath, entry] of _connections) {
+    if (entry.transactionDepth > 0 || dbQueues.get(path.resolve(dbPath))?.active) continue;
     if (now - entry.lastUsed > IDLE_TIMEOUT_MS) {
       if (entry.dirty) {
         const data = entry.db.export();
@@ -299,6 +307,23 @@ export function closeAllConnections(): void {
     entry.db.close();
   }
   _connections.clear();
+}
+
+/** Drain queued work before closing only connections inside this data directory. */
+export async function closeConnectionsUnderDirectory(directory: string): Promise<void> {
+  const root = path.resolve(directory);
+  const files = [...new Set([..._connections.keys(), ...dbQueues.keys(), ...openingConnections.keys()])].filter(file => {
+    const relative = path.relative(root, path.resolve(file));
+    return relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative);
+  });
+  await Promise.all(files.map(file => withDbQueue(file, async () => {
+    await openingConnections.get(file);
+    const entry = _connections.get(file);
+    if (!entry) return;
+    saveConnection(file);
+    entry.db.close();
+    _connections.delete(file);
+  })));
 }
 
 export function closeConnectionsForPage(pageDir: string): void {

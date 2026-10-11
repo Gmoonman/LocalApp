@@ -3,7 +3,7 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { Readable } from "node:stream";
+import { PassThrough, Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppSyncSource, SyncSourceError } from "../src/lib/app-sync-source.js";
 import { AppSyncTarget } from "../src/lib/app-sync-target.js";
@@ -28,7 +28,36 @@ describe("peer synchronization concurrency, deadlines, and cancellation", () => 
     for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
   });
 
-  it("serializes concurrent target commits and returns the same persisted outcome to a response-loss retry", async () => {
+  it.each(["package", "data"] as const)("cancels a stalled %s upload and removes partial files before stopping", async kind => {
+    const dataDir = tempRoot();
+    const bytes = Buffer.from("upload payload");
+    const digest = crypto.createHash("sha256").update(bytes).digest("hex");
+    const sessions = new SyncSessionStore({ dataDir });
+    const id = crypto.randomUUID();
+    sessions.create({ id, ownerId: "owner", mode: "app-and-data", appName: "sync-app", appVersion: "1.0.0",
+      packageDigest: digest, packageSize: bytes.length, dataDigest: digest, dataSize: bytes.length });
+    const target = new AppSyncTarget(dataDir, sessions);
+    if (kind === "data") await target.receivePackage({ id, ownerId: "owner", stream: Readable.from(bytes), contentLength: bytes.length });
+    const stream = new PassThrough();
+    const input = { id, ownerId: "owner", stream, contentLength: bytes.length };
+    const upload = kind === "package" ? target.receivePackage(input) : target.receiveData(input);
+    const rejected = expect(upload).rejects.toMatchObject({ code: "SYNC_TARGET_STOPPED" });
+    stream.write(bytes.subarray(0, 2));
+    const directory = path.dirname(sessions.packagePath(id));
+    await waitFor(() => fs.readdirSync(directory).some(file => file.endsWith(".partial")), 1000);
+    await target.shutdown();
+    await rejected;
+    expect(stream.destroyed).toBe(true);
+    expect(fs.readdirSync(directory).some(file => file.endsWith(".partial"))).toBe(false);
+    await expect(target.receivePackage({ ...input, stream: Readable.from(bytes) })).rejects.toMatchObject({ code: "SYNC_TARGET_STOPPED" });
+    const restored = new AppSyncTarget(dataDir, new SyncSessionStore({ dataDir }));
+    const retry = { ...input, stream: Readable.from(bytes) };
+    const result = kind === "package" ? await restored.receivePackage(retry) : await restored.receiveData(retry);
+    expect(result.status).toBe("uploaded");
+    await restored.shutdown();
+  });
+
+  it.each([false, true])("serializes commits and drains pending installation when stopping=%s", async (stop) => {
     const dataDir = tempRoot();
     const packagePath = await packageFixture(dataDir);
     const bytes = fs.readFileSync(packagePath);
@@ -57,9 +86,24 @@ describe("peer synchronization concurrency, deadlines, and cancellation", () => 
       await waitFor(() => installCalls === 1 && sessions.getOwned(id, "owner")?.status === "committing", 500);
       expect(installCalls).toBe(1);
       expect(sessions.getOwned(id, "owner")?.status).toBe("committing");
+      let drained = false;
+      const shutdown = stop ? target.shutdown().then(() => { drained = true; }) : undefined;
+      if (stop) {
+        await Promise.resolve();
+        expect(drained).toBe(false);
+        expect(target.active).toBe(false);
+        await expect(target.commit(id, "owner")).rejects.toMatchObject({ code: "SYNC_TARGET_STOPPED" });
+        expect(() => target.create(sessionInput())).toThrow(expect.objectContaining({ code: "SYNC_TARGET_STOPPED" }));
+      }
       release();
       expect(await first).toEqual(await second);
-      expect((await target.commit(id, "owner")).outcome).toEqual(outcome);
+      await shutdown;
+      if (stop) {
+        expect(drained).toBe(true);
+        expect(sessions.getOwned(id, "owner")?.status).toBe("completed");
+      } else {
+        expect((await target.commit(id, "owner")).outcome).toEqual(outcome);
+      }
       expect(installCalls).toBe(1);
     } finally {
       release();
@@ -115,6 +159,21 @@ describe("peer synchronization concurrency, deadlines, and cancellation", () => 
       restore.restore();
       rename.mockRestore();
     }
+  });
+
+  it("drains a prepared source job before its deferred upload starts and rejects new jobs", async () => {
+    let uploads = 0;
+    const harness = await sourceHarness((request, response) => {
+      if (request.method === "POST") return json(response, 201, {});
+      if (request.method === "PUT") { uploads += 1; request.resume(); return; }
+      response.writeHead(404).end();
+    }, { uploadTimeoutMs: 500, commitTimeoutMs: 100 });
+    const job = await harness.source.start(harness.input);
+    await harness.source.shutdown();
+    expect(harness.source.active).toBe(false);
+    expect(harness.jobs.get(job.id)?.status).toBe("failed");
+    expect(uploads).toBe(0);
+    await expect(harness.source.start(harness.input)).rejects.toMatchObject({ code: "SYNC_SOURCE_STOPPED", statusCode: 503 });
   });
 
   it("fails a never-resolving upload within its hard deadline and leaves no live run", async () => {

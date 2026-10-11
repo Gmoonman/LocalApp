@@ -10,23 +10,34 @@ declare module "@deepseek-ai/cordis" {
 /** Shared UI resources have their own Context, separate from private Agents. */
 export default class NativeClientAssets extends Service {
   private readonly assets = new Context();
+  private scheduledAssets?: Promise<Context>;
   private readonly ready: Promise<void>;
-  constructor(ctx: Context) {
+  constructor(ctx: Context, private readonly config: { baseUrl?: string; contributions?: string[] } = {}) {
     super(ctx, "nativeClientAssets");
     this.ready = (async () => {
       await this.assets.plugin(EmbeddedWebServer, { host: "127.0.0.1", port: 0 });
-      await mountNativeClientModules(this.assets);
+      await mountNativeClientModules(this.assets, false, config);
     })();
     ctx.effect(() => async () => { await this.ready.catch(() => {}); await this.assets.fiber.dispose(); });
   }
   [Service.init](): Promise<void> { return this.ready; }
-  async renderIndex(html: string): Promise<string> {
+  private async context(schedule: boolean): Promise<Context> {
     await this.ready;
-    return this.assets.webServer.renderIndex(html);
+    if (!schedule) return this.assets;
+    return this.scheduledAssets ??= (async () => {
+      const assets = new Context();
+      this.ctx.effect(() => () => assets.fiber.dispose());
+      await assets.plugin(EmbeddedWebServer, { host: "127.0.0.1", port: 0 });
+      await mountNativeClientModules(assets, true, this.config);
+      return assets;
+    })();
   }
-  async resource(request: IncomingMessage, response: ServerResponse): Promise<boolean> {
-    await this.ready;
+  async renderIndex(html: string, schedule = false): Promise<string> {
+    return (await this.context(schedule)).webServer.renderIndex(html);
+  }
+  async resource(request: IncomingMessage, response: ServerResponse, schedule = false): Promise<boolean> {
+    const assets = await this.context(schedule);
     if (!new URL(request.url ?? "/", "http://localapp.invalid").pathname.startsWith("/plugins/")) return false;
-    return (this.assets.webServer as EmbeddedWebServer).dispatchHttp(request, response);
+    return (assets.webServer as EmbeddedWebServer).dispatchHttp(request, response);
   }
 }

@@ -1,6 +1,6 @@
 # 应用 Agent 的 Skills 和工具设置
 
-LocalApp 随 Server 提供四个公共文档 skill：MarkItDown、PDF、DOCX 和 XLSX。来源、固定 commit、许可证和 LocalApp 的改动记录分别保存在 `packages/server/skills/<name>/SOURCE.json` 与 `LICENSE` 中；发布包包含完整 instructions、scripts 和 references。
+LocalApp 随 Server 提供四个公共文档 skill：MarkItDown、PDF、DOCX 和 XLSX。来源、固定 commit、许可证和 LocalApp 的改动记录分别保存在 `packages/dsh-document-tools/skills/<name>/SOURCE.json` 与 `LICENSE` 中；发布包包含完整 instructions、scripts 和 references。
 
 应用在 manifest 声明所需能力，例如：
 

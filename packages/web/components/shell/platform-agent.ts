@@ -153,20 +153,8 @@ export function usePlatformAgent({
     return () => { unsubscribe(); agent.dispose(); };
   }, [pagePath, userName]);
 
-  const agentSend = useCallback(async (text: string) => {
-    if (!text.trim() || agentRef.current?.state.isStreaming) return;
-    let agent = agentRef.current;
-    if (!agent) {
-      agent = new HarnessAgent({ initialState: { systemPrompt: "" }, appId: pagePath });
-      const current = agent;
-      agent.subscribe(() => {
-        if (agentRef.current !== current) return;
-        setIsRunning(current.state.isStreaming);
-        setAiError(current.state.errorMessage ?? null);
-        setChatMessages(toChatMessages(current.state.messages));
-      });
-      agentRef.current = agent;
-    }
+  const synchronizeContext = useCallback((agent: HarnessAgent | null = agentRef.current) => {
+    if (!agent) return;
     agent.state.systemPrompt = [
       "你是一个运行在 LocalApp 应用中的 AI 助手。",
       `当前应用: ${appName}`,
@@ -184,10 +172,28 @@ export function usePlatformAgent({
         return { content: [{ type: "text" as const, text: JSON.stringify(value.result) ?? "null" }], details: value.result, isError: value.isError };
       },
     }));
-    await agent.prompt(text);
   }, [appName, userName, pagePath, registeredToolsRef, systemHintRef, sendToolCallToApp]);
+  useEffect(() => { synchronizeContext(); }, [harness, synchronizeContext]);
 
-  return { harness, chatMessages, setChatMessages, isRunning, aiError, agentSend, handleToolResult };
+  const agentSend = useCallback(async (text: string) => {
+    if (!text.trim() || agentRef.current?.state.isStreaming) return;
+    let agent = agentRef.current;
+    if (!agent) {
+      agent = new HarnessAgent({ initialState: { systemPrompt: "" }, appId: pagePath });
+      const current = agent;
+      agent.subscribe(() => {
+        if (agentRef.current !== current) return;
+        setIsRunning(current.state.isStreaming);
+        setAiError(current.state.errorMessage ?? null);
+        setChatMessages(toChatMessages(current.state.messages));
+      });
+      agentRef.current = agent;
+    }
+    synchronizeContext(agent);
+    await agent.prompt(text);
+  }, [pagePath, synchronizeContext]);
+
+  return { synchronizeContext, harness, chatMessages, setChatMessages, isRunning, aiError, agentSend, handleToolResult };
 }
 
 /** Keep the settings tool list available before a model request is sent. */

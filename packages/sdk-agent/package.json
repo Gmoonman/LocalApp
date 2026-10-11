@@ -13,7 +13,8 @@
     "./postmessage-types": "./src/postmessage-types.ts",
     "./use-register-edit-session": "./src/use-register-edit-session.ts",
     "./harness-client": "./src/harness-client.ts",
-    "./agent-controls": "./src/agent-controls.tsx"
+    "./agent-controls": "./src/agent-controls.tsx",
+    "./native-frame-bridge": "./src/native-frame-bridge.ts"
   },
   "files": [
     "src"

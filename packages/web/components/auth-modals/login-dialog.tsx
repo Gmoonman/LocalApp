@@ -1,25 +1,32 @@
 "use client";
 
-import { type FormEvent, useEffect, useState } from "react";
-import { LogIn, X } from "lucide-react";
+import { type FormEvent, useState } from "react";
+import { LogIn } from "lucide-react";
 import { useAuthModals } from "./auth-provider";
 import { resolveAuthReturnTo } from "./auth-return";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 export function LoginDialog() {
-  const { loginOpen, loginReturnTo, closeLogin, openChangePassword, setPendingOldPassword } = useAuthModals();
+  const {
+    loginOpen,
+    loginReturnTo,
+    closeLogin,
+    openChangePassword,
+    setPendingOldPassword,
+    restoreLoginFocus,
+    changePasswordOpen,
+  } = useAuthModals();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!loginOpen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeLogin();
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [loginOpen, closeLogin]);
-
-  if (!loginOpen) return null;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -57,61 +64,59 @@ export function LoginDialog() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4 py-6 backdrop-blur-md">
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-black/10 bg-white text-black shadow-[0_30px_90px_rgba(17,17,17,0.22)]">
-        <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
-          <div>
-            <p className="text-xl font-black">欢迎回来</p>
-            <p className="mt-1 text-sm text-black/52">登录后进入平台，管理应用、密钥和发布记录</p>
-          </div>
-          <button
-            type="button"
-            onClick={closeLogin}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-black/50 hover:bg-black/5 hover:text-black"
-            aria-label="关闭登录"
-          >
-            <X className="h-4 w-4" />
-          </button>
+    <Dialog
+      open={loginOpen}
+      onOpenChange={(open) => {
+        if (!open) closeLogin();
+      }}
+    >
+      <DialogContent
+        closeLabel="关闭登录"
+        className="sm:max-w-md"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (!changePasswordOpen) restoreLoginFocus?.();
+        }}
+      >
+        <div className="mb-6 space-y-2 pr-6">
+          <DialogTitle className="text-xl font-semibold">欢迎回来</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            登录后，继续使用和创建你的应用。
+          </DialogDescription>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="auth-login-username" className="text-sm font-semibold text-black/68">
-              用户名或邮箱
-            </label>
-            <input
+            <Label htmlFor="auth-login-username">用户名或邮箱</Label>
+            <Input
               id="auth-login-username"
               name="username"
               autoComplete="username"
               required
-              className="h-11 w-full rounded-md border border-black/12 bg-white px-3 text-sm outline-none ring-[#c00000]/20 placeholder:text-black/32 focus:border-[#c00000]/60 focus:ring-2"
               placeholder="请输入用户名或邮箱"
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="auth-login-password" className="text-sm font-semibold text-black/68">
-              密码
-            </label>
-            <input
+            <Label htmlFor="auth-login-password">密码</Label>
+            <Input
               id="auth-login-password"
               name="password"
               type="password"
               autoComplete="current-password"
               required
-              className="h-11 w-full rounded-md border border-black/12 bg-white px-3 text-sm outline-none ring-[#c00000]/20 placeholder:text-black/32 focus:border-[#c00000]/60 focus:ring-2"
-              placeholder="••••••••"
+              placeholder="请输入密码"
             />
           </div>
-          {error && <p className="text-sm text-[#c00000]">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#c00000] text-sm font-bold text-white hover:bg-[#a30000] disabled:opacity-60"
-          >
-            <LogIn className="h-4 w-4" />
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <Button type="submit" disabled={loading} className="w-full">
+            <LogIn size={16} />
             {loading ? "登录中..." : "登录"}
-          </button>
+          </Button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

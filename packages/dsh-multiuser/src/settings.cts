@@ -1,3 +1,4 @@
+export { createSqliteSettingsPersistence } from "./sqlite-settings.cjs";
 import fs from "node:fs";
 import path from "node:path";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
@@ -39,6 +40,7 @@ export interface AgentSettings {
   applications: Record<string, AgentAppPreferences>;
 }
 const empty = (): AgentSettings => ({ providers: [], defaultProviderId: "", grants: {}, mcpServers: [], applications: {} });
+const validPreferenceId = (id: string) => id === "platform" || /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(id) || /^development:[a-zA-Z0-9-]{1,100}$/.test(id);
 
 /** Server-owned encrypted storage; browser reads never return provider or MCP credentials. */
 export class AgentSettingsStore {
@@ -82,7 +84,7 @@ export class AgentSettingsStore {
     if (settings.defaultProviderId && !ids.has(settings.defaultProviderId)) throw new Error("Default provider does not exist");
     const grants: Record<string, AgentCapability[]> = {};
     for (const [appId, capabilities] of Object.entries(settings.grants ?? previous.grants)) {
-      if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(appId) || !Array.isArray(capabilities) || capabilities.some((c) => !AGENT_CAPABILITIES.includes(c))) throw new Error("Invalid application capability grant");
+      if (!validPreferenceId(appId) || !Array.isArray(capabilities) || capabilities.some((c) => !AGENT_CAPABILITIES.includes(c))) throw new Error("Invalid application capability grant");
       grants[appId] = [...new Set(capabilities)];
     }
     const mcpServers = settings.mcpServers.map((server): AgentMcpServer => {
@@ -107,7 +109,7 @@ export class AgentSettingsStore {
     const applications = settings.applications ?? previous.applications;
     if (!applications || typeof applications !== "object" || Array.isArray(applications) || Object.keys(applications).length > 1000) throw new Error("Invalid application Agent preferences");
     for (const [id, preferences] of Object.entries(applications)) {
-      if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(id) || !preferences || !Array.isArray(preferences.skills) || preferences.skills.length > 20 || preferences.skills.some((name) => !this.skillIds.includes(name)) || !Array.isArray(preferences.disabledTools) || preferences.disabledTools.length > 500 || preferences.disabledTools.some((name) => typeof name !== "string" || !name || name.length > 200) || !Array.isArray(preferences.tools) || preferences.tools.length > 100 || preferences.tools.some((tool) => !tool || typeof tool.name !== "string" || !tool.name || tool.name.length > 200 || typeof tool.description !== "string" || tool.description.length > 10000)) throw new Error("Invalid application Agent preferences");
+      if (!validPreferenceId(id) || !preferences || !Array.isArray(preferences.skills) || preferences.skills.length > 20 || preferences.skills.some((name) => !this.skillIds.includes(name)) || !Array.isArray(preferences.disabledTools) || preferences.disabledTools.length > 500 || preferences.disabledTools.some((name) => typeof name !== "string" || !name || name.length > 200) || !Array.isArray(preferences.tools) || preferences.tools.length > 100 || preferences.tools.some((tool) => !tool || typeof tool.name !== "string" || !tool.name || tool.name.length > 200 || typeof tool.description !== "string" || tool.description.length > 10000)) throw new Error("Invalid application Agent preferences");
     }
     const value: AgentSettings = { providers, defaultProviderId: settings.defaultProviderId, grants, mcpServers, applications };
     const iv = randomBytes(12);

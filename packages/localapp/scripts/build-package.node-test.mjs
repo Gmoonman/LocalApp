@@ -47,6 +47,111 @@ test("packed product exposes one localapp binary without workspace references", 
   assert.equal(manifest.name, "@patodo/localapp");
   assert.deepEqual(manifest.bin, { localapp: "bin/localapp.mjs" });
   assert.equal(JSON.stringify(manifest).includes("workspace:"), false);
+  for (const name of ["multiuser", "agent-ui", "applications", "development", "documents"]) {
+    const entry = manifest.exports[`./plugins/${name}`];
+    assert.equal(entry.default, `./plugins/${name}.mjs`);
+    await fs.access(path.join(result.outputDirectory, entry.default));
+  }
+  const pluginCheck = spawn(process.execPath, ["--input-type=module", "-e", `
+    import AgentUI from '@patodo/localapp/plugins/agent-ui';
+    import Multiuser from '@patodo/localapp/plugins/multiuser';
+    import Platform, { clientHostUrl as platformClient } from '@patodo/localapp/plugins/applications';
+    import Development, { clientHostUrl as developmentClient, taskSupervisorPath, createBuildOperations, checkProject, buildApplicationPackage } from '@patodo/localapp/plugins/development';
+    import Documents from '@patodo/localapp/plugins/documents';
+    import { createRequire } from 'node:module';
+    import { pathToFileURL } from 'node:url';
+    import path from 'node:path';
+    import fs from 'node:fs/promises';
+    import { execFile } from 'node:child_process';
+    import { promisify } from 'node:util';
+    for (const plugin of [AgentUI, Multiuser, Platform, Development, Documents]) if (typeof plugin !== 'function') throw new Error('Invalid public plugin');
+    const require = createRequire(path.resolve('runtime/server/package.json'));
+    const { Context } = await import(pathToFileURL(require.resolve('@deepseek-ai/cordis')).href);
+    const SQL = await require('sql.js')();
+    const database = new SQL.Database(); const context = new Context();
+    try {
+      if (!taskSupervisorPath.startsWith(path.resolve('runtime/server/node_modules/@localapp/dsh-app-development/runner') + path.sep)) throw new Error('Supervisor escaped the development plugin');
+      try {
+        await promisify(execFile)(process.execPath, [taskSupervisorPath]);
+        throw new Error('Supervisor accepted missing arguments');
+      } catch (error) {
+        if (error.code !== 125 || !error.stderr.includes('Invalid LocalApp task supervisor invocation')) throw error;
+      }
+      await context.plugin(Multiuser, { capacity: 2 });
+      await context.plugin(AgentUI);
+      await context.plugin(Platform, { owner: () => undefined, application: () => undefined, canAccess: () => false });
+      await context.plugin(Development, { dataDir: path.resolve('plugin-test-data'), persistence: { database: () => database, flush: () => {} } });
+      await context.plugin(Documents);
+      const projectDir = path.resolve('plugin-test-data/public-build');
+      await fs.mkdir(path.join(projectDir, 'dist'), { recursive: true });
+      await fs.writeFile(path.join(projectDir, 'manifest.json'), JSON.stringify({ name: 'public-build-app', platformVersion: '^1.2' }));
+      await fs.writeFile(path.join(projectDir, 'package.json'), JSON.stringify({ name: 'public-build-app', version: '1.0.0', scripts: { test: 'node test.cjs', build: 'node build.cjs' } }));
+      await fs.writeFile(path.join(projectDir, 'test.cjs'), 'process.stdout.write("public-check-test")');
+      await fs.writeFile(path.join(projectDir, 'build.cjs'), 'require("node:fs").writeFileSync("dist/index.html", "<main>public build</main>")');
+      const report = await checkProject({ projectDir });
+      if (!report.success) throw new Error('Public project check failed: ' + JSON.stringify(report));
+      const operations = createBuildOperations();
+      if ((await operations.loadAndValidateProjectManifest(projectDir)).name !== 'public-build-app') throw new Error('Public build operations failed');
+      const packaged = await buildApplicationPackage({ projectDir, outputPath: path.join(projectDir, 'public.localapp') });
+      if (packaged.appId !== 'public-build-app' || !(await fs.stat(packaged.path)).size) throw new Error('Public application package missing');
+      if (!context.localappAgentUI || !context.localappMultiuser || !context.localappApps || !context.localappDevelopment || !context.localappDocuments) throw new Error('Missing public plugin service');
+      const workspaces = context.localappDevelopment.workspaces({ workspaceDir: path.resolve('plugin-test-data/workspaces'), authorizeExecution: () => true });
+      const workspace = await workspaces.create({ name: 'public-task-workspace', ownerId: 'public-user' });
+      const taskRunner = context.localappDevelopment.taskRunner({ workspaceStore: workspaces, taskDir: path.resolve('plugin-test-data/tasks'), allowedExecutables: { node: process.execPath }, authorizeExecution: () => true });
+      const task = await taskRunner.start({ workspaceId: workspace.id, kind: 'test', executable: 'node', args: ['-e', 'process.stdout.write("public-task-completed")'], timeoutMs: 5000, requestedBy: 'public-user' });
+      const deadline = Date.now() + 5000;
+      while (context.localappDevelopment.tasks.get(task.id)?.status === 'running' && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+      if (context.localappDevelopment.tasks.get(task.id)?.status !== 'succeeded') throw new Error('Public task failed: ' + JSON.stringify(context.localappDevelopment.tasks.get(task.id)));
+      if (!taskRunner.logs(task.id, 0).content.includes('public-task-completed')) throw new Error('Public task output missing');
+      const secrets = context.localappMultiuser.createSecrets(path.resolve('plugin-test-data/master.key'));
+      const sealed = secrets.seal('public-plugin-secret', 'public-plugin-test');
+      if (secrets.open(sealed, 'public-plugin-test') !== 'public-plugin-secret') throw new Error('Public secret service failed');
+      const settingsValues = new Map();
+      const settings = context.localappMultiuser.createSettings(path.resolve('plugin-test-data/settings'), {
+        users: () => [...settingsValues.keys()], read: user => settingsValues.get(user), write: (user, value) => settingsValues.set(user, value),
+      }, []);
+      settings.write('public-user', { providers: [], defaultProviderId: '', grants: {}, mcpServers: [], applications: {} });
+      if (settings.read('public-user').providers.length !== 0 || !settingsValues.has('public-user')) throw new Error('Public settings service failed');
+      const { mountNativeClientModules } = await import(pathToFileURL(require.resolve('@localapp/dsh-multiuser/native-client')).href);
+      const assets = new Context();
+      try {
+        const modules = await mountNativeClientModules(assets, true, { contributions: [platformClient, developmentClient] });
+        const entries = modules.graph().entries;
+        for (const id of ['@localapp/dsh-multiuser', '@localapp/dsh-app-platform', '@localapp/dsh-app-development', '@deepseek-ai/dsh-client-ui-trajectory']) {
+          if (!entries.some(entry => entry.id === id)) throw new Error('Missing public client contribution: ' + id);
+        }
+        for (const entry of entries) {
+          const response = await modules.fetchBundle(new Request('http://localapp.test/' + entry.url));
+          if (response.status !== 200 || (await response.text()).length < 100) throw new Error('Unreadable client bundle: ' + entry.id);
+        }
+      } finally { await assets.fiber.dispose(); }
+    } finally { await context.fiber.dispose(); database.close(); }
+  `], { cwd: result.outputDirectory, env: { ...process.env, NODE_PATH: "" }, stdio: ["ignore", "pipe", "pipe"] });
+  let pluginErrors = ""; pluginCheck.stderr.on("data", chunk => { pluginErrors += chunk; });
+  assert.equal(await new Promise(resolve => pluginCheck.once("close", resolve)), 0, pluginErrors);
+  const consumer = path.join(result.outputDirectory, "plugin-consumer.mts");
+  await fs.writeFile(consumer, `
+    import Multiuser, { clientHostUrl } from '@patodo/localapp/plugins/multiuser';
+    import Platform from '@patodo/localapp/plugins/applications';
+    import Development from '@patodo/localapp/plugins/development';
+    import Documents from '@patodo/localapp/plugins/documents';
+    const url: string = clientHostUrl;
+    const options: ConstructorParameters<typeof Multiuser>[1] = { capacity: 2 };
+    // @ts-expect-error capacity requires a number
+    const invalid: ConstructorParameters<typeof Multiuser>[1] = { capacity: 'two' };
+    type PlatformOptions = ConstructorParameters<typeof Platform>[1];
+    type DevelopmentOptions = ConstructorParameters<typeof Development>[1];
+    // @ts-expect-error application storage must implement its host interface
+    const invalidPlatform: PlatformOptions = {};
+    // @ts-expect-error development requires persistence as well as a data directory
+    const invalidDevelopment: DevelopmentOptions = { dataDir: '/data' };
+    const documentOptions: ConstructorParameters<typeof Documents>[1] = { root: '/skills' };
+    // @ts-expect-error document roots are filesystem paths
+    const invalidDocuments: ConstructorParameters<typeof Documents>[1] = { root: 123 };
+  `);
+  const compiler = spawn(process.execPath, [createRequire(path.join(projectDirectory, "packages/server/package.json")).resolve("typescript/bin/tsc"), "--noEmit", "--strict", "--skipLibCheck", "--module", "NodeNext", "--target", "ES2022", "--typeRoots", path.join(result.outputDirectory, "runtime/server/node_modules/@types"), consumer], { cwd: result.outputDirectory, env: { ...process.env, NODE_PATH: "" }, stdio: ["ignore", "pipe", "pipe"] });
+  let diagnostics = ""; for (const stream of [compiler.stdout, compiler.stderr]) stream.on("data", chunk => { diagnostics += chunk; });
+  assert.equal(await new Promise(resolve => compiler.once("close", resolve)), 0, diagnostics);
   assert.equal(await run(result.outputDirectory, ["--version"]), `localapp ${productVersion}`);
   assert.match(await run(result.outputDirectory, ["-h"]), /Commands:\n[\s\S]*server \[start\][\s\S]*app install/);
   assert.match(await run(result.outputDirectory, ["server", "run", "--help"]), /--data-dir <path>[\s\S]*--host <address>[\s\S]*--port <number>/);

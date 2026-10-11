@@ -1,6 +1,25 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { createTestServer, getAppUrl, getTestApiKey } from "./helpers.js";
 import type { FastifyInstance } from "fastify";
+import path from "node:path";
+
+it("keeps CLI minimum-version checks on migrated business routes", async () => {
+  const server = await createTestServer({ dataRoot: path.resolve(__dirname, "../../../../tmp/version-check"), env: { MIN_CLI_VERSION: "0.4.0" } });
+  try {
+    const login = await server.app.inject({ method: "POST", url: "/api/auth/login", payload: { username: "localadmin", password: "localadmin" } });
+    expect(login.statusCode).toBe(200);
+    const cookie = login.cookies.find(value => value.name === "token")!;
+    expect(cookie).toBeDefined();
+    for (const url of ["/api/config", "/api/keys", "/api/pages", "/api/workspaces"]) {
+      const headers = { "x-api-key": getTestApiKey() };
+      expect((await server.app.inject({ url, headers })).statusCode, url).toBe(403);
+      expect((await server.app.inject({ url, headers: { ...headers, "x-cli-version": "0.3.0" } })).statusCode, url).toBe(403);
+      expect((await server.app.inject({ url, headers: { ...headers, "x-cli-version": "0.4.0" } })).statusCode, url).toBe(200);
+      expect((await server.app.inject({ url, cookies: { token: cookie.value } })).statusCode, url).toBe(200);
+      expect((await server.app.inject({ url, cookies: { token: cookie.value }, headers: { "x-api-key": "invalid", "x-cli-version": "0.4.0" } })).statusCode, url).toBe(401);
+    }
+  } finally { await server.stop(); }
+});
 
 describe("server-config — env vars", () => {
   let app: FastifyInstance;

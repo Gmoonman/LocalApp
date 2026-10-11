@@ -25,6 +25,30 @@ const call = (cookie: string, url: string, method = "GET", body?: unknown) =>
     headers: { Cookie: cookie, "Content-Type": "application/json" },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
+it("isolates developer capability settings by user and project", async () => {
+  const create = async (cookie: string, name: string) => {
+    const result = await call(cookie, "", "POST", { name });
+    expect(result.status).toBe(201);
+    return (await result.json()).data.id;
+  };
+  const first = await create(alice, "settings-first"), second = await create(alice, "settings-second"), foreign = await create(bob, "settings-foreign");
+  const endpoint = `/${first}/agent/settings`;
+  const input = { enabledCapabilities: ["files"], disabledTools: ["write"] };
+  expect((await call("", endpoint)).status).toBe(401);
+  expect((await call(bob, endpoint)).status).toBe(404);
+  expect((await call(bob, endpoint, "PUT", input)).status).toBe(404);
+  expect((await call(alice, `/${foreign}/agent/settings`, "PUT", input)).status).toBe(404);
+  expect((await call(alice, endpoint, "PUT", { ...input, enabledCapabilities: ["unknown-capability"] })).status).toBe(400);
+  expect((await call(alice, endpoint, "PUT", { ...input, disabledTools: [123] })).status).toBe(400);
+  expect((await call(alice, endpoint, "PUT", input)).status).toBe(200);
+  expect((await (await call(alice, endpoint)).json()).data).toMatchObject(input);
+  const other = (await (await call(alice, `/${second}/agent/settings`)).json()).data;
+  expect(other.enabledCapabilities).toContain("terminal");
+  expect(other.disabledTools).toEqual([]);
+  const foreignSettings = (await (await call(bob, `/${foreign}/agent/settings`)).json()).data;
+  expect(foreignSettings.enabledCapabilities).toContain("terminal");
+  expect(foreignSettings.disabledTools).toEqual([]);
+});
 it("creates a builtin source project and rejects cross-user access and stale saves", async () => {
   expect((await call("", "/")).status).toBe(401);
   const create = await call(alice, "", "POST", { name: "browser-app" });
@@ -237,3 +261,21 @@ it("migrates original source with the distributed skill helper, preserving binar
     await expect(migrate({project})).rejects.toThrow("符号链接");
   } finally { if (oldConfig === undefined) delete process.env.LOCALAPP_CONFIG_DIR; else process.env.LOCALAPP_CONFIG_DIR = oldConfig; fs.rmSync(root,{recursive:true,force:true}); }
 });
+
+it("serves native dsh development sessions only to the project owner",async()=>{
+ const settings=await fetch(server.baseUrl+"/api/agent/settings",{method:"PUT",headers:{Cookie:alice,"Content-Type":"application/json"},body:JSON.stringify({providers:[{id:"native-dev",name:"Native development",protocol:"openai-completions",baseUrl:"http://127.0.0.1:9/v1",model:"test-model",apiKey:"test-key"}],defaultProviderId:"native-dev",grants:{},mcpServers:[]})});
+ expect(settings.status).toBe(200);
+ const p=(await (await call(alice,"","POST",{name:"native-development"})).json()).data;
+ const body={type:"client-request",rpcId:"dev-list",method:"session/list",payload:{args:{_request:{}}}};
+ const response=await call(alice,`/${p.id}/native/api/session/list`,"POST",body);
+ expect(response.status).toBe(200);
+ const value=await response.json();expect(JSON.stringify(value)).not.toContain("test-key");
+ expect(value.type).toBe("server-response");
+ const createNative=(request:unknown)=>call(alice,`/${p.id}/native/api/session/create`,"POST",{type:"client-request",rpcId:"dev-create",method:"session/create",payload:{args:{request}}});
+ const created=await createNative({});expect(created.status).toBe(200);
+ expect((await created.json()).result.value.sessionId).toMatch(/^session-/);
+ expect(await (await createNative({cwd:server.dataDir})).text()).toContain("outside the application workspace");
+ expect(await (await createNative({sessionId:"../escape"})).text()).toContain("Invalid session ID");
+ expect((await call(bob,`/${p.id}/native/api/session/list`,"POST",body)).status).toBe(404);
+ expect((await call("",`/${p.id}/native/api/session/list`,"POST",body)).status).toBe(401);
+},30000);

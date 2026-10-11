@@ -34,6 +34,15 @@ afterEach(async () => {
 });
 
 describe("managed template zones", () => {
+  it("ships plugin-backed server-core without a private registry dependency", async () => {
+    const runtime = path.join(project, ".localapp/runtime/server-core");
+    const manifest = JSON.parse(await fs.readFile(path.join(runtime, "package.json"), "utf8"));
+    expect(manifest.dependencies).not.toHaveProperty("@localapp/dsh-app-platform");
+    expect(await fs.readFile(path.join(runtime, "dist/lib/app-db.js"), "utf8")).toContain("../platform/app-db.cjs");
+    expect(await fs.readFile(path.join(runtime, "dist/platform/app-db.cjs"), "utf8")).toContain("exports.getConnection");
+    expect(await fs.readFile(path.join(runtime, "dist/lib/app-db.d.ts"), "utf8")).toContain("../platform/app-db.cjs");
+  });
+
   it("sync replaces managed files without changing user source", async () => {
     // Break caught: copying the full template during sync overwrites application source or custom skills.
     await fs.writeFile(path.join(project, "src/App.tsx"), "user-owned\n");
