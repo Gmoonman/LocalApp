@@ -41,3 +41,4 @@ jobs:
           tests/app-sync.test.ts
           tests/daemon-cleanup-failure.test.ts
           tests/daemon-integration.test.ts
+          tests/release-store.test.ts

@@ -40,7 +40,7 @@
     {
       "path": "packages/localapp/tests/release-store.test.ts",
       "rule": "LOCAL_ABSOLUTE_PATH",
-      "sha256": "15f4de883dd0ed1965cce691113245937264e76e98558eb2fe0fb81dacdea6f8",
+      "sha256": "4523bdd7716f8067a14065c14ecc019dd841f467677b0d9956ea30de4feefb62",
       "reason": "The unchanged Windows layout fixture uses the fictional user Alice; it is not a developer machine path."
     },
     {

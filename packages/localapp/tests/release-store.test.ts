@@ -229,7 +229,7 @@ describe("release store", () => {
     const source = packageArtifact;
 
     const reordered = path.join(root, "reordered descriptor");
-    await fs.cp(source, reordered, { recursive: true });
+    await copyArtifact(source, reordered);
     const reorderedManifestPath = path.join(reordered, ".localapp-artifact.json");
     const reorderedManifest = JSON.parse(await fs.readFile(reorderedManifestPath, "utf8"));
     reorderedManifest.protocolVersions = { peerSync: 1, deviceAction: 2, notificationDelivery: 2 };
@@ -237,7 +237,7 @@ describe("release store", () => {
     await expect(verifyReleaseArtifact(reordered)).rejects.toMatchObject({ code: "release_artifact_invalid" });
 
     const substituted = path.join(root, "substituted native manifest");
-    await fs.cp(source, substituted, { recursive: true });
+    await copyArtifact(source, substituted);
     const nativePath = path.join(substituted, "runtime/native/adapter-manifest.json");
     const native = JSON.parse(await fs.readFile(nativePath, "utf8"));
     native.signing.mode = native.signing.mode === "adhoc" ? "release" : "adhoc";
@@ -257,7 +257,7 @@ describe("release store", () => {
   it("rejects a release descriptor that omits required protocol and native adapter contracts", async () => {
     const root = await fixtureRoot();
     const source = path.join(root, "missing release contracts");
-    await fs.cp(packageArtifact, source, { recursive: true });
+    await copyArtifact(packageArtifact, source);
     const manifestPath = path.join(source, ".localapp-artifact.json");
     const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
     delete manifest.protocolVersions;
@@ -373,4 +373,23 @@ function exitedProcessPid(): Promise<number> {
     child.once("error", reject);
     child.once("exit", () => resolve(pid));
   });
+}
+
+// Copy every file in the verified package with bounded filesystem concurrency.
+// Each destination remains independent so tampering cannot alter the fixture.
+async function copyArtifact(source: string, destination: string): Promise<void> {
+  const manifest = JSON.parse(await fs.readFile(path.join(source, ".localapp-artifact.json"), "utf8"));
+  const files: string[] = [".localapp-artifact.json", ...manifest.files.map((file: { path: string }) => file.path)];
+  let next = 0;
+  const workers = Array.from({ length: Math.min(16, files.length) }, async () => {
+    while (next < files.length) {
+      const relative = files[next++];
+      const target = path.join(destination, relative);
+      await fs.mkdir(path.dirname(target), { recursive: true });
+      await fs.copyFile(path.join(source, relative), target, fsConstants.COPYFILE_FICLONE);
+    }
+  });
+  const results = await Promise.allSettled(workers);
+  const failure = results.find(result => result.status === "rejected");
+  if (failure?.status === "rejected") throw failure.reason;
 }
