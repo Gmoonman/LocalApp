@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs/promises";
 import { Readable } from "node:stream";
 import path from "node:path";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { acquireDaemonLock, LocalAppDaemon } from "../src/daemon/daemon.js";
 import { createIpcClient } from "../src/daemon/ipc-client.js";
 import { publishRelease } from "../src/daemon/release-store.js";
@@ -18,20 +18,22 @@ const directories: string[] = [];
 // strongly reachable for this test process so Node does not report a GC-close.
 const retainedDaemons: LocalAppDaemon[] = [];
 let preparedLayout: ReturnType<typeof createRuntimeLayout>;
+let supportDirectory: string;
 
 beforeAll(async () => {
   await fs.mkdir(testRoot, { recursive: true });
   await buildLocalAppPackage({ outputDirectory: packageArtifact });
+  supportDirectory = await fs.mkdtemp(path.join(testRoot, "support-"));
+  await publishRelease({ sourceDirectory: packageArtifact, layout: createRuntimeLayout({ supportDir: supportDirectory, runtimeDir: path.join(supportDirectory, "run"), dataDir: path.join(supportDirectory, "data") }) });
 }, 120_000);
-// Publish and verify the complete real product as setup. The five-second test
-// deadline continues to cover daemon startup and failure cleanup, not copying
-// thousands of dependency files into its isolated release directory.
+// Share one verified immutable release; each test keeps its own data and control
+// directories. Test deadlines cover daemon startup and failure cleanup.
 beforeEach(async () => {
   const root = await fs.mkdtemp(path.join(testRoot, "fixture-"));
   directories.push(root);
-  preparedLayout = createRuntimeLayout({ supportDir: path.join(root, "support"), runtimeDir: path.join(root, "run"), dataDir: path.join(root, "data") });
-  await publishRelease({ sourceDirectory: packageArtifact, layout: preparedLayout });
+  preparedLayout = createRuntimeLayout({ supportDir: supportDirectory, runtimeDir: path.join(root, "run"), dataDir: path.join(root, "data") });
 });
+afterAll(async () => { if (supportDirectory) await fs.rm(supportDirectory, { recursive: true, force: true }); });
 afterEach(async () => {
   vi.unstubAllGlobals();
   await Promise.all(directories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true })));

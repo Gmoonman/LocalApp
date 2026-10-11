@@ -34,3 +34,9 @@ jobs:
           src/lib/__tests__/dsh-native-session.test.mts
           tests/integration/dsh-account-stop.test.ts
           tests/integration/dsh-development-mcp.test.ts
+      - name: Verify CLI synchronization and daemon lifecycle
+        run: >-
+          pnpm -C packages/localapp exec vitest run
+          tests/app-sync.test.ts
+          tests/daemon-cleanup-failure.test.ts
+          tests/daemon-integration.test.ts
