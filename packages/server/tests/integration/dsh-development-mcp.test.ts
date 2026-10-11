@@ -1,3 +1,4 @@
+import { processExists } from "../helpers/processExists.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, it, vi } from "vitest";
@@ -54,7 +55,7 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", li
     expect(run.statusCode, run.body).toBe(200);
     expect(called, run.body).toBe(true);
     const pid = Number(await fs.readFile(path.join(workspace, "mcp.pid"), "utf8"));
-    expect(() => process.kill(pid, 0)).not.toThrow();
+    expect(processExists(pid)).toBe(true);
     if (reason === "account") { getDb().run("DELETE FROM users WHERE id = ?", [owner.id]); flushMetaDb(); }
     else if (reason === "configuration") {
       const settings = new AgentSettingsStore(root);

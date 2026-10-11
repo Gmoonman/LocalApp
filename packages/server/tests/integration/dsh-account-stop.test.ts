@@ -1,3 +1,4 @@
+import { processExists } from "../helpers/processExists.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, it, vi } from "vitest";
@@ -142,7 +143,7 @@ it.each(["user", "developer"].flatMap(role => ["delete", "logout", "password", "
     expect(run.body).toContain("Background started");
     let pid = 0;
     await expect.poll(async () => { try { pid = Number(await fs.readFile(path.join(workspace, "job.pid"), "utf8")); return pid > 0; } catch { return false; } }, { timeout: 5000 }).toBe(true);
-    expect(() => process.kill(pid, 0)).not.toThrow();
+    expect(processExists(pid)).toBe(true);
     let cookie = "";
     if (action === "delete") { getDb().run("DELETE FROM users WHERE id = ?", [owner.id]); flushMetaDb(); }
     else {

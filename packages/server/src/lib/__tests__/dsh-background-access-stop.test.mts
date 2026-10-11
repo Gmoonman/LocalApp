@@ -1,3 +1,4 @@
+import { processExists } from "../../../tests/helpers/processExists.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import Fastify from "fastify";
@@ -45,11 +46,11 @@ it.each(["application", "capabilities", "grants", "python", "provider", "mcp", "
       try { pid = Number(await fs.readFile(path.join(workspaceRoot, "job.pid"), "utf8")); return pid > 0; }
       catch { return false; }
     }, { timeout: 5000 }).toBe(true);
-    expect(() => process.kill(pid, 0)).not.toThrow();
+    expect(processExists(pid)).toBe(true);
     // Allow the periodic check to run after /run records the application's tool catalog.
     await new Promise(resolve => setTimeout(resolve, 1200));
     expect(context.localappMultiuser.forUser("alice")).toHaveLength(1);
-    expect(() => process.kill(pid, 0)).not.toThrow();
+    expect(processExists(pid)).toBe(true);
     if (reason === "application") available = false;
     else if (reason === "capabilities") capabilitiesAllowed = false;
     else if (reason === "python") await fs.writeFile(path.join(root, "python-environment.json"), JSON.stringify({ executable: path.join(root, "python", "bin", "python"), directory: path.join(root, "python"), baseDirectory: path.join(root, "base-python"), revision: "new-environment", managed: true, version: "3.12.0" }));
@@ -65,8 +66,11 @@ it.each(["application", "capabilities", "grants", "python", "provider", "mcp", "
     available = true;
     if (reason === "python") await fs.rm(path.join(root, "python-environment.json"));
     if (["provider", "mcp", "tools"].includes(reason)) settings.write("alice", initialSettings);
-    const history = await app.inject("/api/agent/sessions/scheduled-session?appId=alice/scheduled");
-    expect(history.statusCode).toBe(200);
-    expect(history.body).toContain("Access background process");
+    await expect.poll(async () => {
+      const history = await app.inject("/api/agent/sessions/scheduled-session?appId=alice/scheduled");
+      expect(history.statusCode, history.body).toBe(200);
+      expect(history.body).toContain("Access background process");
+      return true;
+    }, { timeout: 3000 }).toBe(true);
   } finally { await app.close(); await context.fiber.dispose(); vi.unstubAllGlobals(); await fs.rm(root, { recursive: true, force: true }); }
 }, 15000);
