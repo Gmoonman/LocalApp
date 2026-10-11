@@ -1,3 +1,4 @@
+import { resolveDeepSeekPlugin } from "./deepseek-plugin.mjs";
 import { Context } from "@deepseek-ai/cordis";
 import AgentUI from "@localapp/dsh-agent-ui";
 import Multiuser from "@localapp/dsh-multiuser";
@@ -32,17 +33,17 @@ export async function createPluginSuite(options: PluginSuiteOptions): Promise<Co
   try {
     if (options.documents !== false) {
       const { default: DocumentTools } = await import("@localapp/dsh-document-tools");
-      await context.plugin(DocumentTools, { root: options.documents?.root ?? process.env.LOCALAPP_PUBLIC_SKILLS_ROOT });
+      await context.plugin(resolveDeepSeekPlugin(DocumentTools), { root: options.documents?.root ?? process.env.LOCALAPP_PUBLIC_SKILLS_ROOT });
     }
-    await context.plugin(Multiuser, options.multiuser);
-    if (options.agentUI !== false) await context.plugin(AgentUI);
+    await context.plugin(resolveDeepSeekPlugin(Multiuser), options.multiuser);
+    if (options.agentUI !== false) await context.plugin(resolveDeepSeekPlugin(AgentUI));
     if (combination !== "multiuser") {
       const { default: Platform } = await import("@localapp/dsh-app-platform");
-      await context.plugin(Platform, options.platform!);
+      await context.plugin(resolveDeepSeekPlugin(Platform), options.platform!);
     }
     if (combination === "full") {
       const { default: Development } = await import("@localapp/dsh-app-development");
-      await context.plugin(Development, options.development!);
+      await context.plugin(resolveDeepSeekPlugin(Development), options.development!);
     }
     return context;
   } catch (error) {

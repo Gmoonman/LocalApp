@@ -1,3 +1,4 @@
+import { resolveDeepSeekPlugin } from "./deepseek-plugin.mjs";
 import fs from "node:fs/promises";
 import { constants, createReadStream } from "node:fs";
 import path from "node:path";
@@ -96,8 +97,8 @@ export async function inventoryLegacyHistory(dataDir: string, userId: string, ap
     await checkTree(sessions);
     const context = new Context();
     try {
-      await context.plugin(Sessions);
-      await context.plugin(Persistence, { root: sessions, compression: "none" });
+      await context.plugin(resolveDeepSeekPlugin(Sessions));
+      await context.plugin(resolveDeepSeekPlugin(Persistence), { root: sessions, compression: "none" });
       for (const snapshot of await context.sessionPersistence.list()) {
         const handle = await context.sessionPersistence.open(snapshot.header.id, "read");
         try {
