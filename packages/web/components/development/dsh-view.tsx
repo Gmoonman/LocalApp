@@ -22,13 +22,16 @@ const folding = {
 export const DshMarkdown = ({
   text,
   streaming = false,
+  compact = false,
 }: {
   text: string;
   streaming?: boolean;
+  compact?: boolean;
 }) => (
   <MarkdownText
     text={text}
     streaming={streaming}
+    variant={compact ? "compact" : "body"}
     labels={{
       code: {
         copyLabel: "复制",

@@ -5,8 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "next build",
-    "build:package": "next build",
+    "build": "pnpm -C ../dsh-app-development build && next build",
+    "build:package": "pnpm -C ../dsh-app-development build && next build",
     "start": "next start",
     "test": "vitest run"
   },
