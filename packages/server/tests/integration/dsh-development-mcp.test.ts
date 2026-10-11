@@ -1,3 +1,4 @@
+import { hostProcessId } from "../../src/lib/__tests__/helpers/hostProcessId.js";
 import { processExists } from "../../src/lib/__tests__/helpers/processExists.js";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -37,6 +38,7 @@ it.each(["account", "configuration", "capabilities"] as const)("calls a real pro
     const outside = path.join(root, "outside-private.txt");
     await fs.writeFile(outside, "outside-private-marker");
     const script = `const fs = require("node:fs");
+process.title = ${JSON.stringify("localapp-mcp-" + path.basename(root))};
 fs.writeFileSync("mcp.pid", String(process.pid));
 require("node:readline").createInterface({ input: process.stdin }).on("line", line => {
  const message = JSON.parse(line); if (message.id === undefined) return;
@@ -54,7 +56,7 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", li
     const run = await app.inject({ method: "POST", url: `/api/development/projects/${id}/agent/run`, headers: { "X-API-Key": "mcp-key" }, payload: { sessionId: "mcp-project-session", prompt: "Inspect project through MCP" } });
     expect(run.statusCode, run.body).toBe(200);
     expect(called, run.body).toBe(true);
-    const pid = Number(await fs.readFile(path.join(workspace, "mcp.pid"), "utf8"));
+    const pid = await hostProcessId(Number(await fs.readFile(path.join(workspace, "mcp.pid"), "utf8")), "localapp-mcp-" + path.basename(root));
     expect(processExists(pid)).toBe(true);
     if (reason === "account") { getDb().run("DELETE FROM users WHERE id = ?", [owner.id]); flushMetaDb(); }
     else if (reason === "configuration") {

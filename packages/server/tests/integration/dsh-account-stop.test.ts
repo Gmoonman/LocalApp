@@ -1,3 +1,4 @@
+import { hostProcessId } from "../../src/lib/__tests__/helpers/hostProcessId.js";
 import { processExists } from "../../src/lib/__tests__/helpers/processExists.js";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -119,7 +120,7 @@ it.each(["user", "developer"].flatMap(role => ["delete", "logout", "password", "
   vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
     const request = JSON.parse(init.body);
     const done = request.messages.some((message: any) => message.role === "tool");
-    const delta = done ? { content: "Background started" } : { tool_calls: [{ index: 0, id: "account-background", function: { name: "bash", arguments: JSON.stringify({ description: "Account background process", command: `exec node -e 'require("fs").writeFileSync("job.pid", String(process.pid)); setInterval(() => {}, 1000)'`, run_in_background: true }) } }] };
+    const delta = done ? { content: "Background started" } : { tool_calls: [{ index: 0, id: "account-background", function: { name: "bash", arguments: JSON.stringify({ description: "Account background process", command: `exec node -e 'process.title = "localapp-background-${path.basename(root)}"; require("fs").writeFileSync("job.pid", String(process.pid)); setInterval(() => {}, 1000)'`, run_in_background: true }) } }] };
     return new Response(`data: ${JSON.stringify({ choices: [{ delta, finish_reason: done ? "stop" : "tool_calls" }] })}\n\ndata: [DONE]\n\n`, { headers: { "Content-Type": "text/event-stream" } });
   }));
   const tokens = new SetupTokenStore();
@@ -143,6 +144,7 @@ it.each(["user", "developer"].flatMap(role => ["delete", "logout", "password", "
     expect(run.body).toContain("Background started");
     let pid = 0;
     await expect.poll(async () => { try { pid = Number(await fs.readFile(path.join(workspace, "job.pid"), "utf8")); return pid > 0; } catch { return false; } }, { timeout: 5000 }).toBe(true);
+    pid = await hostProcessId(pid, "localapp-background-" + path.basename(root));
     expect(processExists(pid)).toBe(true);
     let cookie = "";
     if (action === "delete") { getDb().run("DELETE FROM users WHERE id = ?", [owner.id]); flushMetaDb(); }

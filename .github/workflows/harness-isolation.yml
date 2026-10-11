@@ -1,0 +1,35 @@
+name: Harness isolation diagnostics
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: bash scripts/setup-ci-sandbox.sh
+      - run: pnpm -C packages/server-core build
+      - name: Verify isolated process shutdown and session persistence
+        run: >-
+          pnpm -C packages/server exec vitest run
+          src/lib/__tests__/helpers/hostProcessId.test.ts
+          src/lib/__tests__/helpers/processExists.test.ts
+          src/lib/__tests__/dsh-close-projection.test.mts
+          src/lib/__tests__/dsh-background-access-stop.test.mts
+          src/lib/__tests__/deepseek-capabilities.test.ts
+          src/lib/__tests__/dsh-native-session.test.mts
+          tests/integration/dsh-account-stop.test.ts
+          tests/integration/dsh-development-mcp.test.ts

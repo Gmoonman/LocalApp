@@ -1,3 +1,4 @@
+import { hostProcessId } from "./helpers/hostProcessId.js";
 import { processExists } from "./helpers/processExists.js";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -21,7 +22,7 @@ it.each(["application", "capabilities", "grants", "python", "provider", "mcp", "
   vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
     const request = JSON.parse(init.body); requests.push(request);
     const hasResult = request.messages.some((message: any) => message.role === "tool");
-    const delta = hasResult ? { content: "Background started" } : { tool_calls: [{ index: 0, id: "access-background", function: { name: "bash", arguments: JSON.stringify({ description: "Access background process", command: `exec node -e 'require("fs").writeFileSync("job.pid", String(process.pid)); setInterval(() => {}, 1000)'`, run_in_background: true }) } }] };
+    const delta = hasResult ? { content: "Background started" } : { tool_calls: [{ index: 0, id: "access-background", function: { name: "bash", arguments: JSON.stringify({ description: "Access background process", command: `exec node -e 'process.title = "localapp-background-${path.basename(root)}"; require("fs").writeFileSync("job.pid", String(process.pid)); setInterval(() => {}, 1000)'`, run_in_background: true }) } }] };
     return new Response(`data: ${JSON.stringify({ choices: [{ delta, finish_reason: hasResult ? "stop" : "tool_calls" }] })}\n\ndata: [DONE]\n\n`, { headers: { "Content-Type": "text/event-stream" } });
   }));
   let available = true;
@@ -46,6 +47,7 @@ it.each(["application", "capabilities", "grants", "python", "provider", "mcp", "
       try { pid = Number(await fs.readFile(path.join(workspaceRoot, "job.pid"), "utf8")); return pid > 0; }
       catch { return false; }
     }, { timeout: 5000 }).toBe(true);
+    pid = await hostProcessId(pid, "localapp-background-" + path.basename(root));
     expect(processExists(pid)).toBe(true);
     // Allow the periodic check to run after /run records the application's tool catalog.
     await new Promise(resolve => setTimeout(resolve, 1200));

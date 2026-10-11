@@ -143,7 +143,7 @@
     {
       "path": "packages/dsh-multiuser/src/harness.mts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "e473343be0333662218e89edc2e90ea957f454fabac1a56a9ef656b978bd11ba",
+      "sha256": "ea608724c0a9187165c0c77fba7536087e88734ea5b418e7bb31d645ddf90afa",
       "reason": "apiKeyEnv names LOCALAPP_USER_MODEL_KEY, not a credential value."
     },
     {
@@ -179,7 +179,7 @@
     {
       "path": "packages/server/tests/integration/dsh-account-stop.test.ts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "84e89bda304d118b4babeb6e03093b7d00aef3c5f65464e57714f24a58d4288f",
+      "sha256": "2933c7da3ced25b404b4bfe09badb8f22d806feed1c51499f9374fcf72f59b70",
       "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
     },
     {
@@ -191,7 +191,7 @@
     {
       "path": "packages/server/tests/integration/dsh-development-mcp.test.ts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "6d9e880b55be3e303c3fa6c33592efc02f9ea37b98557818a98879478cc920f5",
+      "sha256": "78420020bd99d3075054ea3316ea6d47678957be8ec1e9a8e89376151da933a5",
       "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
     },
     {

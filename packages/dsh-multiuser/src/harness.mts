@@ -467,7 +467,14 @@ export class DeepSeekHarness {
       // Native Agents are owned by the controller and outlive compatibility
       // records. Persist their final projection cut before plugin disposal
       // removes the cache's event listeners.
-      await Promise.all(this.ctx.sessions.list().map(session => cache.write(session)));
+      await Promise.all(this.ctx.sessions.list().map(async session => {
+        try { await cache.write(session); }
+        catch (error) {
+          // Completed child Agents may already have closed their persistence
+          // handles. Their close drained the log; only live handles need flush.
+          if (!(error instanceof Error) || error.name !== "SessionHandleClosedError") throw error;
+        }
+      }));
     }
     this.conversations.clear();
     this.nativeApplications.clear();
