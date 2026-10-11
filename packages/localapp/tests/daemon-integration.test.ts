@@ -2,7 +2,7 @@ import { execFile, spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createIpcClient } from "../src/daemon/ipc-client.js";
 import { publishRelease } from "../src/daemon/release-store.js";
 import { createRuntimeLayout } from "../src/daemon/runtime-layout.js";
@@ -14,7 +14,18 @@ const directories: string[] = [];
 const children: ChildProcess[] = [];
 const execFileAsync = promisify(execFile);
 
-beforeAll(async () => { await fs.mkdir(testRoot, { recursive: true }); });
+let fixture: { root: string; artifact: string; layout: ReturnType<typeof createRuntimeLayout> };
+beforeAll(async () => {
+  if (process.platform === "win32") return;
+  await fs.mkdir(testRoot, { recursive: true });
+  const root = await fs.mkdtemp(path.join(testRoot, "fixture-"));
+  const artifact = path.join(root, "packed");
+  await buildLocalAppPackage({ outputDirectory: artifact });
+  const layout = createRuntimeLayout({ supportDir: path.join(root, "support"), runtimeDir: path.join(root, "run"), dataDir: path.join(root, "data") });
+  await publishRelease({ sourceDirectory: artifact, layout });
+  fixture = { root, artifact, layout };
+}, 120_000);
+afterAll(async () => { if (fixture) await fs.rm(fixture.root, { recursive: true, force: true }); });
 afterEach(async () => {
   for (const child of children.splice(0)) child.kill("SIGTERM");
   await Promise.all(directories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true })));
@@ -22,12 +33,7 @@ afterEach(async () => {
 
 describe("packed daemon integration", () => {
   it.skipIf(process.platform === "win32")("runs the packed internal daemon through IPC, health, restart, and stop without a user service", async () => {
-    const root = await fs.mkdtemp(path.join(testRoot, "fixture-"));
-    directories.push(root);
-    const artifact = path.join(root, "packed");
-    await buildLocalAppPackage({ outputDirectory: artifact });
-    const layout = createRuntimeLayout({ supportDir: path.join(root, "support"), runtimeDir: path.join(root, "run"), dataDir: path.join(root, "data") });
-    await publishRelease({ sourceDirectory: artifact, layout });
+    const { artifact, layout } = fixture;
     const daemon = spawn(process.execPath, [path.join(artifact, "bin/localapp.mjs"), "_daemon"], {
       env: { ...process.env, LOCALAPP_SUPPORT_DIR: layout.supportDir, LOCALAPP_RUNTIME_DIR: layout.runtimeDir, LOCALAPP_DATA_DIR: layout.dataDir },
       stdio: "ignore",

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, lstatSync, openSync, fstatSync, readFileSync, closeSync } from "node:fs";
 import path from "node:path";
 import { lifecycleError } from "../errors.js";
 import type { RuntimeLayout } from "./runtime-layout.js";
@@ -55,7 +55,7 @@ const DIGEST = /^[0-9a-f]{64}$/;
 const VERSION = /^[0-9A-Za-z][0-9A-Za-z.+_-]{0,127}$/;
 
 export async function verifyReleaseArtifact(directory: string): Promise<ReleaseArtifactManifest> {
-  return (await inspectReleaseArtifact(path.resolve(directory))).manifest;
+  return (await inspectReleaseArtifact(path.resolve(directory), false)).manifest;
 }
 
 export async function publishRelease(options: PublishReleaseOptions): Promise<CurrentRelease> {
@@ -115,7 +115,7 @@ export async function readCurrentRelease(layout: RuntimeLayout): Promise<Current
   };
 }
 
-async function inspectReleaseArtifact(directory: string): Promise<InspectedArtifact> {
+async function inspectReleaseArtifact(directory: string, retainFiles = true): Promise<InspectedArtifact> {
   try {
     const root = await fs.lstat(directory);
     if (!root.isDirectory() || root.isSymbolicLink()) throw invalidArtifact();
@@ -128,10 +128,15 @@ async function inspectReleaseArtifact(directory: string): Promise<InspectedArtif
       throw invalidArtifact();
     }
     const files = new Map<string, Buffer>();
+    let checked = 0;
     await forEachConcurrent(manifest.files, async (entry) => {
-      const bytes = await readRegularFile(path.join(directory, ...entry.path.split("/")));
+      const filePath = path.join(directory, ...entry.path.split("/"));
+      const bytes = retainFiles ? await readRegularFile(filePath) : readRegularFileSync(filePath);
       if (bytes.byteLength !== entry.size || sha256(bytes) !== entry.sha256) throw invalidArtifact();
-      files.set(entry.path, bytes);
+      if (retainFiles || entry.path === "runtime/native/adapter-manifest.json") files.set(entry.path, bytes);
+      // Avoid hundreds of thousands of thread-pool round trips on startup,
+      // while letting control requests run between bounded verification batches.
+      if (!retainFiles && ++checked % 128 === 0) await new Promise<void>(resolve => setImmediate(resolve));
     });
     validatePackedNativeManifest(manifest, files);
     return { manifest, files, manifestBytes };
@@ -530,6 +535,22 @@ async function readRegularFile(filePath: string): Promise<Buffer> {
   } finally {
     await handle.close();
   }
+}
+
+function readRegularFileSync(filePath: string): Buffer {
+  const before = lstatSync(filePath, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink()) throw invalidArtifact();
+  const noFollow = "O_NOFOLLOW" in fsConstants ? fsConstants.O_NOFOLLOW : 0;
+  const handle = openSync(filePath, fsConstants.O_RDONLY | noFollow);
+  try {
+    const opened = fstatSync(handle, { bigint: true });
+    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino) throw invalidArtifact();
+    const bytes = readFileSync(handle);
+    const after = fstatSync(handle, { bigint: true });
+    if (!after.isFile() || after.dev !== opened.dev || after.ino !== opened.ino || after.size !== opened.size
+      || BigInt(bytes.byteLength) !== after.size) throw invalidArtifact();
+    return bytes;
+  } finally { closeSync(handle); }
 }
 
 function isSafeRelativeFile(value: string): boolean {
