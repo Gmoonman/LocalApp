@@ -4,8 +4,8 @@
     {
       "path": "packages/localapp/scripts/build-package.node-test.mjs",
       "rule": "PRIVATE_TEST_IDENTITY",
-      "sha256": "1bf256bcb71daa5d85ebe56be9496301ef2f734aa32893b050c105760cd217c4",
-      "reason": "The canonical scoped npm package determines the tarball filename; this is public package metadata."
+      "sha256": "537d2460630db30d618db477b1b3efad38225376395f4d0e3fcc5f5274ab3550",
+      "reason": "Canonical scoped npm package determines public tarball filename."
     },
     {
       "path": "packages/localapp/src/commands/login.ts",
@@ -143,6 +143,114 @@
       "rule": "POSSIBLE_CREDENTIAL",
       "sha256": "458fa1f96ba54ff2bef8c0d72b298cf4f179c28d7763be755d6cf8321719aef8",
       "reason": "apiKeyEnv names the LOCALAPP_USER_MODEL_KEY environment variable; it contains no credential value."
+    },
+    {
+      "path": "packages/dsh-app-platform/src/device-control-routes.cts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "64331daac91e23cca3267b9609f0db8037d904d14d427a015b409f7c338c2a70",
+      "reason": "TOKEN_HEADER is an HTTP header name, not a credential value."
+    },
+    {
+      "path": "packages/dsh-app-platform/src/device-notifications-routes.cts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "9b0bf606d85d9a0cbeae3123bc21a6156fb67106404e35a9c9fe8cf08610707a",
+      "reason": "TOKEN_HEADER is an HTTP header name, not a credential value."
+    },
+    {
+      "path": "packages/dsh-multiuser/src/harness.mts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "e473343be0333662218e89edc2e90ea957f454fabac1a56a9ef656b978bd11ba",
+      "reason": "apiKeyEnv names LOCALAPP_USER_MODEL_KEY, not a credential value."
+    },
+    {
+      "path": "packages/server/src/lib/__tests__/dsh-account-schema.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "6642668b8c5208a4c91aa45ef89385bea003bcd960b00435ecaf48ed1714fd36",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/src/lib/__tests__/dsh-multiuser-settings.test.mts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "6940016fb57a5383d51fe023dfb1c738a08983ff40f61f7fa8a9e3ad1aaf1676",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/src/lib/__tests__/dsh-multiuser.test.mts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "5324437afe8e460cac592354d3a4b71ad53c9abc651e50b06275ed15470bbfeb",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/e2e-unified/agent-harness.spec.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "91e79b2eb87dc27a0afc51893034188983d9a16af380aa43afa0323e9fcde715",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/e2e-unified/fixtures/document.docx",
+      "rule": "RELEASE_BINARY_MAGIC",
+      "sha256": "99c9902811dfcece9e9dc097e36cb0f3465968f84e69a7449d660685696cd592",
+      "reason": "Synthetic python-docx fixture containing only localapp document marker; ZIP document container, not an executable."
+    },
+    {
+      "path": "packages/server/tests/integration/dsh-account-stop.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "d2e6108c06eaa76e0e070165e4ba6fbcfe6ac7651a093f75f2a04066fd3bfa2e",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/dsh-development-document.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "4cae1c26d28f6450ba1c021657eeabfab6a0b5456381de8d89543fba0f0deea4",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/dsh-development-mcp.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "ad252f978bc47bc3d6d15d64eda058d0e9186c160802c35edc6ee3c34c5948c6",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/dsh-development-schedule.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "86e2953327d241e9f0ee986064ac2447adfea7d6247f6d1c2def052c15b55965",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/dsh-development-tools.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "70e9fe9aa4519c15974a9abe674236788f742b95e9a2f5be514aa9777b0092a1",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/dsh-development-web.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "26d88eb26125001f0026f4ad720b1943441511372851d683ffe443da9d45ec63",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/dsh-history-migration.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "cd4f1fbe7591a1bbe43169dfcbad342afeace997487ac81b048fb87e4618d006",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/dsh-version-upgrade.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "46783293b64a3c4d455c483be07687e6812c6ce1f69355c22e248768c0b0be4f",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/plugin-combination.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "96d333805718ba55437ddf3f49d8e82fcbcd85af2d73e411ac95df049d0ce7f1",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/server/tests/integration/plugin-settings.test.ts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "ece409e06f26b669c7de8797c79f9a725d1ff6816aa86acc3e8bcf00ca8b7d11",
+      "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
     }
   ]
 }
