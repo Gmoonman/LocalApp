@@ -8,6 +8,7 @@ vi.mock("./dsh-view", () => ({
   DshMarkdown: ({ text }: { text: string }) => <span>{text}</span>,
   DshDiff: () => null,
   DshTerminal: () => null,
+  DshRunningStatus: () => <div role="status">正在处理…</div>,
 }));
 beforeEach(() => {
   HTMLElement.prototype.scrollTo = vi.fn();
@@ -196,6 +197,23 @@ it("uses the composer plus for attachments without creating a conversation or ex
   expect(p.actions.newSession).not.toHaveBeenCalled();
   expect(screen.queryByRole("log")).toBeNull();
   expect(screen.getByLabelText("待发送附件")).toHaveTextContent("brief.pdf");
+});
+
+it("reports default visibility and synchronizes minimize and reveal with the platform", () => {
+  const p = props();
+  const onVisibilityChange = vi.fn();
+  const view = render(<AppDevelopmentDock {...p} onVisibilityChange={onVisibilityChange} />);
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(true);
+  view.rerender(<AppDevelopmentDock {...p} onVisibilityChange={onVisibilityChange} minimize={1} />);
+  expect(screen.getByLabelText("已最小化的开发对话")).toBeInTheDocument();
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(false);
+  view.rerender(<AppDevelopmentDock {...p} onVisibilityChange={onVisibilityChange} minimize={1} reveal={1} />);
+  expect(screen.getByLabelText("最小化开发对话")).toBeInTheDocument();
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(true);
+  fireEvent.click(screen.getByLabelText("最小化开发对话"));
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(false);
+  fireEvent.click(screen.getByLabelText("恢复开发对话"));
+  expect(onVisibilityChange).toHaveBeenLastCalledWith(true);
 });
 
 it("minimizes without stopping work, shows a spinner, then previews only the final reply", () => {

@@ -7,6 +7,7 @@ vi.mock("./dsh-view", () => ({
   DshMarkdown: () => null,
   DshDiff: () => null,
   DshTerminal: () => null,
+  DshRunningStatus: () => <div role="status">正在处理…</div>,
 }));
 it("connects app source without a configured model", async () => {
   const fetcher = vi.fn(async (url: string) => {

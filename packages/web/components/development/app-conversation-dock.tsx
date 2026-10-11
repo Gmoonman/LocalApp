@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, lazy, useEffect, useState } from "react";
 import type { HarnessAgent } from "@localapp/sdk-agent/harness-client";
-import { InteractionCard } from "@localapp/sdk-agent/agent-controls";
+import { AgentInteractionCard } from "./agent-interaction-card";
 const DevelopmentPage = lazy(() => import("./development-page").then(module => ({ default: module.DevelopmentPage })));
 import { AppDevelopmentDock } from "./app-development-dock";
 import type { DevelopmentShellProps } from "@localapp/dsh-agent-ui/ui/conversation-types";
@@ -32,6 +32,7 @@ export function AppConversationDock({ application, isOwner, agent, onSend, revea
   const [providers, setProviders] = useState<DevelopmentShellProps["providers"]>([]);
   const [sessions, setSessions] = useState<DevelopmentShellProps["sessions"]>([]);
   const [pending, setPending] = useState(false);
+  const [answering, setAnswering] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [, update] = useState(0);
   useEffect(() => {
@@ -86,8 +87,11 @@ export function AppConversationDock({ application, isOwner, agent, onSend, revea
   };
   const dock = { identity: canDevelop ? identity : "user" as const, userConversation: conversation, nativeUserAgent:agent??undefined,
     onIdentityChange: canDevelop ? setIdentity : undefined, reveal, minimize, onVisibilityChange, onPreview,
-    userInteractions: agent?.state.interactions.map(interaction => <InteractionCard key={interaction.token} interaction={interaction}
-      answer={result => void act(() => agent.answerInteraction(interaction.token, result))} />) };
+    userInteractions: agent?.state.interactions.map(interaction => <AgentInteractionCard key={interaction.token} interaction={interaction} pending={answering === interaction.token}
+      answer={result => {
+        setAnswering(interaction.token);
+        void act(() => agent.answerInteraction(interaction.token, result)).finally(() => setAnswering(null));
+      }} />) };
   if(!ui?.enabled) return null;
   return canDevelop
     ? <Suspense fallback={<p role="status">正在打开开发工作区…</p>}><DevelopmentPage application={application} dock={dock} /></Suspense>
