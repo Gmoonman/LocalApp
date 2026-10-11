@@ -1,4 +1,4 @@
-import { processExists } from "../helpers/processExists.js";
+import { processExists } from "../../src/lib/__tests__/helpers/processExists.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, it, vi } from "vitest";

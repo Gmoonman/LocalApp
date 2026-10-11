@@ -179,7 +179,7 @@
     {
       "path": "packages/server/tests/integration/dsh-account-stop.test.ts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "8b4ce15ad6e2fc2a5d7f06ea98e7e2a7797617ceaa4e05bdab88c40e9cb5cae8",
+      "sha256": "84e89bda304d118b4babeb6e03093b7d00aef3c5f65464e57714f24a58d4288f",
       "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
     },
     {
@@ -191,7 +191,7 @@
     {
       "path": "packages/server/tests/integration/dsh-development-mcp.test.ts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "bd2a42a4ee6eda768e45aa39e2b8ba15417e2f88327edfa0c0c87aea342dd59a",
+      "sha256": "6d9e880b55be3e303c3fa6c33592efc02f9ea37b98557818a98879478cc920f5",
       "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
     },
     {
