@@ -53,7 +53,6 @@ jobs:
       - name: Build TypeScript applications
         run: |
           pnpm -C packages/server-core build
-          pnpm build:plugins
           pnpm -C packages/web build
           pnpm -C packages/server build
           pnpm -C packages/localapp build
