@@ -76,6 +76,9 @@ async function stageServerCorePlatform(repositoryRoot: string, destination: stri
   const dist = path.join(destination, "dist");
   const platform = path.join(dist, "platform");
   await copyDirectory(path.join(repositoryRoot, "packages/dsh-app-platform/dist"), platform);
+  // These modules moved out of the application plugin. Copy their actual
+  // implementation over the compatibility re-exports for standalone apps.
+  await copyDirectory(path.join(repositoryRoot, "packages/app-foundation/dist"), platform);
   async function rewrite(directory: string): Promise<void> {
     for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
       const file = path.join(directory, entry.name);

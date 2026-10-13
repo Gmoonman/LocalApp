@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ejectManagedTemplate } from "../src/commands/eject-template.js";
 import { initializeProject } from "../src/commands/init.js";
@@ -41,6 +42,11 @@ describe("managed template zones", () => {
     expect(await fs.readFile(path.join(runtime, "dist/lib/app-db.js"), "utf8")).toContain("../platform/app-db.cjs");
     expect(await fs.readFile(path.join(runtime, "dist/platform/app-db.cjs"), "utf8")).toContain("exports.getConnection");
     expect(await fs.readFile(path.join(runtime, "dist/lib/app-db.d.ts"), "utf8")).toContain("../platform/app-db.cjs");
+    await fs.mkdir(path.join(runtime, "node_modules"));
+    await fs.symlink(path.join(repositoryRoot, "packages/app-foundation/node_modules/sql.js"), path.join(runtime, "node_modules/sql.js"), "junction");
+    const runtimeRequire = createRequire(path.join(runtime, "package.json"));
+    const database = runtimeRequire("./dist/lib/app-db.js");
+    expect(database.getConnection).toBeTypeOf("function");
   });
 
   it("sync replaces managed files without changing user source", async () => {
