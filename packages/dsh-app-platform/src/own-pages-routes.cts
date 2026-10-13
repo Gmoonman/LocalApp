@@ -5,6 +5,7 @@ import { readPageMeta, getPageDir } from "./page-storage.cjs";
 import { removeDirRecursive } from "./file-utils.cjs";
 import { closeConnectionsForPage } from "./app-db.cjs";
 import { withAppDataMaintenance } from "./app-data-maintenance.cjs";
+import { checkPageAccess } from "./access-control.cjs";
 import { getAppLifecycleStatus } from "./app-lifecycle.cjs";
 export interface OwnApplicationPagesHost {
   dataDir: string;
@@ -19,6 +20,28 @@ export async function registerOwnApplicationPages(app: FastifyInstance, host: Ow
     reply.status(401).send({ success: false, error: "Authentication required" });
     return false;
   }
+  app.get<{Querystring:{q?:string;page?:string;limit?:string}}>("/api/market/apps", async (req, reply) => {
+    reply.header("Cache-Control", "private, no-store");
+    const query = (req.query.q ?? "").trim().toLocaleLowerCase();
+    const page = Math.max(1, Math.min(Number.parseInt(req.query.page ?? "1", 10) || 1, 100000));
+    const limit = Math.max(1, Math.min(Number.parseInt(req.query.limit ?? "24", 10) || 24, 60));
+    const visitor = host.visitorId(req);
+    const apps = [];
+    if (fs.existsSync(host.dataDir)) for (const owner of fs.readdirSync(host.dataDir, {withFileTypes:true})) {
+      if (!owner.isDirectory() || owner.name.startsWith(".")) continue;
+      for (const entry of fs.readdirSync(path.join(host.dataDir, owner.name), {withFileTypes:true})) {
+        if (!entry.isDirectory()) continue;
+        let meta;
+        try { meta = readPageMeta(host.dataDir, owner.name, entry.name); } catch { continue; }
+        if (!meta || meta.userId !== owner.name || meta.name !== entry.name || meta.currentVersion < 1 || meta.status === "needs-migration-repair" || getAppLifecycleStatus(meta) !== "online" || !checkPageAccess(meta.pageAccess, visitor, meta.userId)) continue;
+        const item = {userId:meta.userId, name:meta.name, description:typeof meta.description === "string" ? meta.description : "", currentVersion:meta.currentVersion, updatedAt:meta.updatedAt ?? ""};
+        if (query && ![item.name,item.description,item.userId].some(value=>value.toLocaleLowerCase().includes(query))) continue;
+        apps.push(item);
+      }
+    }
+    apps.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)||a.userId.localeCompare(b.userId)||a.name.localeCompare(b.name));
+    return {success:true,data:{apps:apps.slice((page-1)*limit,page*limit),total:apps.length,page,limit}};
+  });
   // ── Session-auth page routes (/api/me/pages) ──
 
   // GET /api/me/pages — list current user's apps (session auth)

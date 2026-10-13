@@ -125,7 +125,7 @@
   height: 34px;
   outline: none;
 }
-.app-development-dock .dock-send {
+:is(.app-development-dock, [data-localapp-running-composer]) .dock-send {
   background: var(--foreground, #080808);
   color: var(--background, #fff);
   border-radius: 50%;
@@ -405,3 +405,15 @@
 .dark .app-development-dock.dsh-development {
   --dsw-alias-bg-base: var(--background, #fff);
 }
+
+[data-localapp-running-composer] { width: 100%; min-width: 0; box-sizing: border-box; }
+
+/* Draft text spans the card; controls form a separate bottom row. */
+.development-dock-composer { flex-wrap:wrap; align-items:center; gap:10px; padding:16px 20px; }
+.development-dock-composer textarea { order:2; flex:0 0 100%; width:100%; min-height:64px; padding:4px 0 12px; }
+.development-dock-composer > button, .development-dock-composer > a { order:3; }
+.development-dock-composer .dock-model-trigger { order:3; margin-left:auto; margin-right:0; max-width:min(280px,60%); }
+.dock-page-selection { order:1; display:flex; align-items:center; gap:10px; max-width:100%; border:1px solid var(--border,#e5e5e5); border-radius:12px; padding:8px; background:var(--muted,#fafafa); }
+.dock-page-selection > img { width:112px; height:80px; object-fit:contain; border-radius:6px; background:white; }
+.dock-page-selection > span { display:flex; flex-direction:column; min-width:0; gap:4px; font-size:12px; }
+.dock-page-selection > span > span { max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--muted-foreground,#737373); }

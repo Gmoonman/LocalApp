@@ -7,7 +7,7 @@ vi.mock("@localapp/sdk-agent/native-frame-bridge",()=>({attachNativeFrame:(...ar
 it("keeps developer sources outside the user tool bridge",()=>{
  binding.attach.mockClear();
  const view=render(<NativeConversationFrame identity="developer" projectId="project-one" providerId="model-one"/>);
- expect(screen.getByTitle("原生应用开发对话")).toHaveAttribute("src","/api/development/projects/project-one/native/model-one/");expect(binding.attach).not.toHaveBeenCalled();view.unmount();
+ expect(screen.getByTitle("原生应用开发对话")).toHaveAttribute("src","/api/development/projects/project-one/native/model-one/?localappCompact=1");expect(binding.attach).not.toHaveBeenCalled();view.unmount();
 });
 it("restores history after native readiness and synchronizes trusted selection changes",()=>{
  const onSelection=vi.fn();
@@ -63,4 +63,30 @@ it("creates a blank native conversation before submitting its first draft",async
  const request=post.mock.calls.at(-1)![0];expect(request).toMatchObject({type:"localapp:native-composer",sessionId:"created-one",prompt:"创建日历"});
  window.dispatchEvent(new MessageEvent("message",{source:frame.contentWindow,origin:window.location.origin,data:{type:"localapp:native-composer-result",requestId:request.requestId}}));
  await expect(result).resolves.toBeUndefined();view.unmount();
+});
+
+ it("reports workspace initialization failures immediately and preserves the draft", async()=>{
+ const ready=vi.fn(); const view=render(<NativeConversationFrame identity="developer" projectId="one" providerId="model" onComposerReady={ready}/>);
+ const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+ const announce=(data:unknown)=>window.dispatchEvent(new MessageEvent("message",{source:frame.contentWindow,origin:window.location.origin,data}));
+ announce({type:"localapp:native-selection",state:null});
+ const pending=ready.mock.calls.at(-1)![0].request("submit","保留需求");
+ const failure=expect(pending).rejects.toThrow("工作区不可用");
+ announce({type:"localapp:native-navigation-error",error:"工作区不可用"});
+ await failure;view.unmount();
+ });
+
+it("connects application tools before every user-mode submission",async()=>{
+ let connect!:(value:any)=>void;
+ const agent={connectNativeSession:vi.fn(()=>new Promise(resolve=>{connect=resolve}))} as any;
+ const ready=vi.fn();const view=render(<NativeConversationFrame identity="user" applicationId="owner/app" providerId="model" agent={agent} onComposerReady={ready}/>);
+ const frame=screen.getByTitle("原生应用用户对话") as HTMLIFrameElement;
+ window.dispatchEvent(new MessageEvent("message",{source:frame.contentWindow,origin:window.location.origin,data:{type:"localapp:native-selection",state:{sessionId:"one",title:"需求",running:false}}}));
+ const post=vi.spyOn(frame.contentWindow!,"postMessage");
+ const pending=ready.mock.calls.at(-1)![0].request("submit","调用应用工具");
+ expect(agent.connectNativeSession).toHaveBeenCalledWith("one");expect(post).not.toHaveBeenCalled();
+ connect({sessionId:"one"});await Promise.resolve();await Promise.resolve();
+ const request=post.mock.calls.at(-1)![0];expect(request).toMatchObject({type:"localapp:native-composer",sessionId:"one"});
+ window.dispatchEvent(new MessageEvent("message",{source:frame.contentWindow,origin:window.location.origin,data:{type:"localapp:native-composer-result",requestId:request.requestId}}));
+ await pending;view.unmount();
 });

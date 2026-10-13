@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/notify-rate-limit";
+export * from "@localapp/dsh-device-services/notify-rate-limit";

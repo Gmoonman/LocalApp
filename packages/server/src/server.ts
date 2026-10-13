@@ -63,6 +63,9 @@ export interface BuildServerOptions {
   enableDevTools?: boolean;
   pluginCombination?: "multiuser" | "platform" | "full";
   agentUI?: boolean;
+  synchronization?:boolean;
+  collaboration?:boolean;
+  deviceServices?:boolean;
   documents?: false | { root?: string };
 }
 
@@ -76,7 +79,7 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
   const configStore = options.configStore ?? createServerConfigStore({ env });
   const config = await configStore.read();
   const { Context } = await import("@deepseek-ai/cordis");
-  const { default: EmbeddedWebServer } = await import("@localapp/dsh-multiuser/native-server");
+  const { default: EmbeddedWebServer } = await import("@localapp/dsh-agent-runtime/native-server");
   const context = new Context();
   await context.plugin(EmbeddedWebServer, { host: "127.0.0.1", port: 0 });
   const carrier = context.webServer as InstanceType<typeof EmbeddedWebServer>;
@@ -92,6 +95,9 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
     documents: options.documents ?? (config.documentsEnabled === false ? false : undefined),
     documentsControlled: options.documents !== undefined,
     agentUI: options.agentUI ?? env.LOCALAPP_AGENT_UI !== "0",
+    synchronization:options.synchronization??env.LOCALAPP_APP_SYNC!=="0",
+    collaboration:options.collaboration??env.LOCALAPP_COLLABORATION!=="0",
+    deviceServices:options.deviceServices??env.LOCALAPP_DEVICE_SERVICES!=="0",
     webRoot: options.webRoot,
     nativeClientRoot: options.nativeClientRoot ?? env.LOCALAPP_NATIVE_CLIENT_ROOT ?? path.resolve(__dirname, "../../../tmp/native-client-entry"),
     setupTokens: options.setupTokens ?? new SetupTokenStore(),
@@ -122,9 +128,14 @@ async function registerServerPluginsAndRoutes(
     documents?: false | { root?: string };
     documentsControlled: boolean;
     agentUI?: boolean;
+  synchronization?:boolean;
+  collaboration?:boolean;
+  deviceServices?:boolean;
   },
 ): Promise<void> {
   const { default: websocket } = await import("@fastify/websocket");
+  // Close plugin streams and native connections before Fastify waits for sockets.
+  app.addHook("preClose",()=>options.context.fiber.dispose());
   await app.register(websocket);
   const hasPlatform = options.pluginCombination !== "multiuser";
   await app.register(storagePlugin, { schema: hasPlatform ? "platform" : "accounts" });
@@ -136,6 +147,7 @@ async function registerServerPluginsAndRoutes(
     context: options.context,
     combination: options.pluginCombination,
     agentUI: options.agentUI,
+    synchronization:options.synchronization,collaboration:options.collaboration,deviceServices:options.deviceServices,
     documents: options.documents,
     multiuser: { capacity: 100, accountServices, systemEnvironment },
     platform: hasPlatform ? applicationStore(app.config.dataDir) : undefined,
@@ -172,17 +184,17 @@ async function registerServerPluginsAndRoutes(
   })() : undefined;
   const platform = hasPlatform ? await (async () => {
     const secretBox = pluginContext.localappMultiuser.createSecrets(app.config.masterKeyFile);
-    const deviceNotificationSourceStore = pluginContext.localappApps.createDeviceNotificationSources(
+    const deviceNotificationSourceStore = pluginContext.get("localappDeviceServices")?.createDeviceNotificationSources(
       createDeviceNotificationPersistence(), secretBox);
-    const synchronization = await pluginContext.localappApps.initializeSynchronization({
+    const synchronization = pluginContext.get("localappAppSync") ? await pluginContext.localappAppSync.initializeSynchronization({
       dataDir: app.config.dataDir, secrets: secretBox,
       persistence: { database: getDb, flush: flushMetaDb },
-    });
+    }) : undefined;
     return { ...synchronization, deviceNotificationSourceStore };
   })() : undefined;
   await pluginContext.localappMultiuser.registerSetup(app, createSetupHost(app, options.setupTokens));
   await systemRoutes(app, { documentsEnabled: options.documents !== false, documentsControlled: options.documentsControlled, pluginCombination: options.pluginCombination, pluginCombinationControlled: options.pluginCombinationControlled, configStore: options.configStore, restartController: options.restartController });
-  if (platform) pluginContext.localappApps.registerSynchronizationRoutes(app, {
+  if (platform?.peerStore && platform.syncTarget && platform.syncSource) pluginContext.localappAppSync.registerSynchronizationRoutes(app, {
     protocol: { keyOwner: validateApiKey, user: findUserById },
     target: platform.syncTarget, authenticateTarget: createSyncTargetAuthentication,
     source: platform.syncSource, userId: request => request.userId,
@@ -191,7 +203,7 @@ async function registerServerPluginsAndRoutes(
   app.get("/health", async () => ({ status: "ok" }));
   app.get("/api/system/plugins", async () => ({
     success: true,
-    data: { combination: options.pluginCombination, multiuser: true, applications: Boolean(platform), development: Boolean(development) },
+    data: { combination: options.pluginCombination, multiuser: true, applications: Boolean(platform), development: Boolean(development), agentRuntime: Boolean(pluginContext.get("localappAgentRuntime")), agentSettings:Boolean(pluginContext.get("localappAgentSettings")), modelSettings:Boolean(pluginContext.get("localappModelSettings")), executionEnvironment:Boolean(pluginContext.get("localappExecutionEnvironment")), documents:Boolean(pluginContext.get("localappDocuments")), agentUI:Boolean(pluginContext.get("localappAgentUI")), synchronization:Boolean(pluginContext.get("localappAppSync")),collaboration:Boolean(pluginContext.get("localappCollaboration")),deviceServices:Boolean(pluginContext.get("localappDeviceServices")) },
   }));
   if (development) app.register(async scope => pluginContext.localappDevelopment.registerStarter(scope));
 
@@ -205,21 +217,27 @@ async function registerServerPluginsAndRoutes(
     ownPages:createOwnApplicationPagesHost(app),settings:createApplicationSettingsHost(app),
     dataSettings:createApplicationDataSettingsHost(app),data:createPlatformDataHost(),
   });
-  pluginContext.localappMultiuser.registerModelRoutes(app, {
-    authenticate: authPlugin, llm: createLlmRoutesHost(app, pluginContext.localappMultiuser),
+  const { registerModelSettings } = await import("./lib/model-settings.mjs");
+  await registerModelSettings(app, pluginContext, authPlugin, options.nativeClientRoot);
+  pluginContext.localappAgentRuntime.registerModelRoutes(app, {
+    authenticate: authPlugin, llm: createLlmRoutesHost(app, pluginContext.localappAgentSettings),
     agent: () => createAgentRoutesHost(app, pluginContext), nativeClientRoot: options.nativeClientRoot,
   });
   if (platform) pluginContext.localappApps.registerApplicationInteractionRoutes(app, {
     issues: createIssueRoutesHost(app), favorites: createApplicationFavoritesHost(),
-    subscriptions: createSubscriptionRoutesHost(), inbox: createApplicationInboxHost(),
+
     websocket: createWebSocketHost(),
   });
-  if (platform) pluginContext.localappApps.registerDeviceRoutes(app, {
-    desktop: desktopActionContribution(app, pluginContext.localappApps.createDesktopActionRoutes.bind(pluginContext.localappApps)),
-    device: deviceActionContribution(app, pluginContext.localappApps.createDeviceActionRoutes.bind(pluginContext.localappApps)),
+  if(platform && pluginContext.get("localappDeviceServices")){
+    app.register(async scope=>pluginContext.localappDeviceServices.registerSubscriptions(scope,createSubscriptionRoutesHost()));
+    app.register(async scope=>pluginContext.localappDeviceServices.registerInbox(scope,createApplicationInboxHost()));
+  }
+  if (platform && pluginContext.get("localappDeviceServices")) pluginContext.localappDeviceServices.registerDeviceRoutes(app, {
+    desktop: desktopActionContribution(app, pluginContext.localappDeviceServices.createDesktopActionRoutes.bind(pluginContext.localappDeviceServices)),
+    device: deviceActionContribution(app, pluginContext.localappDeviceServices.createDeviceActionRoutes.bind(pluginContext.localappDeviceServices)),
     control: createDeviceControlHost(app),
   });
-  if (platform) pluginContext.localappApps.registerNotificationRoutes(
+  if (platform?.deviceNotificationSourceStore) pluginContext.localappDeviceServices.registerNotificationRoutes(
     app, platform.deviceNotificationSourceStore, createDeviceNotificationRoutesHost(app));
   pluginContext.localappMultiuser.registerPersonalResources(app, {
     pages: createPersonalPagesHost({ webRoot }),
@@ -229,7 +247,7 @@ async function registerServerPluginsAndRoutes(
     authenticate: authenticateCliRequest, keys: createKeyRoutesHost(),
   });
   if (platform) pluginContext.localappApps.registerApplicationServing(app, {
-    entry: createApplicationEntryHost(app, { webRoot }), verification: createVerificationHost(app),
+    entry: {...createApplicationEntryHost(app, { webRoot }),collaborationEnabled:!!pluginContext.get("localappCollaboration"),deviceServicesEnabled:!!pluginContext.get("localappDeviceServices"),createCrdt:pluginContext.get("localappCollaboration")?.createCrdt.bind(pluginContext.get("localappCollaboration")),createCollaboration:pluginContext.get("localappCollaboration")?.createCollaboration.bind(pluginContext.get("localappCollaboration"))}, verification: createVerificationHost(app),
   });
   if (development) pluginContext.localappDevelopment.registerDeveloperUtilities(app, {
     authenticate: authPlugin,
@@ -248,18 +266,18 @@ async function registerServerPluginsAndRoutes(
       development: () => createDevelopmentRoutesHost(app, {
         builds: development.builds,
         previews: development.previews,
-        runtimeRegistry: pluginContext.localappMultiuser,
+        runtimeRegistry: pluginContext.localappAgentRuntime,
         documents: () => pluginContext.get("localappDocuments"),
         nativeClient: developmentClientResources(pluginContext, options.nativeClientRoot),
-      }, pluginContext.localappMultiuser),
+      }, pluginContext.localappAgentSettings),
       workspaces: createWorkspaceRoutesHost(development.workspaceStore),
       tasks: createTaskRoutesHost({ taskStore: development.taskStore, taskRunner: development.taskRunner, agentRunner: development.agentRunner }),
       tools: options.enableDevTools ? scope => devToolkitContribution(app).register(scope) : undefined,
   });
   pluginContext.localappMultiuser.registerAdministrationRoutes(app, {
     authenticate: adminAuth, accounts: createAdministratorAccountsHost(app.config.dataDir),
-    environment: { dataDir: app.config.dataDir, checkEnvironment: () => systemEnvironment.check(app.config.dataDir) },
     contributions: async scope => {
+      scope.register(async environmentScope => pluginContext.localappExecutionEnvironment.registerEnvironment(environmentScope,{dataDir:app.config.dataDir,checkEnvironment:()=>systemEnvironment.check(app.config.dataDir)}));
       if (platform) await pluginContext.localappApps.registerAdministratorApplications(scope, createAdministratorApplicationsHost(app.config.dataDir));
       if (development) scope.register(async environmentScope => pluginContext.localappDevelopment.registerEnvironment(environmentScope, createBuildOperations().createExecutor));
     },

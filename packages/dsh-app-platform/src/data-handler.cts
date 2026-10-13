@@ -1,5 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import path from "node:path";
+import fs from "node:fs";
+import {exportDatabaseSnapshot,evictConnectionForDbPath} from "./app-db.cjs";
 import { getPageDir, readPageMeta } from "./page-storage.cjs";
 import { matchAppApiRoute } from "./app-api-contract.cjs";
 import { loadBackendContract, loadDefaultBackendContract } from "./backend-contract.cjs";
@@ -10,6 +12,8 @@ export interface ApplicationRequestContext {
   visitor: VisitorContext;
   verification?: { version: number; databasePath: string } | null;
   now?: string;
+  previewData?: {databasePath:string;ownerId:string;readSource:"test"|"production";writeSource:"test"|"production"};
+  readOnlyProduction?: {databasePath:string;ownerId:string};
 }
 
 export async function handleApplicationData(
@@ -38,7 +42,13 @@ export async function handleApplicationData(
   }
 
   if (appRoute.kind === "named-query" || appRoute.kind === "named-mutation" || appRoute.kind === "named-mutation-transaction") {
+    if (context.readOnlyProduction && appRoute.kind !== "named-query")
+      return reply.status(403).send({success:false,error:"生产数据只读",code:"preview_production_read_only"});
+    const production = context.previewData;
+    const useProduction = production && (appRoute.kind === "named-query" ? production.readSource : production.writeSource) === "production";
+    const selectedProduction = useProduction ? production : context.readOnlyProduction;
     const pageDir = getPageDir(dataDir, userId, pageName);
+    let snapshotDirectory: string | undefined;
     const meta = readPageMeta(dataDir, userId, pageName);
     const contractDir = meta
       ? path.join(pageDir, "versions", `v${context.verification?.version ?? meta.currentVersion}`)
@@ -56,20 +66,44 @@ export async function handleApplicationData(
           ? loadBackendContract(pageDir, meta.backend, { allowDisabledHostedActions: true })
           : loadDefaultBackendContract(pageDir, { allowDisabledHostedActions: true });
       }
+      let databasePath = context.verification?.databasePath ?? pageDir;
+      if (selectedProduction) {
+        if (!fs.existsSync(selectedProduction.databasePath))
+          return reply.status(404).send({success:false,error:"生产数据库不存在"});
+        if (appRoute.kind !== "named-query") databasePath = selectedProduction.databasePath;
+        else {
+        snapshotDirectory = fs.mkdtempSync(path.join(pageDir, ".production-read-"));
+        databasePath = path.join(snapshotDirectory,"data.db");
+        fs.writeFileSync(databasePath,await exportDatabaseSnapshot(selectedProduction.databasePath),{mode:0o600});
+      }
+        }
       const runtime = createAppNamedSqlRuntime({
         contract,
-        dbPath: context.verification?.databasePath ?? pageDir,
+        dbPath: databasePath,
         context: () => ({
-          visitorId: visitor.id,
-          ownerId: userId,
+          visitorId: production?.ownerId ?? selectedProduction?.ownerId ?? visitor.id,
+          ownerId: production?.ownerId ?? selectedProduction?.ownerId ?? userId,
           now: new Date(context.now ?? Date.now()),
         }),
       });
       const result = await runtime.execute(appRoute, req.body);
-      return { success: true, data: result };
+      const sourcePrefix = selectedProduction ? `/serve/${selectedProduction.ownerId}/${pageName}/api/content/` : null;
+      const rewriteContent = (value: unknown): unknown => {
+        if (typeof value === "string" && sourcePrefix && value.startsWith(sourcePrefix))
+          return `/serve/${userId}/${pageName}/api/content/` + value.slice(sourcePrefix.length);
+        if (Array.isArray(value)) return value.map(rewriteContent);
+        if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,rewriteContent(item)]));
+        return value;
+      };
+      return { success: true, data: sourcePrefix ? rewriteContent(result) : result };
     } catch (err: unknown) {
       const response = classifyAppRuntimeError(err, visitor.id !== null);
       return reply.status(response.status).send(response.body);
+    } finally {
+      if (snapshotDirectory) {
+        evictConnectionForDbPath(path.join(snapshotDirectory,"data.db"));
+        fs.rmSync(snapshotDirectory,{recursive:true,force:true});
+      }
     }
   }
 

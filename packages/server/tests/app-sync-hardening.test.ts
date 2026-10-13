@@ -343,7 +343,9 @@ describe("peer synchronization concurrency, deadlines, and cancellation", () => 
   });
 
   function tempRoot(): string {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "localapp-sync-hardening-"));
+    const parent = path.resolve(__dirname,"../../../tmp/sync-hardening-tests");
+    fs.mkdirSync(parent,{recursive:true});
+    const root = fs.mkdtempSync(path.join(parent, "data-"));
     roots.push(root);
     return root;
   }

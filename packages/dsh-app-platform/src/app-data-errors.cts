@@ -1,6 +1,1 @@
-export class AppDataError extends Error {
-  constructor(public readonly code: string, message: string) {
-    super(message);
-    this.name = "AppDataError";
-  }
-}
+export * from "@localapp/app-foundation/app-data-errors";

@@ -1,1 +1,2 @@
-export { PUBLIC_AGENT_SKILLS, preparePublicSkills, publicSkillAvailability } from "@localapp/dsh-document-tools/catalog";
+/** Compatibility export; implementation belongs to dsh-execution-environment. */
+export * from "@localapp/dsh-execution-environment/public-skills";

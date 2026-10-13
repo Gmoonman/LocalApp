@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-multiuser/llm-adapter";
+export * from "@localapp/dsh-agent-runtime/llm-adapter";

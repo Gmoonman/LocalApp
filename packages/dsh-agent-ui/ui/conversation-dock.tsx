@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  ScanLine,
   ArrowUp,
   Minus,
   CircleAlert,
@@ -32,6 +33,11 @@ import "./conversation-dock.css";
 interface NativeSelection { sessionId: string; title: string; running: boolean }
 interface NativeCatalogEntry { id: string; title: string; updatedAt: number; pinned?: boolean }
 export interface DockComponents {
+  renderPortal?: (content: ReactNode, target: Element) => ReactNode;
+  DevelopmentDelivery?: JSXElementConstructor<{value:DevelopmentShellProps}>;
+  markPage?: () => Promise<unknown>;
+  clearPage?: () => Promise<unknown>;
+  activatePage?: (projectId:string) => Promise<void>;
   // Host shadcn components accept library-specific presentation props.
   Button: JSXElementConstructor<any>;
   Textarea: JSXElementConstructor<TextareaHTMLAttributes<HTMLTextAreaElement> & React.RefAttributes<HTMLTextAreaElement>>;
@@ -52,6 +58,7 @@ export interface DockComponents {
   DevelopmentAgentSettings: JSXElementConstructor<{projectId: string}>;
   NativeConversationFrame: JSXElementConstructor<{
     providerId: string; sessionId?: string; newSession?: number;
+    onRunningSeat?: (seat: HTMLElement | null) => void;
     onAttachments?: (files: NativeAttachment[]) => void;
     onComposerReady?: (port: NativeComposerPort | null) => void;
     onCatalog?: (rows: NativeCatalogEntry[]) => void;
@@ -70,7 +77,7 @@ export interface DockIdentityProps {
   onVisibilityChange?: (visible: boolean) => void;
 }
 export function createConversationDock(components: DockComponents) {
-const { Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+const { DevelopmentDelivery, renderPortal, markPage, clearPage, activatePage, Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuItem,
   DshMarkdown, DshDiff, DshTerminal, DevelopmentAgentSettings, NativeConversationFrame } = components;
 return function AppDevelopmentDock(
@@ -88,9 +95,12 @@ return function AppDevelopmentDock(
   const [previewVisible, setPreviewVisible] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const historyTrigger = useRef<HTMLButtonElement>(null);
-  const [panel, setPanel] = useState<"chat" | "changes" | "build">("chat");
+  const [panel, setPanel] = useState<"chat" | "changes" | "build" | "delivery">("chat");
   const nativeComposer = useRef<NativeComposerPort | null>(null);
+  const [pageSelection,setPageSelection]=useState<{label:string; image?:string; fileName?:string}|null>(null);
+  const [marking,setMarking]=useState(false);
   const [nativeAttachments,setNativeAttachments] = useState<NativeAttachment[]>([]);
+  const [runningSeat,setRunningSeat]=useState<HTMLElement|null>(null);
   const [nativeSubmitting, setNativeSubmitting] = useState(false);
   const [nativeCommandError, setNativeCommandError] = useState("");
   const error = p.error || nativeCommandError;
@@ -100,7 +110,7 @@ return function AppDevelopmentDock(
   const [nativeHistory,setNativeHistory]=useState<DevelopmentShellProps["sessions"]|null>(null);
   const running=p.running||!!nativeSelection?.running;
   const nativeEnabled=!!input.application&&!!p.project&&!!p.provider&&(!userMode||!!input.nativeUserAgent);
-  useEffect(()=>{setNativeSelection(null);setNativeSession(undefined);setNativeNew(0);setNativeHistory(null);setNativeCommandError("");setNativeAttachments([]);},[input.identity,p.project?.id,p.provider]);
+  useEffect(()=>{setNativeSelection(null);setNativeSession(undefined);setNativeNew(0);setNativeHistory(null);setNativeCommandError("");setNativeAttachments([]);setPageSelection(null);},[input.identity,p.project?.id,p.provider]);
   const sendDraft = async () => {
     setPanel("chat");
     if (!nativeEnabled) {p.actions.run(); return;}
@@ -108,20 +118,22 @@ return function AppDevelopmentDock(
     if(receipts.some(file=>!file.path||!file.path.startsWith(`.localapp-attachments/${file.id}/`)||file.path.split("/").some(part=>part===".."||part==="."))){
       setNativeCommandError("附件缺少工作区路径，请移除后重新上传");return;
     }
-    if (nativeSubmitting) return;
+    if (nativeSubmitting || marking) return;
     const port = nativeComposer.current;
     if (!port) {setNativeCommandError("原生会话尚未就绪"); return;}
-    const submitted = p.prompt;
+    const submitted = p.prompt + (pageSelection ? `\n[页面${pageSelection.image?"截图":"标记"}：${pageSelection.label}${pageSelection.image?"":"。可通过 get_current_page 获取元素位置与页面上下文"}]` : "");
     setNativeCommandError("");setNativeSubmitting(true);
     try {
+      if(!userMode&&p.project)await activatePage?.(p.project.id);
       await port.request("submit", submitted+receipts.map(file=>`\n用户上传文件：${JSON.stringify(file.name)}，工作区文件路径：${JSON.stringify(file.path)}`).join(""));
-      if (nativeComposer.current === port) {p.actions.setPrompt("");receipts.forEach(file=>p.actions.removeAttachment?.(file.id));}
+      if (nativeComposer.current === port) {p.actions.setPrompt("");setPageSelection(null);receipts.forEach(file=>p.actions.removeAttachment?.(file.id));}
     } catch (error) {
       if (nativeComposer.current === port) setNativeCommandError(error instanceof Error ? error.message : String(error));
     } finally {setNativeSubmitting(false);}
   };
   const history=nativeEnabled&&nativeHistory?nativeHistory:p.sessions;
   const selectedSession=nativeEnabled&&nativeSelection?nativeSelection.sessionId:p.selectedSession;
+  useEffect(()=>setPageSelection(null),[selectedSession]);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const transcript = useRef<HTMLDivElement>(null);
@@ -296,11 +308,113 @@ return function AppDevelopmentDock(
         </Button>
         {working && (
           <span className="sr-only" role="status">
-            {p.interaction ? "Agent 等待回复" : "开发任务进行中"}
+            {p.interaction ? "Agent 等待回复" : userMode ? "应用 AI 正在工作" : "开发任务进行中"}
           </span>
         )}
       </section>
     );
+  const composer = (
+<div className="development-dock-composer">
+        {pageSelection && <div className="dock-page-selection" aria-label="待发送页面标记">
+          {pageSelection.image ? <img src={pageSelection.image} alt="选区截图" /> : <ScanLine size={20}/>}
+          <span><strong>{pageSelection.image?"页面截图":"页面标记"}</strong><span>{pageSelection.label}</span></span>
+          <Button variant="ghost" size="icon" aria-label="移除页面标记" disabled={nativeSubmitting} onClick={()=>{
+            if(pageSelection.fileName){nativeAttachments.filter(file=>file.name===pageSelection.fileName).forEach(file=>{void nativeComposer.current?.request("remove",file.id).catch(error=>setNativeCommandError(String(error)));});}
+            setPageSelection(null);void clearPage?.().catch(error=>setNativeCommandError(String(error)));
+          }}><X size={14}/></Button>
+        </div>}
+        {!userMode && markPage && <Button variant="unstyled" size="none" aria-label="标记页面问题" title="点击标记元素，拖动截图" disabled={marking||nativeSubmitting||!!pageSelection} onClick={()=>{
+          setExpanded(false);setNativeCommandError("");setMarking(true);
+          const selectionPort=nativeComposer.current;
+          void markPage().then(async value=>{
+            if(nativeComposer.current!==selectionPort)throw new Error("会话已切换，请重新标记页面");
+            const selected=value as {tag?:string;text?:string;image?:string;bounds?:{width:number;height:number}};
+            const label=selected.image ? `${Math.round(selected.bounds?.width??0)} × ${Math.round(selected.bounds?.height??0)}` : `${selected.tag??"元素"} · ${(selected.text??"").replace(/\s+/g," ").slice(0,80)}`;
+            if(selected.image){
+              if(selected.image.length>8*1024*1024||!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(selected.image))throw new Error("截图格式无效，请重新截图");
+              const fileName=`页面截图-${crypto.randomUUID()}.png`;
+              const file=new File([await (await fetch(selected.image)).blob()],fileName,{type:"image/png"});
+              const port=nativeComposer.current;if(!port)throw new Error("会话尚未就绪，请稍后重新截图");
+              await port.request("attach",undefined,[file]);
+              setPageSelection({label,image:selected.image,fileName});
+            }else setPageSelection({label});
+          }).catch(error=>setNativeCommandError(error instanceof Error?error.message:String(error))).finally(()=>setMarking(false));
+        }}>{marking?<LoaderCircle size={19} className="dock-spinner"/>:<ScanLine size={19}/>}</Button>}
+
+        <Button variant="unstyled" size="none"
+          aria-label="上传文件"
+          disabled={(!nativeEnabled && running) || nativeSubmitting || p.pending || !p.project || (!nativeEnabled && !p.actions.upload)}
+          onClick={() => attachmentInput.current?.click()}
+        >
+          <Plus size={20} />
+        </Button>
+        <Textarea
+          ref={draft}
+          rows={1}
+          aria-label={userMode ? "应用对话消息" : "应用修改需求"}
+          placeholder={
+            running && nativeEnabled ? "补充需求，当前任务完成后继续…" : userMode ? "向应用 AI 提问…" : p.project ? "描述你想修改的功能…" : "与 Agent 一起编辑应用…"
+          }
+          value={p.prompt}
+          disabled={(!nativeEnabled && running) || nativeSubmitting || !p.project}
+          onChange={(e) => p.actions.setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              !e.nativeEvent.isComposing
+            ) {
+              e.preventDefault();
+              if (p.prompt.trim() && p.provider && !p.pending && !nativeSubmitting && !marking) {
+                void sendDraft();
+              }
+            }
+          }}
+        />
+        <Select value={p.provider || undefined} disabled={running || nativeSubmitting || p.pending || !p.providers.length} onValueChange={p.actions.setProvider}>
+          <SelectTrigger className="dock-model-trigger" aria-label={userMode ? "对话模型" : "开发模型"}>
+            <SelectValue placeholder="先配置模型" />
+          </SelectTrigger>
+          <SelectContent side="top" align="end" sideOffset={8}>
+            {p.providers.map((model) => (
+              <SelectItem key={model.id} value={model.id}>{model.name} · {model.model}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {!p.providers.length && <a href="/my/models">配置模型</a>}
+        {running && (!nativeEnabled || !p.prompt.trim()) ? (
+          <Button variant="unstyled" size="none"
+            className="dock-send"
+            aria-label={userMode ? "停止对话" : "停止开发"}
+            onClick={() => {
+              if (!nativeEnabled) {p.actions.stop(); return;}
+              setNativeCommandError("");
+              const port = nativeComposer.current;
+              if (!port) {setNativeCommandError("原生会话尚未就绪"); return;}
+              void port.request("cancel").catch(error => {
+                if (nativeComposer.current === port) setNativeCommandError(error instanceof Error ? error.message : String(error));
+              });
+            }}
+          >
+            <Square size={14} fill="currentColor" />
+          </Button>
+        ) : (
+          <Button variant="unstyled" size="none"
+            className="dock-send"
+            title={running ? "排队发送，当前任务完成后处理" : "发送"}
+            aria-label={userMode ? "发送对话消息" : "发送修改需求"}
+            disabled={
+              !p.project || !p.provider || !p.prompt.trim() || p.pending || nativeSubmitting || marking
+            }
+            onClick={() => {
+              void sendDraft();
+            }}
+          >
+            <ArrowUp size={18} />
+          </Button>
+        )}
+      </div>
+  );
   return (<>
     {minimized && mini}
     <section style={minimized?{display:"none"}:undefined}
@@ -383,17 +497,6 @@ return function AppDevelopmentDock(
               {!history.length && <p>暂无历史对话</p>}
             </DropdownMenuContent>
         </DropdownMenu>
-        {!userMode && <a
-          href={
-            p.project
-              ? `/my/development?projectId=${encodeURIComponent(p.project.id)}`
-              : "/my/development"
-          }
-          title="打开完整开发页"
-          aria-label="打开完整开发页"
-        >
-          <Code2 size={17} />
-        </a>}
         {userMode && <a href={`/my/agent?${new URLSearchParams({ appId: `${p.application?.owner}/${p.application?.name}` })}`}
           title="应用 Agent 设置" aria-label="应用 Agent 设置"><Settings size={17} /></a>}
         {!userMode && p.project && <DevelopmentAgentSettings projectId={p.project.id} />}
@@ -422,6 +525,7 @@ return function AppDevelopmentDock(
                 <GitCompareArrows size={15} />
                 改动
               </Button>
+              {DevelopmentDelivery && <Button variant="unstyled" size="none" aria-pressed={panel==='delivery'} onClick={()=>{setPanel('delivery');p.actions.diff();}}>验收与版本</Button>}
               <Button variant="unstyled" size="none"
                 disabled={p.pending || running || building}
                 onClick={() => {
@@ -474,6 +578,7 @@ return function AppDevelopmentDock(
             )}
             {nativeEnabled && <div style={{height:"100%", minHeight:0, ...(panel!=="chat"?{display:"none"}:{})}}> <NativeConversationFrame
                 {...(userMode?{identity:"user" as const,applicationId:input.nativeUserAgent!.appId,agent:input.nativeUserAgent!}:{identity:"developer" as const,projectId:p.project!.id})}
+                onRunningSeat={setRunningSeat}
                 onAttachments={setNativeAttachments}
                 onComposerReady={port=>{nativeComposer.current=port;p.actions.nativeComposerReady?.(port);}}
                 providerId={p.provider} sessionId={nativeSession??p.selectedSession} newSession={nativeNew}
@@ -503,6 +608,7 @@ return function AppDevelopmentDock(
                 )}
               </>
             )}
+            {panel === "delivery" && DevelopmentDelivery && <DevelopmentDelivery value={{...p,running}}/> }
             {panel === "changes" && (
               <>
                 {p.changes.length ? (
@@ -518,7 +624,7 @@ return function AppDevelopmentDock(
                   {building
                     ? "正在检查与构建…"
                     : ready
-                      ? (p.build?.purpose === "preview" ? "预览编译通过，正式上线需完整检查" : "构建通过，可以预览或上线")
+                      ? (p.build?.purpose === "preview" ? "预览编译通过，正式上线需完整检查" : "检查与构建通过，页面行为仍需在预览中验证")
                       : p.build?.status === "failed"
                         ? "构建失败，请查看日志"
                         : "尚未构建"}
@@ -526,6 +632,7 @@ return function AppDevelopmentDock(
                     <Button variant="unstyled" size="none" onClick={p.actions.cancelBuild}>取消构建</Button>
                   )}
                 </p>
+                {ready && !userMode && <p className="dock-hint">打开预览，复现刚刚的问题；如仍有异常，标记位置后继续对话。编译结果不会代替页面验收。</p>}
                 <DshTerminal
                   command="应用检查与构建"
                   output={p.log}
@@ -586,9 +693,9 @@ return function AppDevelopmentDock(
             )}
           </div>
         </div>}
-      {(p.attachments?.length || nativeAttachments.length) ? (
+      {(p.attachments?.length || nativeAttachments.filter(file=>file.name!==pageSelection?.fileName).length) ? (
         <div className="dock-attachments" aria-label="待发送附件">
-          {[...(p.attachments??[]),...nativeAttachments].map((file) => (
+          {[...(p.attachments??[]),...nativeAttachments].filter(file=>file.name!==pageSelection?.fileName).map((file) => (
             <span key={file.id}>
               <Paperclip size={14} />
               <span>{file.name}</span>
@@ -608,6 +715,12 @@ return function AppDevelopmentDock(
           ))}
         </div>
       ) : null}
+      {!userMode && !p.pending && (!p.project || !p.providers.length) && (
+        <div className="dock-error dock-collapsed-error" role="status">
+          {!p.project && <p>应用源码尚未接入，暂时无法对话编辑。<Button variant="ghost" size="sm" onClick={() => {setExpanded(true);setPanel("chat");}}>接入源码</Button></p>}
+          {!p.providers.length && <p>尚未配置模型供应商。<a className="underline" href="/my/models">配置模型后开始对话</a></p>}
+        </div>
+      )}
       {!expanded && error && (
         <p className="dock-error dock-collapsed-error" role="alert">
           {error}
@@ -635,79 +748,7 @@ return function AppDevelopmentDock(
           }).finally(()=>setNativeSubmitting(false));
         }}
       />
-      <div className="development-dock-composer" style={expanded&&panel==="chat"&&nativeEnabled?{display:"none"}:undefined}>
-        <Button variant="unstyled" size="none"
-          aria-label="上传文件"
-          disabled={running || nativeSubmitting || p.pending || !p.project || (!nativeEnabled && !p.actions.upload)}
-          onClick={() => attachmentInput.current?.click()}
-        >
-          <Plus size={20} />
-        </Button>
-        <Textarea
-          ref={draft}
-          rows={1}
-          aria-label={userMode ? "应用对话消息" : "应用修改需求"}
-          placeholder={
-            userMode ? "向应用 AI 提问…" : p.project ? "描述你想修改的功能…" : "与 Agent 一起编辑应用…"
-          }
-          value={p.prompt}
-          disabled={running || nativeSubmitting || !p.project}
-          onChange={(e) => p.actions.setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (
-              e.key === "Enter" &&
-              !e.shiftKey &&
-              !e.nativeEvent.isComposing
-            ) {
-              e.preventDefault();
-              if (p.prompt.trim() && p.provider && !p.pending && !nativeSubmitting) {
-                void sendDraft();
-              }
-            }
-          }}
-        />
-        <Select value={p.provider || undefined} disabled={running || nativeSubmitting || p.pending || !p.providers.length} onValueChange={p.actions.setProvider}>
-          <SelectTrigger className="dock-model-trigger" aria-label={userMode ? "对话模型" : "开发模型"}>
-            <SelectValue placeholder="先配置模型" />
-          </SelectTrigger>
-          <SelectContent side="top" align="end" sideOffset={8}>
-            {p.providers.map((model) => (
-              <SelectItem key={model.id} value={model.id}>{model.name} · {model.model}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {!p.providers.length && <a href="/my/models">配置模型</a>}
-        {running ? (
-          <Button variant="unstyled" size="none"
-            className="dock-send"
-            aria-label={userMode ? "停止对话" : "停止开发"}
-            onClick={() => {
-              if (!nativeEnabled) {p.actions.stop(); return;}
-              setNativeCommandError("");
-              const port = nativeComposer.current;
-              if (!port) {setNativeCommandError("原生会话尚未就绪"); return;}
-              void port.request("cancel").catch(error => {
-                if (nativeComposer.current === port) setNativeCommandError(error instanceof Error ? error.message : String(error));
-              });
-            }}
-          >
-            <Square size={14} fill="currentColor" />
-          </Button>
-        ) : (
-          <Button variant="unstyled" size="none"
-            className="dock-send"
-            aria-label={userMode ? "发送对话消息" : "发送修改需求"}
-            disabled={
-              !p.project || !p.provider || !p.prompt.trim() || p.pending || nativeSubmitting
-            }
-            onClick={() => {
-              void sendDraft();
-            }}
-          >
-            <ArrowUp size={18} />
-          </Button>
-        )}
-      </div>
+      {running && expanded && panel === "chat" && runningSeat && renderPortal ? renderPortal(composer,runningSeat) : composer}
       <input
         ref={sourceInput}
         type="file"

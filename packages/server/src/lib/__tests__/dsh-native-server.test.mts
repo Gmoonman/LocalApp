@@ -5,7 +5,7 @@ import { connect } from "node:net";
 import { once } from "node:events";
 
 it("dispatches native upgrades exclusively and preserves compatibility upgrades", async () => {
-  const { default: EmbeddedWebServer } = await import("@localapp/dsh-multiuser/native-server");
+  const { default: EmbeddedWebServer } = await import("@localapp/dsh-agent-runtime/native-server");
   const ctx = new Context();
   await ctx.plugin(EmbeddedWebServer, { host: "127.0.0.1", port: 0 });
   const carrier = ctx.webServer as InstanceType<typeof EmbeddedWebServer>;
@@ -41,7 +41,7 @@ it("dispatches native upgrades exclusively and preserves compatibility upgrades"
   } finally { await ctx.fiber.dispose(); await new Promise<void>(resolve => listener.close(() => resolve())); }
 });
 it("carries native routes and the compatibility handler on one listening server", async () => {
-  const { default: EmbeddedWebServer } = await import("@localapp/dsh-multiuser/native-server");
+  const { default: EmbeddedWebServer } = await import("@localapp/dsh-agent-runtime/native-server");
   const ctx = new Context();
   let app: ReturnType<typeof Fastify> | undefined;
   try {
@@ -65,7 +65,7 @@ it("carries native routes and the compatibility handler on one listening server"
   } finally { await app?.close(); await ctx.fiber.dispose(); }
 });
 it("rejects new HTTP, upgrade and fallback contributions after the carrier stops", async () => {
-  const { default: EmbeddedWebServer } = await import("@localapp/dsh-multiuser/native-server");
+  const { default: EmbeddedWebServer } = await import("@localapp/dsh-agent-runtime/native-server");
   const ctx = new Context();
   try {
     await ctx.plugin(EmbeddedWebServer, { host: "127.0.0.1", port: 0 });
@@ -81,7 +81,7 @@ it("rejects new HTTP, upgrade and fallback contributions after the carrier stops
   } finally { await ctx.fiber.dispose(); }
 });
 it("runs dsh registered routes through the existing Server without opening another listener", async () => {
-  const { default: EmbeddedWebServer } = await import("@localapp/dsh-multiuser/native-server");
+  const { default: EmbeddedWebServer } = await import("@localapp/dsh-agent-runtime/native-server");
   const ctx = new Context(); const app = Fastify();
   await ctx.plugin(EmbeddedWebServer, { host: "127.0.0.1", port: 0 });
   const native = ctx.webServer as InstanceType<typeof EmbeddedWebServer>;

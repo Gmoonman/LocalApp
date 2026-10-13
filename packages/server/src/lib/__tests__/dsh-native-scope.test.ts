@@ -1,4 +1,4 @@
-import { encodeNativeScope, decodeNativeScope } from "@localapp/dsh-multiuser/native-scope";
+import { encodeNativeScope, decodeNativeScope } from "@localapp/dsh-agent-runtime/native-scope";
 import { expect, it } from "vitest";
 
 it("pins native requests to an application and configured provider, without carrying an actor", () => {

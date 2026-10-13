@@ -146,15 +146,15 @@ return function CreateApplicationDialog({ open, onOpenChange, onCreated = url =>
       </div>}
       {error && <p role="alert" className="px-7 pb-2 text-sm text-destructive">{error}</p>}
       {!providers.length && <a className="px-7 pb-3 text-sm underline" href="/my/models">先配置模型供应商</a>}
-      {!creation && <form className="m-5 mt-0 rounded-2xl border bg-background p-3 shadow-sm" onSubmit={event => { event.preventDefault(); void send(); }}>
-        <Textarea aria-label="创建应用需求" placeholder="描述你想创建的应用…" className="min-h-20 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
+      {!creation && <form className="m-5 mt-0 flex shrink-0 flex-col gap-2 rounded-2xl border bg-background p-3 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-ring/30" onSubmit={event => { event.preventDefault(); void send(); }}>
+        <Textarea aria-label="创建应用需求" placeholder="描述你想创建的应用…" className="max-h-48 min-h-20 resize-none rounded-none border-0 bg-transparent px-2 py-1 shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
           value={prompt} disabled={busy || confirming} onChange={event => setPrompt(event.target.value)} onKeyDown={event => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); }
           }} />
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-2">
           <ChoiceSelect label="创建应用模型" value={provider} disabled={busy || confirming || pendingCreation.current !== null} onValueChange={setProvider}
-            options={providers.map(p => ({ value: p.id, label: `${p.name} · ${p.model}` }))} className="max-w-64 border-0 shadow-none" />
-          <Button type="submit" size="icon" className="rounded-full" aria-label="发送创建需求" disabled={!prompt.trim() || !provider || busy || confirming}>
+            options={providers.map(p => ({ value: p.id, label: `${p.name} · ${p.model}` }))} className="w-auto min-w-0 max-w-[calc(100%-3rem)] border-0 bg-transparent shadow-none sm:max-w-80" />
+          <Button type="submit" size="icon" className="shrink-0 rounded-full" aria-label="发送创建需求" disabled={!prompt.trim() || !provider || busy || confirming}>
             {busy ? <LoaderCircle className="animate-spin" /> : <ArrowUp />}
           </Button>
         </div>

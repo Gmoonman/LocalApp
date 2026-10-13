@@ -1,0 +1,11 @@
+{
+  "repository": "NousResearch/hermes-agent",
+  "commit": "1744a19e0df568c647e4f3ff9c37f2a284a282fb",
+  "path": "skills/productivity/docx",
+  "license": "MIT",
+  "localappChanges": [
+    "Workspace and dependency setup guidance",
+    "Map tool names to available LocalApp tools",
+    "Keep original scripts and references"
+  ]
+}

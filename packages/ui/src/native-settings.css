@@ -1,0 +1,8 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+@import "./theme.css";
+@source "./";
+
+@source "../../dsh-agent-settings/ui";
+@source "../../dsh-execution-environment/ui";

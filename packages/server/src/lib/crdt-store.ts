@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/crdt-store";
+export * from "@localapp/dsh-collaboration/crdt-store";

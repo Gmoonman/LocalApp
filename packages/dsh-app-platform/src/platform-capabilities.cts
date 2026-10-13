@@ -50,8 +50,21 @@ export const PLATFORM_CAPABILITIES = {
         "extension": "pdf",
         "mimeType": "application/pdf",
         "inlinePreview": true
+      },
+      {
+        "extension": "xlsx",
+        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "inlinePreview": false
       }
-    ]
+    ],
+    "bundles": {
+      "enabled": true,
+      "maxFiles": 1000,
+      "maxBytes": 2147483648,
+      "maxConcurrent": 2,
+      "maxPending": 20,
+      "retentionSeconds": 86400
+    }
   },
   "backend": {
     "stableMode": "named-sql",
@@ -124,4 +137,4 @@ export const PLATFORM_CAPABILITIES = {
 
 export type PlatformCapabilities = typeof PLATFORM_CAPABILITIES;
 
-export const PLATFORM_CAPABILITIES_SOURCE_SHA256 = "e31ac24f30db9ad0f310123f063f4ee1f7a8dc0b9759c8b75e6e0a777a15bc0d";
+export const PLATFORM_CAPABILITIES_SOURCE_SHA256 = "0bdab4e2be1d93c1e736b9807671317d83370f94d00054e0bdda9fb6e2d7b7b2";

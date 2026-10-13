@@ -1,5 +1,5 @@
 "use client";
-import { createSystemAgentEnvironment } from "@localapp/dsh-multiuser/ui/system-agent-environment";
+import { createSystemAgentEnvironment } from "@localapp/dsh-execution-environment/ui/system-agent-environment";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

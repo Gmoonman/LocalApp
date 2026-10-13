@@ -1,4 +1,4 @@
-import { registerPeers } from "@localapp/dsh-app-platform/peers-routes";
+import { registerPeers } from "@localapp/dsh-app-sync/peers-routes";
 import type { FastifyInstance } from "fastify";
 import type { PeerStore } from "../lib/peer-store.js";
 import { adminAuth } from "../plugins/auth.js";

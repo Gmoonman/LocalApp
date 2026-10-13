@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 it("loads Python configuration and dependency checks from the standalone multiuser plugin", async () => {
-  const python = await import("@localapp/dsh-multiuser/python-environment");
-  const environment = await import("@localapp/dsh-multiuser/agent-environment");
+  const python = await import("@localapp/dsh-execution-environment/python-environment");
+  const environment = await import("@localapp/dsh-execution-environment/agent-environment");
   expect(python.shellQuote("/space dir/python")).toBe("'/space dir/python'");
   expect(environment.environmentProbe("/space dir/python")).toContain("'/space dir/python'");
   const report = environment.summarizeEnvironment(JSON.stringify({ version: [3, 12, 0], python: "python", modules: { docx: true }, commands: { soffice: true } }), ["docx"], []);
@@ -18,7 +18,7 @@ it("reads existing Server Python settings without changing their location or con
   const content = JSON.stringify(config);
   try {
     const filename = path.join(root, "python-environment.json"); await fs.writeFile(filename, content);
-    const plugin = await import("@localapp/dsh-multiuser/python-environment");
+    const plugin = await import("@localapp/dsh-execution-environment/python-environment");
     const server = await import("../python-environment.js");
     expect(plugin.readPythonEnvironment(root)).toEqual(config);
     expect(server.readPythonEnvironment(root)).toEqual(config);

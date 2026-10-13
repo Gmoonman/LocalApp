@@ -5,7 +5,7 @@ import { registerApplicationPages } from "@localapp/dsh-app-platform/pages-route
 import { registerApplicationInstall } from "@localapp/dsh-app-platform/install-routes";
 import { registerApplicationShell } from "@localapp/dsh-app-platform/shell-routes";
 import { registerApplicationResources } from "@localapp/dsh-app-platform/resource-routes";
-import { handleApplicationNotification, type ApplicationNotificationRecord } from "@localapp/dsh-app-platform/notify-handler";
+import { handleApplicationNotification, type ApplicationNotificationRecord } from "@localapp/dsh-device-services/notify-handler";
 import { expect, it } from "vitest";
 
 it("hosts pages with injected identity and object storage", async () => {

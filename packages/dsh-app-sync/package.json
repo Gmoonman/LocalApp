@@ -1,0 +1,73 @@
+{
+  "name": "@localapp/dsh-app-sync",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./app-sync-source": {
+      "types": "./dist/app-sync-source.d.cts",
+      "default": "./dist/app-sync-source.cjs"
+    },
+    "./app-sync-target": {
+      "types": "./dist/app-sync-target.d.cts",
+      "default": "./dist/app-sync-target.cjs"
+    },
+    "./peer-client": {
+      "types": "./dist/peer-client.d.cts",
+      "default": "./dist/peer-client.cjs"
+    },
+    "./peer-protocol-routes": {
+      "types": "./dist/peer-protocol-routes.d.cts",
+      "default": "./dist/peer-protocol-routes.cjs"
+    },
+    "./peer-records": {
+      "types": "./dist/peer-records.d.cts",
+      "default": "./dist/peer-records.cjs"
+    },
+    "./peer-store": {
+      "types": "./dist/peer-store.d.cts",
+      "default": "./dist/peer-store.cjs"
+    },
+    "./peers-routes": {
+      "types": "./dist/peers-routes.d.cts",
+      "default": "./dist/peers-routes.cjs"
+    },
+    "./sync-job-store": {
+      "types": "./dist/sync-job-store.d.cts",
+      "default": "./dist/sync-job-store.cjs"
+    },
+    "./sync-session-store": {
+      "types": "./dist/sync-session-store.d.cts",
+      "default": "./dist/sync-session-store.cjs"
+    },
+    "./sync-source-routes": {
+      "types": "./dist/sync-source-routes.d.cts",
+      "default": "./dist/sync-source-routes.cjs"
+    },
+    "./sync-target-routes": {
+      "types": "./dist/sync-target-routes.d.cts",
+      "default": "./dist/sync-target-routes.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "sql.js": "^1.14.1",
+    "@localapp/app-foundation": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "typescript": "5.6.3",
+    "fastify": "^4.26.0",
+    "@types/ws": "^8.18.1",
+    "@fastify/websocket": "^8.3.1",
+    "@types/sql.js": "^1.4.11"
+  }
+}

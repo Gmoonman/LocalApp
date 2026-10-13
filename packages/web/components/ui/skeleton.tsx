@@ -1,2 +1,2 @@
 "use client";
-export * from "@localapp/dsh-multiuser/ui/shadcn/skeleton";
+export * from "@localapp/ui/skeleton";

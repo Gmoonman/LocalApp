@@ -38,3 +38,7 @@ it("checks the same allocated loopback ports used by release builds",async()=>{
  });
  expect(report.ready).toBe(true);expect(close).toHaveBeenCalledOnce();
 });
+
+it("accepts a fixed HTTPS preview address on another port",()=>{
+ expect(saveDevelopmentSettings(root,{previewOrigin:"https://apps.example.com:60014"}).previewOrigin).toBe("https://apps.example.com:60014");
+});

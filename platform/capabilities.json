@@ -20,8 +20,17 @@
       { "extension": "gif", "mimeType": "image/gif", "inlinePreview": true },
       { "extension": "webp", "mimeType": "image/webp", "inlinePreview": true },
       { "extension": "svg", "mimeType": "image/svg+xml", "inlinePreview": true },
-      { "extension": "pdf", "mimeType": "application/pdf", "inlinePreview": true }
-    ]
+      { "extension": "pdf", "mimeType": "application/pdf", "inlinePreview": true },
+      { "extension": "xlsx", "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "inlinePreview": false }
+    ],
+    "bundles": {
+      "enabled": true,
+      "maxFiles": 1000,
+      "maxBytes": 2147483648,
+      "maxConcurrent": 2,
+      "maxPending": 20,
+      "retentionSeconds": 86400
+    }
   },
   "backend": {
     "stableMode": "named-sql",

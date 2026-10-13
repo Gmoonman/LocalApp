@@ -1,7 +1,7 @@
-import { AgentSettingsStore as PluginSettingsStore, createSqliteSettingsPersistence } from "@localapp/dsh-multiuser/settings";
+import { AgentSettingsStore as PluginSettingsStore, createSqliteSettingsPersistence } from "@localapp/dsh-agent-settings/settings";
 import { PUBLIC_AGENT_SKILLS } from "./public-agent-skills.js";
 import { getDb, flushMetaDb } from "./meta-sqlite.js";
-export * from "@localapp/dsh-multiuser/settings";
+export * from "@localapp/dsh-agent-settings/settings";
 export function createAgentSettingsOptions(dataDir: string) {
   return [dataDir, createSqliteSettingsPersistence({ database: getDb, flush: flushMetaDb }),
     PUBLIC_AGENT_SKILLS.map(skill => skill.id)] as const;

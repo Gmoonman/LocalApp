@@ -1,3 +1,4 @@
+import type {} from "@localapp/dsh-agent-runtime";
 import type {} from "@localapp/dsh-agent-ui";
 import { starterDocRoutes } from "./starter-doc-routes.cjs";
 import { createCliRoutes, type CliRouteOptions } from "./cli-routes.cjs";
@@ -151,7 +152,7 @@ export class ApplicationDevelopment extends Service {
   }
   registerRoutes(app: FastifyInstance, host: Omit<Parameters<typeof registerDevelopmentRoutes>[1], "dataDir" | "projects" | "attachments" | "creations" | "releases" | "registerSource" | "runtimeRegistry"> & { runtimeRegistry?: Parameters<typeof registerDevelopmentRoutes>[1]["runtimeRegistry"] }) {
     if (!this.active) throw new Error("Application development plugin is stopped");
-    const runtimeRegistry = host.runtimeRegistry ?? this.context.get("localappMultiuser");
+    const runtimeRegistry = host.runtimeRegistry ?? this.context.get("localappAgentRuntime");
     if (!runtimeRegistry) throw new Error("Multiuser runtime service is required");
     app.addHook("onRequest", async (_request, reply) => {
       if (!this.active) return reply.code(503).send({ success: false, error: "Application development plugin is stopped" });

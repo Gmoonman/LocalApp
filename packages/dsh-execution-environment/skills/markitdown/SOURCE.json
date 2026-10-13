@@ -1,0 +1,11 @@
+{
+  "repository": "K-Dense-AI/scientific-agent-skills",
+  "commit": "92ace75ac21efe19a620434e0ca4e356081fe807",
+  "path": "skills/markitdown",
+  "license": "MIT",
+  "localappChanges": [
+    "Workspace and dependency setup guidance",
+    "Map tool names to available LocalApp tools",
+    "Remove mandatory promotional citation"
+  ]
+}

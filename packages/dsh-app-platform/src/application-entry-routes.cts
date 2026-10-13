@@ -26,6 +26,8 @@ declare module "fastify" {
 
 import { createApplicationCrdt } from "./crdt-handler.cjs";
 import { handleContentUpload as uploadContent, handleContentRead as readContent } from "./content-handler.cjs";
+import { ContentBundles, BundleError, canExportFile, validateBundleFiles } from "./content-bundles.cjs";
+import { openObject } from "./content-storage.cjs";
 import type * as ContentStorage from "./content-storage.cjs";
 import type { ApplicationNotificationHost } from "./notify-handler.cjs";
 import type { ApplicationShellHost } from "./shell-routes.cjs";
@@ -35,8 +37,13 @@ import type { createDeviceActionRoutes } from "./device-actions-routes.cjs";
 import type {} from "@fastify/cookie";
 export interface ApplicationEntryHost {
   onStop?(cleanup: () => void): void;
+  collaborationEnabled?:boolean;
+  deviceServicesEnabled?:boolean;
+  createCrdt?: typeof createApplicationCrdt;
+  createCollaboration?: typeof createApplicationCollaboration;
   webRoot: string;
   dataDir(request?: FastifyRequest): string;
+  previewData?(request: FastifyRequest): { databasePath: string; ownerId: string; readSource: "test" | "production"; writeSource: "test" | "production" } | undefined;
   visitorId(request: FastifyRequest): string | null | undefined;
   visitorName(request: FastifyRequest): string | null | undefined;
   userId(request: FastifyRequest): string | null | undefined;
@@ -46,7 +53,7 @@ export interface ApplicationEntryHost {
   userCount(): number;
   pushPageView: ApplicationShellHost["pushPageView"];
   notifications: Pick<ApplicationNotificationHost, "resolveRecipients" | "persistNotifications">;
-  storage: Pick<typeof ContentStorage, "putObject" | "getObject">;
+  storage: Pick<typeof ContentStorage, "putObject" | "getObject"> & Partial<Pick<typeof ContentStorage, "openObject">>;
   sessions: VerificationSessionStore;
   desktopAction: ReturnType<typeof createDesktopActionRoutes>["handleDesktopActionCreation"];
   deviceAction: ReturnType<typeof createDeviceActionRoutes>["handleDeviceActionCreation"];
@@ -54,7 +61,7 @@ export interface ApplicationEntryHost {
 export async function registerApplicationEntry(app: FastifyInstance, host: ApplicationEntryHost) {
   const { user: findUserById, keyOwner: validateApiKey, pushPageView, desktopAction: handleDesktopActionCreation, deviceAction: handleDeviceActionCreation } = host;
   const { resolveRecipients, persistNotifications } = host.notifications;
-  const handleContentUpload = (req: FastifyRequest, reply: FastifyReply, owner: string, name: string, pageDir?: string) => uploadContent(req, reply, owner, name, pageDir, host.storage);
+  const handleContentUpload = (req: FastifyRequest, reply: FastifyReply, owner: string, name: string, pageDir?: string, responseContentBase?: string, uploader?: string) => uploadContent(req, reply, owner, name, pageDir, host.storage, responseContentBase, uploader);
   const handleContentRead = (req: FastifyRequest, reply: FastifyReply, owner: string, name: string, key: string) => readContent(req, reply, owner, name, key, host.storage);
 const HTML_404 = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Not Found</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:system-ui;background:#f8f9fa"><div style="text-align:center"><h1 style="font-size:2rem;color:#1a1d23">404</h1><p style="color:#6b7280">Page not found.</p><a href="/" style="color:#2563eb">Back to home</a></div></body></html>`;
 
@@ -66,17 +73,21 @@ function buildServerTime(now: string): { now: string; today: string } {
   };
 }
 
-  const crdt = createApplicationCrdt({ visitorId: host.visitorId, verification: request => request.verificationSession, user: host.user, validateApiKey: host.keyOwner });
-  const { handleCrdtAwareness, handleCrdtEvents, handleCrdtSync, handleCrdtUpdate } = crdt;
-  app.addHook("onClose", async () => crdt.dispose());
-  host.onStop?.(() => crdt.dispose());
-  const collaboration = createApplicationCollaboration({
+  const crdt = host.collaborationEnabled===false ? undefined : (host.createCrdt ?? createApplicationCrdt)({ visitorId: host.visitorId, verification: request => request.verificationSession, user: host.user, validateApiKey: host.keyOwner });
+  const unavailable=async(_req:FastifyRequest,reply:FastifyReply,..._args:unknown[])=>reply.code(404).send({success:false,error:"Plugin is not enabled"});
+  const { handleCrdtAwareness, handleCrdtEvents, handleCrdtSync, handleCrdtUpdate } = crdt ?? {handleCrdtAwareness:unavailable,handleCrdtEvents:unavailable,handleCrdtSync:unavailable,handleCrdtUpdate:unavailable};
+  app.addHook("onClose", async () => crdt?.dispose());
+  host.onStop?.(() => crdt?.dispose());
+  const collaboration = host.collaborationEnabled===false ? undefined : (host.createCollaboration ?? createApplicationCollaboration)({
     visitor: visitorFromReq, user: findUserById,
     verification: request => request.verificationSession,
   });
-  const { handleCollaborationEvents, handleCollaborationCommit, handlePresenceEvents, handlePresenceLeaseMutation } = collaboration;
-  app.addHook("onClose", async () => collaboration.dispose());
-  host.onStop?.(() => collaboration.dispose());
+  const { handleCollaborationEvents, handleCollaborationCommit, handlePresenceEvents, handlePresenceLeaseMutation } = collaboration ?? {handleCollaborationEvents:unavailable,handleCollaborationCommit:unavailable,handlePresenceEvents:unavailable,handlePresenceLeaseMutation:unavailable};
+  app.addHook("onClose", async () => collaboration?.dispose());
+  host.onStop?.(() => collaboration?.dispose());
+  const bundles = new ContentBundles(path.join(host.dataDir(), ".content-bundles"), host.storage.openObject ?? openObject);
+  app.addHook("onClose", async () => { await bundles.close(); });
+  host.onStop?.(() => bundles.close());
   const webOutDir = host.webRoot;
   const dataDir = host.dataDir;
 
@@ -94,6 +105,11 @@ function buildServerTime(now: string): { now: string; today: string } {
   }
 
   app.get("/", serveNextHtml("index"));
+  app.get("/market", serveNextHtml("market"));
+  app.get("/market.txt", async (_req, reply) => {
+    try { return reply.type("text/x-component").send(fs.readFileSync(path.join(host.webRoot, "market.txt"))); }
+    catch { return reply.status(404).send(""); }
+  });
 
   app.get("/setup", async (_req, reply) => {
     if (host.userCount() !== 0) return reply.status(404).type("text/html").send(HTML_404);
@@ -174,6 +190,7 @@ function buildServerTime(now: string): { now: string; today: string } {
     handleApi: async (req, reply, meta, userId, pageName, restPath) => {
       const isDesktopActionCreation = restPath === "api/desktop-actions" && req.method === "POST";
       const isDeviceActionCreation = restPath === "api/device-actions" && req.method === "POST";
+      if(host.deviceServicesEnabled===false && (isDesktopActionCreation||isDeviceActionCreation||restPath==="api/notify"))return unavailable(req,reply);
         if (restPath === "api/_verification/report" && req.method === "POST") {
           return handleVerificationReport(app, req, reply, userId, pageName);
         }
@@ -239,12 +256,57 @@ function buildServerTime(now: string): { now: string; today: string } {
           return handleActionRequest(req, reply, dataDir(req), userId, pageName, appRoute.name);
         }
 
+        if (restPath === "api/content/bundles" || restPath.startsWith("api/content/bundles/")) {
+          const visitor = host.visitorId(req);
+          if (!visitor) return reply.status(401).send({ success:false, error:"Authentication required" });
+          if (req.verificationSession) return reply.status(409).send({success:false,error:"打包任务不支持隔离验证会话"});
+          const preview = host.previewData?.(req);
+          const owner = preview?.readSource === "production" ? preview.ownerId : userId;
+          const directory = preview?.readSource === "production" ? path.dirname(preview.databasePath) : getPageDir(dataDir(req),userId,pageName);
+          const scope = `${userId}/${pageName}`;
+          const locations = [{ owner, directory }];
+          if (preview && preview.readSource !== preview.writeSource) {
+            const writeOwner = preview.writeSource === "production" ? preview.ownerId : userId;
+            locations.push({owner:writeOwner,directory:preview.writeSource === "production" ? path.dirname(preview.databasePath) : getPageDir(dataDir(req),userId,pageName)});
+          }
+          const authorize = (file: {key:string}) => locations.some(location => canExportFile(location.directory,file.key,visitor,preview?.ownerId ?? meta.userId));
+          const parts = restPath.split("/");
+          const withDownload = (job: import("./content-bundles.cjs").BundleJob) => ({...job,
+            ...(job.state === "completed" ? {downloadUrl:`/serve/${userId}/${pageName}/api/content/bundles/${job.id}/download`} : {}),
+          });
+          try {
+            if (req.method === "POST" && parts.length === 3) {
+              const body = req.body as { files?:unknown; idempotencyKey?:unknown } | null;
+              const files = validateBundleFiles(body?.files);
+              const objectKeys = files.map(file => {
+                const candidates = locations.filter(location => canExportFile(location.directory,file.key,visitor,preview?.ownerId ?? meta.userId));
+                if (!candidates.length) throw new BundleError(403,`无权读取文件：${file.key} (${file.path})`);
+                return candidates.map(location => `${location.owner}/${pageName}/${file.key}`);
+              });
+              return reply.status(202).send({success:true,data:withDownload(bundles.create(scope,visitor,files,body?.idempotencyKey,authorize,objectKeys))});
+            }
+            if (req.method === "GET" && parts.length === 4) return {success:true,data:withDownload(bundles.get(parts[3],scope,visitor))};
+            if (req.method === "GET" && parts.length === 5 && parts[4] === "download") {
+              const result = bundles.download(parts[3],scope,visitor,authorize);
+              reply.header("Cache-Control","private, no-store").header("X-Content-Type-Options","nosniff").header("Content-Disposition",`attachment; filename="${parts[3]}.zip"`);
+              return reply.type("application/zip").send(fs.createReadStream(result));
+            }
+            return reply.status(404).send({success:false,error:"Unknown bundle endpoint"});
+          } catch(error) {
+            if (error instanceof BundleError) return reply.status(error.status).send({success:false,error:error.message});
+            throw error;
+          }
+        }
+
         // Content upload/read routes: /serve/{userId}/{name}/api/content/upload|{key}
         if (appRoute.kind === "content-upload") {
-          return handleContentUpload(req, reply, userId, pageName, getPageDir(dataDir(req), userId, pageName));
+          const source = host.previewData?.(req);
+          const owner = source?.writeSource === "production" ? source.ownerId : userId;
+          const directory = source?.writeSource === "production" ? path.dirname(source.databasePath) : getPageDir(dataDir(req), userId, pageName);
+          return handleContentUpload(req, reply, owner, pageName, directory, `/serve/${userId}/${pageName}/api/content/`, host.visitorId(req) ?? undefined);
         }
         if (appRoute.kind === "content-read") {
-          return handleContentRead(req, reply, userId, pageName, appRoute.key);
+          return handleContentRead(req, reply, host.previewData?.(req)?.readSource === "production" ? host.previewData!(req)!.ownerId : userId, pageName, appRoute.key);
         }
 
         // Notify endpoint: POST /serve/{userId}/{name}/api/notify
@@ -266,7 +328,7 @@ async function handleCrudRequest(
   appRoute = matchAppApiRoute(req.method, restPath.slice("api".length)),
 ) {
   return handleApplicationData(req, reply, dataDir, userId, pageName, restPath, {
-    visitor: visitorFromReq(req), verification: req.verificationSession, now: host.now(req),
+    visitor: visitorFromReq(req), verification: req.verificationSession, now: host.now(req), previewData: host.previewData?.(req),
   }, appRoute);
 }
 

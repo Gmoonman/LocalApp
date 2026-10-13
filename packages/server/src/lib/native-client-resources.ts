@@ -3,14 +3,14 @@ import { pathToFileURL } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Context } from "@deepseek-ai/cordis" with { "resolution-mode": "import" };
-import type NativeClientAssets from "@localapp/dsh-multiuser/native-client-assets" with { "resolution-mode": "import" };
+import type NativeClientAssets from "@localapp/dsh-agent-runtime/native-client-assets" with { "resolution-mode": "import" };
 const loading=new WeakMap<Context,Promise<NativeClientAssets>>();
 export function nativeClientAssets(context:Context) {
  let ready=loading.get(context);
  if(!ready) {
   ready=(async()=>{
    const require=createRequire(path.join(__dirname,"../package.json"));
-   const {default:Assets}=await import(pathToFileURL(require.resolve("@localapp/dsh-multiuser/native-client-assets")).href);
+   const {default:Assets}=await import(pathToFileURL(require.resolve("@localapp/dsh-agent-runtime/native-client-assets")).href);
    if(!context.get("nativeClientAssets")) await context.plugin(Assets, {
     contributions: [
      ...(context.get("localappAgentUI") ? [pathToFileURL(require.resolve("@localapp/dsh-agent-ui/client-host")).href] : []),

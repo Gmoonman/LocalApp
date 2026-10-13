@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/peer-client";
+export * from "@localapp/dsh-app-sync/peer-client";

@@ -1,3 +1,1 @@
-import { PLATFORM_CAPABILITIES } from "./platform-capabilities.cjs";
-
-export const CURRENT_PLATFORM_VERSION = PLATFORM_CAPABILITIES.platformVersion;
+export * from "@localapp/app-foundation/platform-version";

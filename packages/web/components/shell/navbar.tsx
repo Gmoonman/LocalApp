@@ -25,6 +25,7 @@ export interface PlatformEditSession {
 
 interface NavbarProps {
   pageName: string;
+  previewControls?: React.ReactNode;
   user: UserData | null;
   favCount: number;
   isFavorited: boolean;
@@ -40,7 +41,7 @@ interface NavbarProps {
   presenceSnapshot?: PresenceSnapshot | null;
 }
 
-export function Navbar({ pageName, user, favCount, isFavorited, onToggleFavorite, onOpenIssues, openIssueCount, aiMode, aiOpen, onToggleAI, bell, editSession, presenceCount, presenceSnapshot }: NavbarProps) {
+export function Navbar({ previewControls, pageName, user, favCount, isFavorited, onToggleFavorite, onOpenIssues, openIssueCount, aiMode, aiOpen, onToggleAI, bell, editSession, presenceCount, presenceSnapshot }: NavbarProps) {
   const { openLogin } = useAuthModals();
   const initial = user ? (user.displayName || user.name).charAt(0).toUpperCase() : "?";
   const editBusy = editSession?.busy ?? false;
@@ -67,10 +68,11 @@ export function Navbar({ pageName, user, favCount, isFavorited, onToggleFavorite
   }, [presenceOpen]);
 
   return (
-    <nav className="flex shrink-0 flex-col bg-card">
+    <nav className={`flex shrink-0 flex-col bg-card ${previewControls ? "localapp-preview-navbar" : ""}`}>
       <div className="flex items-center justify-between px-4 py-2 text-sm">
       <div className="flex min-w-0 items-center gap-2" data-testid="localapp-platform-nav-left">
         <strong className="max-w-[200px] truncate">{pageName}</strong>
+        {previewControls}
         <Button
           variant="ghost"
           size="sm"
@@ -228,7 +230,7 @@ export function Navbar({ pageName, user, favCount, isFavorited, onToggleFavorite
         )}
       </div>
       </div>
-      <div className="h-[3px] bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-orange-400" />
+      <div className={`h-[3px] ${previewControls ? "bg-sky-400/70" : "bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-orange-400"}`} />
     </nav>
   );
 }

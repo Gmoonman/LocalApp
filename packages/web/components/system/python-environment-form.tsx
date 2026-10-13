@@ -1,5 +1,5 @@
 "use client";
-import { createPythonEnvironmentForm } from "@localapp/dsh-multiuser/ui/python-environment-form";
+import { createPythonEnvironmentForm } from "@localapp/dsh-execution-environment/ui/python-environment-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/notify-payload";
+export * from "@localapp/dsh-device-services/notify-payload";

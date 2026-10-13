@@ -3,8 +3,8 @@ import path from "node:path";
 import Fastify from "fastify";
 import { Context } from "@deepseek-ai/cordis";
 import Multiuser from "@localapp/dsh-multiuser";
-import { AgentSettingsStore } from "@localapp/dsh-multiuser/settings";
-import { registerAgentRoutes } from "@localapp/dsh-multiuser/agent-routes";
+import { AgentSettingsStore } from "@localapp/dsh-agent-settings/settings";
+import { registerAgentRoutes } from "@localapp/dsh-agent-runtime/agent-routes";
 import { DeepSeekHarness } from "../deepseek-harness.mjs";
 import { expect, it, vi } from "vitest";
 

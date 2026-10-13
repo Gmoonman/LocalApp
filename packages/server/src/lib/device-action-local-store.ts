@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/device-action-local-store";
+export * from "@localapp/dsh-device-services/device-action-local-store";

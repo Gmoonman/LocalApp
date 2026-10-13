@@ -19,7 +19,8 @@
     "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@deepseek-ai/cordis": "4.0.5-alpha.1"
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@localapp/dsh-execution-environment": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

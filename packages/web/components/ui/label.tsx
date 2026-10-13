@@ -1,2 +1,2 @@
 "use client";
-export * from "@localapp/dsh-multiuser/ui/shadcn/label";
+export * from "@localapp/ui/label";

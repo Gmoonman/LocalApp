@@ -591,7 +591,8 @@ return function DevelopmentPage({
             await refresh(project!.id);
             setFile(null);
             setText("");
-            setChanges([]);
+            setChanges([]);setBuild(null);setLog("");previewedBuild.current="";autoPreviewBuild.current="";
+            dock?.onPreview?.(null);
           }),
         build: () => void act(() => buildProject()),
         preview: () =>

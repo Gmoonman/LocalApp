@@ -1,5 +1,5 @@
 import path from "node:path";
-import { SystemEnvironment } from "@localapp/dsh-multiuser/system-environment";
+import { SystemEnvironment } from "@localapp/dsh-execution-environment/system-environment";
 import { PUBLIC_AGENT_SKILLS } from "./public-agent-skills.js";
 export const systemEnvironment = new SystemEnvironment({ async createHarness(dataDir, pythonEnvironment) {
   const { DeepSeekHarness } = await import("./deepseek-harness.mjs");
@@ -7,4 +7,4 @@ export const systemEnvironment = new SystemEnvironment({ async createHarness(dat
 } });
 export const systemAgentEnvironment = systemEnvironment.check.bind(systemEnvironment);
 
-export { publicSkillAvailability } from "@localapp/dsh-multiuser/public-skills";
+export { publicSkillAvailability } from "@localapp/dsh-execution-environment/public-skills";

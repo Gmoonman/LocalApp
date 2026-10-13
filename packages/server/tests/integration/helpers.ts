@@ -25,7 +25,7 @@ export async function createTestServer(
   options?: CreateTestServerOptions,
 ): Promise<{ app: FastifyInstance; baseUrl: string; dataDir: string; setupTokens: SetupTokenStore; stop: () => Promise<void> }> {
   closeMetaDb();
-  const dataRoot = options?.dataRoot ?? os.tmpdir();
+  const dataRoot = options?.dataRoot ?? path.resolve(__dirname,"../../../../tmp/server-integration-tests");
   await fs.promises.mkdir(dataRoot, { recursive: true });
   const dataDir = await fs.promises.mkdtemp(path.join(dataRoot, "localapp-test-"));
 

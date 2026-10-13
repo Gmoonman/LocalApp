@@ -74,7 +74,7 @@ it("discusses first, confirms an agent proposal, and navigates with the same con
   });
   fireEvent.click(screen.getByLabelText("发送创建需求"));
   const confirm = await screen.findByRole("button", { name: "确认名称并创建" });
-  expect(screen.getByTitle("原生应用开发对话")).toHaveAttribute("src", "/api/development/projects/project/native/model/");
+  expect(screen.getByTitle("原生应用开发对话")).toHaveAttribute("src", "/api/development/projects/project/native/model/?localappCompact=1");
   expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/agent/run"))).toBe(false);
   expect(created).not.toHaveBeenCalled();
   fireEvent.click(confirm);

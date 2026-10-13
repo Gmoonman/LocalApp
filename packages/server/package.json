@@ -44,8 +44,8 @@
     }
   },
   "scripts": {
-    "dev": "pnpm -C ../dsh-multiuser build && pnpm -C ../dsh-app-platform build && pnpm -C ../dsh-app-development build && node scripts/build-native-client.mjs && node --import ./scripts/dev-env.mjs ./node_modules/tsx/dist/cli.mjs watch --include ../server-core/dist --include ../dsh-multiuser/dist --include ../dsh-app-platform/dist --include ../dsh-app-development/dist src/cli.ts start",
-    "build": "pnpm -C ../dsh-multiuser build && pnpm -C ../dsh-app-platform build && pnpm -C ../dsh-app-development build && tsc",
+    "dev": "node ../../scripts/build-plugin-packages.mjs && node scripts/build-native-client.mjs && node --import ./scripts/dev-env.mjs ./node_modules/tsx/dist/cli.mjs watch --include ../dsh-agent-runtime/dist --include ../dsh-agent-settings/dist --include ../dsh-execution-environment/dist --include ../dsh-app-platform/dist --include ../dsh-app-development/dist src/cli.ts start",
+    "build": "node ../../scripts/build-plugin-packages.mjs && tsc",
     "start": "node dist/cli.js start",
     "package": "pnpm -C ../server-core build && pnpm -C ../web build && node scripts/build-server-package.mjs",
     "test:package": "node --test scripts/build-server-package.node-test.mjs",
@@ -140,7 +140,16 @@
     "@localapp/dsh-app-development": "workspace:*",
     "@deepseek-ai/dsh-working-directory": "0.2.1-alpha.2",
     "@localapp/dsh-document-tools": "workspace:*",
-    "@localapp/dsh-agent-ui": "workspace:*"
+    "@localapp/dsh-agent-ui": "workspace:*",
+    "@localapp/dsh-model-settings": "workspace:*",
+    "@localapp/dsh-agent-settings": "workspace:*",
+    "@localapp/dsh-execution-environment": "workspace:*",
+    "@localapp/dsh-agent-runtime": "workspace:*",
+    "@localapp/dsh-app-sync": "workspace:*",
+    "@localapp/dsh-collaboration": "workspace:*",
+    "@localapp/dsh-device-services": "workspace:*",
+    "@localapp/app-foundation": "workspace:*",
+    "@localapp/ui": "workspace:*"
   },
   "devDependencies": {
     "@types/archiver": "8.0.0",

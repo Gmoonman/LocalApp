@@ -6,9 +6,19 @@ import { ProjectStore, DevelopmentError } from "./projects.cjs";
 import type { ReleaseBuildStore } from "./releases.cjs";
 import { inspectAppPackage } from "@localapp/dsh-app-platform/app-package";
 import { installAppPackage } from "@localapp/dsh-app-platform/app-installer";
+import { createAppDataExport, importAppData, inferAppDataIdentity } from "@localapp/dsh-app-platform/app-data-service";
+import { getPageDir } from "@localapp/dsh-app-platform/page-storage";
 import { readPageMeta } from "@localapp/dsh-app-platform/page-storage";
 export interface Preview {
+  verification?: boolean;
+  buildId?: string;
   id: string;
+  projectId?: string;
+  productionOwner?: string;
+  platformOrigin?: string;
+  dataMode?: "test" | "production";
+  readSource?: "test" | "production";
+  writeSource?: "test" | "production";
   owner: string;
   app: string;
   dataDir: string;
@@ -20,8 +30,8 @@ export interface Preview {
 }
 export interface PreviewHost {
   authorize(request: FastifyRequest, preview: Preview): void;
-  cookie(request: FastifyRequest): string | undefined;
-  setCookie(reply: import("fastify").FastifyReply, token: string): void;
+  cookie(request: FastifyRequest, preview: Preview): string | undefined;
+  setCookie(reply: import("fastify").FastifyReply, token: string, preview: Preview): void;
 }
 const digest = (token: string) =>
   createHash("sha256").update(token).digest("hex");
@@ -38,6 +48,7 @@ export class DevelopmentPreviews {
     user: string,
     buildId: string,
     platformOrigin: string,
+    verification = false,
   ) {
     const project = this.projects.get(id, user),
       build = this.builds.get(id, user, buildId);
@@ -59,19 +70,14 @@ export class DevelopmentPreviews {
     const main = new URL(platformOrigin);
     let origin: string;
     if (settings.previewOrigin) {
-      if (!settings.previewOrigin.includes("{previewId}"))
-        throw new DevelopmentError(
-          "预览域名必须包含 {previewId}，确保每个预览独立",
-          503,
-        );
       origin = new URL(
         settings.previewOrigin.replaceAll("{previewId}", previewId),
       ).origin;
     } else if (["localhost", "127.0.0.1"].includes(main.hostname)) {
       origin = `${main.protocol}//${owner}.localhost${main.port ? ":" + main.port : ""}`;
     } else throw new DevelopmentError("请管理员配置独立预览域名和 TLS", 503);
-    if (new URL(origin).host === main.host)
-      throw new DevelopmentError("预览不能使用平台域名");
+    if (origin === main.origin)
+      throw new DevelopmentError("预览必须使用不同的域名或端口");
     const root = path.join(this.projects.directory, id, "previews", previewId);
     fs.mkdirSync(root, { recursive: true, mode: 0o700 });
     await installAppPackage({
@@ -81,7 +87,11 @@ export class DevelopmentPreviews {
     });
     const ticket = randomBytes(32).toString("hex"),
       preview: Preview = {
-        id: previewId,
+        id: previewId, verification, buildId,
+        projectId: id,
+        productionOwner: project.ownerId,
+        platformOrigin: main.origin,
+        dataMode: "test",
         owner,
         app: project.name,
         dataDir: root,
@@ -90,18 +100,73 @@ export class DevelopmentPreviews {
         ticketHash: digest(ticket),
         ticketExpires: Date.now() + 60000,
       };
-    this.previews.set(new URL(origin).host, preview);
+    this.previews.set(previewId, preview);
     return {
       id: previewId,
-      url: `${origin}/__development/open?ticket=${ticket}`,
+      url: `${origin}/__development/open?previewId=${previewId}&ticket=${ticket}`,
       expiresAt: new Date(preview.expires).toISOString(),
     };
+  }
+  list(projectId:string,user:string) {
+    const project=this.projects.get(projectId,user);
+    return [...this.previews.values()].filter(preview=>preview.projectId===project.id&&preview.productionOwner===user&&preview.expires>Date.now()).map(preview=>({id:preview.id,buildId:preview.buildId,verification:!!preview.verification,expiresAt:new Date(preview.expires).toISOString()})).reverse();
+  }
+  setDataMode(projectId: string | undefined, user: string, previewId: string, mode: "test" | "production", writeSource: "test" | "production" = "test") {
+    const preview = this.previews.get(previewId);
+    if (!preview?.projectId) throw new DevelopmentError("预览已结束", 404);
+    const project = this.projects.get(projectId ?? preview.projectId, user);
+    if (preview.projectId !== project.id || preview.productionOwner !== user || preview.expires < Date.now())
+      throw new DevelopmentError("预览已结束", 404);
+    if ((mode === "production" || writeSource === "production") && !readPageMeta(this.dataDir, project.ownerId, project.name))
+      throw new DevelopmentError("应用尚未上线，没有生产数据", 409);
+    if(preview.verification && (mode !== "test" || writeSource !== "test"))throw new DevelopmentError("自动验收只能使用测试数据",403);
+    preview.dataMode = mode;
+    preview.readSource = mode;
+    preview.writeSource = writeSource;
+    const ticket = randomBytes(32).toString("hex");
+    preview.ticketHash = digest(ticket);
+    preview.ticketExpires = Date.now() + 60000;
+    return { id: preview.id, dataMode: mode, readSource: mode, writeSource, url: `${preview.origin}/__development/open?previewId=${preview.id}&ticket=${ticket}` };
+  }
+  async syncData(user: string, previewId: string, direction: "test-to-production" | "production-to-test") {
+    if (direction !== "production-to-test") throw new DevelopmentError("仅支持将生产数据复制到测试环境");
+    const preview = this.previews.get(previewId);
+    if (!preview?.projectId) throw new DevelopmentError("预览已结束", 404);
+    const project = this.projects.get(preview.projectId, user);
+    if (preview.productionOwner !== user || preview.expires < Date.now()) throw new DevelopmentError("预览已结束", 404);
+    if (!readPageMeta(this.dataDir, project.ownerId, project.name)) throw new DevelopmentError("应用尚未上线，没有生产数据", 409);
+    const testDirectory = getPageDir(preview.dataDir, preview.owner, preview.app);
+    const productionDirectory = getPageDir(this.dataDir, project.ownerId, project.name);
+    const source = productionDirectory;
+    const target = testDirectory;
+    const application = inferAppDataIdentity(target);
+    const exported = await createAppDataExport({pageDir: source, application: inferAppDataIdentity(source), archiveApplication: application, preserveUserIdentity: true});
+    try {
+      const result=await importAppData({pageDir: target, application, archivePath: exported.archivePath, reason: `preview-sync:${direction}`, preserveUserIdentity: true, allowedForeignKeyViolations: exported.foreignKeyViolations});
+      return {...result, warning: exported.foreignKeyViolations?.length ? `生产数据已有 ${exported.foreignKeyViolations.length} 条外键关联异常，已原样复制，未新增异常；生产数据未修改。` : undefined};
+    } finally { exported.cleanup(); }
   }
   close() { this.previews.clear(); }
   attach(app: FastifyInstance) {
     app.addHook("onRequest", async (req, reply) => {
-      const host = req.headers.host ?? "",
-        preview = this.previews.get(host);
+      const host = req.headers.host ?? "";
+      const url = new URL(req.url, "http://preview.invalid");
+      const candidates = [...this.previews.values()].filter(p => new URL(p.origin).host === host);
+      let requestedId = url.pathname.match(/^\/(?:serve\/)?preview([a-f0-9]{32})(?:\/|$)/)?.[1];
+      if (url.pathname === "/__development/open") requestedId = url.searchParams.get("previewId") ?? undefined;
+      if (!requestedId && req.headers.referer) {
+        try {
+          const referrer = new URL(req.headers.referer);
+          if (referrer.host === host) requestedId = referrer.pathname.match(/^\/(?:serve\/)?preview([a-f0-9]{32})(?:\/|$)/)?.[1];
+        } catch {}
+      }
+      const authenticated = candidates.filter(p => {
+        const token = this.host.cookie(req, p);
+        return token && p.cookieHash === digest(token);
+      });
+      const preview = requestedId
+        ? candidates.find(p => p.id === requestedId)
+        : authenticated.length === 1 ? authenticated[0] : undefined;
       let looksPreview = /^preview[a-f0-9]{32}\.localhost(?::\d+)?$/.test(host);
       const configFile = path.join(
         this.dataDir,
@@ -130,9 +195,8 @@ export class DevelopmentPreviews {
       }
       if (preview.expires < Date.now())
         return reply.code(410).send({ success: false, error: "预览已过期" });
-      reply.header("Referrer-Policy", "no-referrer");
+      reply.header("Referrer-Policy", "same-origin");
       reply.header("Cache-Control", "no-store");
-      const url = new URL(req.url, "http://preview.invalid");
       if (url.pathname === "/__development/open") {
         const ticket = url.searchParams.get("ticket");
         if (
@@ -147,12 +211,12 @@ export class DevelopmentPreviews {
         delete preview.ticketHash;
         const cookie = randomBytes(32).toString("hex");
         preview.cookieHash = digest(cookie);
-        this.host.setCookie(reply, cookie);
+        this.host.setCookie(reply, cookie, preview);
         return reply.redirect(`/${preview.owner}/${preview.app}/`);
       }
       if (
-        this.host.cookie(req) === undefined ||
-        digest(this.host.cookie(req)!) !== preview.cookieHash
+        this.host.cookie(req, preview) === undefined ||
+        digest(this.host.cookie(req, preview)!) !== preview.cookieHash
       )
         return reply
           .code(401)
@@ -181,6 +245,8 @@ export class DevelopmentPreviews {
             collaboration: { enabled: false },
             lifecycleStatus: "online",
             developmentPreview: true,
+            developmentVerification: !!preview.verification,
+            developmentParentOrigin: preview.platformOrigin,
           },
         });
       }

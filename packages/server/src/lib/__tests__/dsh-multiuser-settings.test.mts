@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, it } from "vitest";
 it("stores encrypted per-user models without a Server database", async () => {
-  const { AgentSettingsStore } = await import("@localapp/dsh-multiuser/settings");
+  const { AgentSettingsStore } = await import("@localapp/dsh-agent-settings/settings");
   const parent = path.resolve(import.meta.dirname, "../../../../../tmp/dsh-plugin-settings");
   await fs.mkdir(parent, { recursive: true }); const root = await fs.mkdtemp(path.join(parent, "storage-"));
   const records = new Map<string, string>();
@@ -20,7 +20,7 @@ it("stores encrypted per-user models without a Server database", async () => {
 });
 
 it("initializes standalone SQLite model storage and reopens encrypted settings", async () => {
-  const { AgentSettingsStore, createSqliteSettingsPersistence } = await import("@localapp/dsh-multiuser/settings");
+  const { AgentSettingsStore, createSqliteSettingsPersistence } = await import("@localapp/dsh-agent-settings/settings");
   const { default: initSqlJs } = await import("sql.js");
   const SQL = await initSqlJs();
   let db = new SQL.Database(), saved = new Uint8Array();

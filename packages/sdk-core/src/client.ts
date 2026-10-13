@@ -120,6 +120,12 @@ export function availableTransitions(
     }));
 }
 
+export interface FileBundleEntry { key: string; path: string }
+export interface FileBundleJob {
+  id: string; state: "queued" | "running" | "completed" | "failed";
+  processedFiles: number; totalFiles: number; createdAt: number; expiresAt: number;
+  error?: string; failedFile?: FileBundleEntry; downloadUrl?: string;
+}
 export interface LocalAppClient {
   basePath: string;
   me(): Promise<User | null>;
@@ -143,6 +149,10 @@ export interface LocalAppClient {
    */
   action<T = unknown>(name: string, input?: unknown): Promise<T>;
   upload(file: File): Promise<UploadResult>;
+  createFileBundle(files: FileBundleEntry[], options: { idempotencyKey: string }): Promise<FileBundleJob>;
+  getFileBundle(id: string): Promise<FileBundleJob>;
+  fileBundleDownloadUrl(id: string): string;
+  downloadFileBundle(id: string): void;
 }
 
 export function createClient(): LocalAppClient {
@@ -280,6 +290,21 @@ export function createClient(): LocalAppClient {
       });
     },
 
+    async createFileBundle(files, options) {
+      return request<FileBundleJob>(`${basePath}/content/bundles`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files, idempotencyKey: options.idempotencyKey }),
+      });
+    },
+    async getFileBundle(id) {
+      return request<FileBundleJob>(`${basePath}/content/bundles/${encodeURIComponent(id)}`, { method: "GET" });
+    },
+    fileBundleDownloadUrl(id) { return `${basePath}/content/bundles/${encodeURIComponent(id)}/download`; },
+    downloadFileBundle(id) {
+      const link = document.createElement("a");
+      link.href = `${basePath}/content/bundles/${encodeURIComponent(id)}/download`;
+      link.download = `${id}.zip`; document.body.appendChild(link); link.click(); link.remove();
+    },
     async upload(file: File): Promise<UploadResult> {
       const formData = new FormData();
       formData.append("file", file);

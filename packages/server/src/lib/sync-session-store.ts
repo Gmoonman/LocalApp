@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/sync-session-store";
+export * from "@localapp/dsh-app-sync/sync-session-store";

@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { createApplicationCollaboration } from "@localapp/dsh-app-platform/collaboration-handler";
+import { createApplicationCollaboration } from "@localapp/dsh-collaboration/collaboration-handler";
 import { expect, it } from "vitest";
 
 it("keeps formal and verification presence in separate transient channels", async () => {

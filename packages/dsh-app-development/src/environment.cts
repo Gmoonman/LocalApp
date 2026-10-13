@@ -24,10 +24,9 @@ export function saveDevelopmentSettings(
     throw new DevelopmentError("请选择已准备的绝对 node_modules 路径");
   if (value.previewOrigin) {
     if (
-      typeof value.previewOrigin !== "string" ||
-      !value.previewOrigin.includes("{previewId}")
+      typeof value.previewOrigin !== "string"
     )
-      throw new DevelopmentError("预览地址必须包含 {previewId}");
+      throw new DevelopmentError("预览地址必须是 URL");
     const url = new URL(
       value.previewOrigin.replaceAll("{previewId}", "preview-check"),
     );

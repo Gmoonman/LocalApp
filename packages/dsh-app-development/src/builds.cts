@@ -13,7 +13,7 @@ export function createBuildOperations(): BuildOperations<ValidatedProjectManifes
   return {
     loadAndValidateProjectManifest, collectCanonicalFiles, buildApplicationPackage,
     createExecutor: async input => {
-      const { DeepSeekHarness } = await import("@localapp/dsh-multiuser/harness");
+      const { DeepSeekHarness } = await import("@localapp/dsh-agent-runtime/harness");
       return new DeepSeekHarness(input);
     },
   };

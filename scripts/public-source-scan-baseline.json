@@ -4,7 +4,7 @@
     {
       "path": "packages/localapp/scripts/build-package.node-test.mjs",
       "rule": "PRIVATE_TEST_IDENTITY",
-      "sha256": "537d2460630db30d618db477b1b3efad38225376395f4d0e3fcc5f5274ab3550",
+      "sha256": "fbf140a63b286622063e7c9a77e3ecc482c190f20cd429898f1694961e631e46",
       "reason": "Canonical scoped npm package determines public tarball filename."
     },
     {
@@ -111,40 +111,22 @@
     {
       "path": "scripts/export-public-source.mjs",
       "rule": "PRIVATE_TEST_IDENTITY",
-      "sha256": "712439edd4653eec2fe5045579a00687a56912fa21bb787b5e74dd3b02a34b2f"
+      "sha256": "be8cdf6cacc00da96c23df082eeb4eb18b7e6e0334e322fb54dc0e834b40b971"
     },
     {
       "path": "scripts/export-public-source.node-test.mjs",
       "rule": "PRIVATE_TEST_IDENTITY",
-      "sha256": "70a0ffc4c2f0b9ccf4167dca8d2a3445d07d461ed3300694c1d781d65a48c5e0"
+      "sha256": "a6ba51fda55ae2499fcf6566d2cb5ecfe0e4e1a91c574d5a4d886cd279c060e0"
     },
     {
       "path": "scripts/export-public-source.node-test.mjs",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "70a0ffc4c2f0b9ccf4167dca8d2a3445d07d461ed3300694c1d781d65a48c5e0"
+      "sha256": "a6ba51fda55ae2499fcf6566d2cb5ecfe0e4e1a91c574d5a4d886cd279c060e0"
     },
     {
       "path": "scripts/release-workflow.node-test.mjs",
       "rule": "PRIVATE_TEST_IDENTITY",
       "sha256": "fd92a49a95b24e215df5bd4712f1eac0cce46dd3b22a34aedb04b2748932c9d7"
-    },
-    {
-      "path": "packages/dsh-app-platform/src/device-control-routes.cts",
-      "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "64331daac91e23cca3267b9609f0db8037d904d14d427a015b409f7c338c2a70",
-      "reason": "TOKEN_HEADER is an HTTP header name, not a credential value."
-    },
-    {
-      "path": "packages/dsh-app-platform/src/device-notifications-routes.cts",
-      "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "9b0bf606d85d9a0cbeae3123bc21a6156fb67106404e35a9c9fe8cf08610707a",
-      "reason": "TOKEN_HEADER is an HTTP header name, not a credential value."
-    },
-    {
-      "path": "packages/dsh-multiuser/src/harness.mts",
-      "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "ea608724c0a9187165c0c77fba7536087e88734ea5b418e7bb31d645ddf90afa",
-      "reason": "apiKeyEnv names LOCALAPP_USER_MODEL_KEY, not a credential value."
     },
     {
       "path": "packages/server/src/lib/__tests__/dsh-account-schema.test.ts",
@@ -155,7 +137,7 @@
     {
       "path": "packages/server/src/lib/__tests__/dsh-multiuser-settings.test.mts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "6940016fb57a5383d51fe023dfb1c738a08983ff40f61f7fa8a9e3ad1aaf1676",
+      "sha256": "61f93cb17961d2e3c13f5941bb3aae5335928d4949a6b9fda6bbdb5b1cd438c9",
       "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
     },
     {
@@ -167,7 +149,7 @@
     {
       "path": "packages/server/tests/e2e-unified/agent-harness.spec.ts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "91e79b2eb87dc27a0afc51893034188983d9a16af380aa43afa0323e9fcde715",
+      "sha256": "a7aa9501619584e28a309cfa17cad8c3772fbc89403bcea4b737f747de2798ec",
       "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
     },
     {
@@ -227,7 +209,7 @@
     {
       "path": "packages/server/tests/integration/plugin-combination.test.ts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "96d333805718ba55437ddf3f49d8e82fcbcd85af2d73e411ac95df049d0ce7f1",
+      "sha256": "7b892619bbde39b5b4efa660a004c346a841cae12de4e29f5bf2b218a57579a4",
       "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
     },
     {
@@ -235,6 +217,30 @@
       "rule": "POSSIBLE_CREDENTIAL",
       "sha256": "ece409e06f26b669c7de8797c79f9a725d1ff6816aa86acc3e8bcf00ca8b7d11",
       "reason": "Reviewed synthetic test credentials and fixture values; no live account or model credentials."
+    },
+    {
+      "path": "packages/dsh-agent-runtime/src/harness.mts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "94a3f45c82b2b42d7b2484d09deb6c9c4199c23c30746d878f02a565833629f8",
+      "reason": "Model credential environment variable name; no credential value."
+    },
+    {
+      "path": "packages/dsh-device-services/src/device-control-routes.cts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "3307621588f9945ba17a29586d0588c6cca955c1503b5277be3b22eb1a60fb51",
+      "reason": "HTTP header name for device control; no credential value."
+    },
+    {
+      "path": "packages/dsh-device-services/src/device-notifications-routes.cts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "46a47bd5e574c186296b0b5dc105fa670add4b10150546af7f51e9b856a30e60",
+      "reason": "HTTP header name for notification control; no credential value."
+    },
+    {
+      "path": "packages/server/src/lib/__tests__/dsh-model-settings.test.mts",
+      "rule": "POSSIBLE_CREDENTIAL",
+      "sha256": "812653f78c0dba41831844d81ac222ef43d95f2658fb0995ae655aadda65fb9f",
+      "reason": "Synthetic credentials and environment variable references in isolated model settings tests."
     }
   ]
 }

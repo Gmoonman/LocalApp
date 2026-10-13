@@ -6,6 +6,7 @@ export interface NativeSelection { sessionId:string; title:string; running:boole
 export interface NativeCatalogEntry { id:string;title:string;updatedAt:number;pinned?:boolean }
 export interface NativeAttachment {id:string;name:string;size:number}
 export interface NavigationProps {
+  onRunningSeat?: (seat: HTMLElement | null) => void;
   onAttachments?: (files: NativeAttachment[]) => void;
   onComposerReady?: (port: NativeComposerPort | null) => void;
   sessionId?:string;
@@ -15,6 +16,7 @@ export interface NavigationProps {
 }
 export function NativeConversationFrame(props: NavigationProps & {
   src: string; title: string; bind?: (frame: HTMLIFrameElement) => () => void;
+  prepare?: (sessionId: string) => Promise<void>;
 }) {
   const frame=useRef<HTMLIFrameElement>(null);
   const navigation=useRef(props);
@@ -23,6 +25,30 @@ export function NativeConversationFrame(props: NavigationProps & {
   const selected=useRef<string|null>(null);
   const awaitingSelection=useRef<{resolve:(id:string)=>void;reject:(error:Error)=>void}|null>(null);
   const {src, bind}=props;
+  useEffect(()=>{
+    let observer:MutationObserver|undefined;
+    let seat:HTMLElement|undefined;
+    const setup=()=>{
+      const doc=frame.current?.contentDocument;if(!doc?.body?.nodeType)return;
+      doc.documentElement.style.overflowX="hidden";doc.body.style.overflowX="hidden";
+      for(const source of document.querySelectorAll('link[rel="stylesheet"],style')){
+        const clone=source.cloneNode(true) as HTMLElement;
+        if(clone instanceof HTMLLinkElement)clone.href=(source as HTMLLinkElement).href;
+        clone.dataset.localappComposerStyle="";doc.head.append(clone);
+      }
+      const scan=()=>{
+        const status=doc.querySelector<HTMLElement>("[data-chat-running]");
+        if(!status){seat?.remove();seat=undefined;navigation.current.onRunningSeat?.(null);return;}
+        status.style.display="none";
+        if(seat?.parentElement===status.parentElement)return;
+        seat?.remove();seat=doc.createElement("div");seat.dataset.localappRunningComposer="";
+        status.after(seat);navigation.current.onRunningSeat?.(seat);
+      };
+      observer?.disconnect();observer=new MutationObserver(scan);observer.observe(doc.body,{childList:true,subtree:true});scan();
+    };
+    const iframe=frame.current;iframe?.addEventListener("load",setup);
+    return()=>{iframe?.removeEventListener("load",setup);observer?.disconnect();seat?.remove();navigation.current.onRunningSeat?.(null);};
+  },[src]);
   useEffect(()=>{
     const target=frame.current?.contentWindow;
     if(!target)return;
@@ -46,6 +72,10 @@ export function NativeConversationFrame(props: NavigationProps & {
       }
       if(!id)throw new Error("原生会话尚未就绪");
       if(disposed||selected.current!==id)throw new Error("会话已切换");
+      if (action === "submit" && navigation.current.prepare) {
+        await navigation.current.prepare(id);
+        if (disposed || selected.current !== id) throw new Error("会话已切换");
+      }
       return transport.request(id,action,prompt,files);
     }});
     return()=>{disposed=true;awaitingSelection.current?.reject(new Error("原生对话已关闭"));transport.dispose();navigation.current.onComposerReady?.(null);};
@@ -67,6 +97,10 @@ export function NativeConversationFrame(props: NavigationProps & {
       if(event.data?.type==="localapp:native-catalog"){
         const rows=event.data.sessions;
         if(Array.isArray(rows)&&rows.length<=10000&&rows.every(row=>row&&typeof row.id==="string"&&/^[a-zA-Z0-9_-]{1,128}$/.test(row.id)&&typeof row.title==="string"&&Number.isFinite(row.updatedAt)&&(row.pinned===undefined||typeof row.pinned==="boolean")))navigation.current.onCatalog?.(rows);
+        return;
+      }
+      if(event.data?.type==="localapp:native-navigation-error" && typeof event.data.error==="string"){
+        awaitingSelection.current?.reject(new Error(event.data.error));
         return;
       }
       if(event.data?.type!=="localapp:native-selection")return;

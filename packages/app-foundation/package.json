@@ -1,0 +1,149 @@
+{
+  "name": "@localapp/app-foundation",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    "./access-control": {
+      "types": "./dist/access-control.d.cts",
+      "default": "./dist/access-control.cjs"
+    },
+    "./app-data-archive": {
+      "types": "./dist/app-data-archive.d.cts",
+      "default": "./dist/app-data-archive.cjs"
+    },
+    "./app-data-errors": {
+      "types": "./dist/app-data-errors.d.cts",
+      "default": "./dist/app-data-errors.cjs"
+    },
+    "./app-data-maintenance": {
+      "types": "./dist/app-data-maintenance.d.cts",
+      "default": "./dist/app-data-maintenance.cjs"
+    },
+    "./app-data-schema": {
+      "types": "./dist/app-data-schema.d.cts",
+      "default": "./dist/app-data-schema.cjs"
+    },
+    "./app-data-service": {
+      "types": "./dist/app-data-service.d.cts",
+      "default": "./dist/app-data-service.cjs"
+    },
+    "./app-db": {
+      "types": "./dist/app-db.d.cts",
+      "default": "./dist/app-db.cjs"
+    },
+    "./app-installer": {
+      "types": "./dist/app-installer.d.cts",
+      "default": "./dist/app-installer.cjs"
+    },
+    "./app-manifest": {
+      "types": "./dist/app-manifest.d.cts",
+      "default": "./dist/app-manifest.cjs"
+    },
+    "./app-package": {
+      "types": "./dist/app-package.d.cts",
+      "default": "./dist/app-package.cjs"
+    },
+    "./app-version-migrations": {
+      "types": "./dist/app-version-migrations.d.cts",
+      "default": "./dist/app-version-migrations.cjs"
+    },
+    "./backend-actions": {
+      "types": "./dist/backend-actions.d.cts",
+      "default": "./dist/backend-actions.cjs"
+    },
+    "./backend-contract": {
+      "types": "./dist/backend-contract.d.cts",
+      "default": "./dist/backend-contract.cjs"
+    },
+    "./content-capabilities": {
+      "types": "./dist/content-capabilities.d.cts",
+      "default": "./dist/content-capabilities.cjs"
+    },
+    "./content-storage": {
+      "types": "./dist/content-storage.d.cts",
+      "default": "./dist/content-storage.cjs"
+    },
+    "./file-utils": {
+      "types": "./dist/file-utils.d.cts",
+      "default": "./dist/file-utils.cjs"
+    },
+    "./issue-task-conversion": {
+      "types": "./dist/issue-task-conversion.d.cts",
+      "default": "./dist/issue-task-conversion.cjs"
+    },
+    "./issue-templates": {
+      "types": "./dist/issue-templates.d.cts",
+      "default": "./dist/issue-templates.cjs"
+    },
+    "./migrations": {
+      "types": "./dist/migrations.d.cts",
+      "default": "./dist/migrations.cjs"
+    },
+    "./models": {
+      "types": "./dist/models.d.cts",
+      "default": "./dist/models.cjs"
+    },
+    "./notify-config": {
+      "types": "./dist/notify-config.d.cts",
+      "default": "./dist/notify-config.cjs"
+    },
+    "./notify-permission-sql": {
+      "types": "./dist/notify-permission-sql.d.cts",
+      "default": "./dist/notify-permission-sql.cjs"
+    },
+    "./page-storage": {
+      "types": "./dist/page-storage.d.cts",
+      "default": "./dist/page-storage.cjs"
+    },
+    "./platform-capabilities": {
+      "types": "./dist/platform-capabilities.d.cts",
+      "default": "./dist/platform-capabilities.cjs"
+    },
+    "./platform-version": {
+      "types": "./dist/platform-version.d.cts",
+      "default": "./dist/platform-version.cjs"
+    },
+    "./record-access": {
+      "types": "./dist/record-access.d.cts",
+      "default": "./dist/record-access.cjs"
+    },
+    "./runtime-errors": {
+      "types": "./dist/runtime-errors.d.cts",
+      "default": "./dist/runtime-errors.cjs"
+    },
+    "./validate-name": {
+      "types": "./dist/validate-name.d.cts",
+      "default": "./dist/validate-name.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@localapp/dsh-multiuser": "workspace:*",
+    "sql.js": "^1.14.1",
+    "yauzl": "3.4.0",
+    "archiver": "8.0.0",
+    "react": "^18.3.0",
+    "@aws-sdk/client-s3": "3.1053.0",
+    "yjs": "^13.6.32"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "rimraf": "^5.0.0",
+    "typescript": "5.6.3",
+    "@types/sql.js": "^1.4.11",
+    "@types/yauzl": "3.4.0",
+    "@types/archiver": "8.0.0",
+    "fastify": "^4.26.0",
+    "@fastify/multipart": "^8.1.0",
+    "ws": "^8.21.0",
+    "@types/ws": "^8.18.1",
+    "@fastify/websocket": "^8.3.1",
+    "@fastify/cookie": "^9.4.0",
+    "@types/react": "18.3.29",
+    "@localapp/sdk-agent": "workspace:*"
+  }
+}

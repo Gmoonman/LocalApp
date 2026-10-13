@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { expect, it, vi } from "vitest";
 import { DeepSeekHarness } from "../deepseek-harness.mjs";
-import { inventoryLegacyHistory, planLegacyHistory, stageLegacyHistory, remapLegacyCatalog, remapLegacyDirectories, migrateLegacyWorkspace, resolveUserWorkspace } from "@localapp/dsh-multiuser/legacy-history";
+import { inventoryLegacyHistory, planLegacyHistory, stageLegacyHistory, remapLegacyCatalog, remapLegacyDirectories, migrateLegacyWorkspace, resolveUserWorkspace } from "@localapp/dsh-agent-runtime/legacy-history";
 import { userWorkspaceRoot } from "@localapp/dsh-multiuser/workspace-root";
 import Sessions, { SessionId, type SessionEvent } from "@deepseek-ai/dsh-session";
 import { Context } from "@deepseek-ai/cordis";

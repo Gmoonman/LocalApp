@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { createDesktopActionRoutes } from "@localapp/dsh-app-platform/desktop-actions-routes";
-import { createDeviceActionStore } from "@localapp/dsh-app-platform/desktop-actions-db";
+import { createDesktopActionRoutes } from "@localapp/dsh-device-services/desktop-actions-routes";
+import { createDeviceActionStore } from "@localapp/dsh-device-services/desktop-actions-db";
 import { getDb, flushMetaDb, findUserById, validateApiKey } from "../lib/meta-sqlite.js";
 import { requireRequestUser } from "../plugins/auth.js";
 import { guardTimerCallback } from "../lib/timer-guard.js";

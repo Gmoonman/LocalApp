@@ -1,5 +1,5 @@
 import { Context } from "@deepseek-ai/cordis";
-import { mountNativeClientModules } from "@localapp/dsh-multiuser/native-client";
+import { mountNativeClientModules } from "@localapp/dsh-agent-runtime/native-client";
 import { expect, it } from "vitest";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
@@ -19,7 +19,7 @@ it.each([
     const modules = await mountNativeClientModules(ctx, combination.schedule, { contributions });
     const graph = modules.graph();
     const ids = new Set(graph.entries.map(entry => entry.id));
-    const pluginEntry = createRequire(import.meta.url).resolve("@localapp/dsh-multiuser/native-client");
+    const pluginEntry = createRequire(import.meta.url).resolve("@localapp/dsh-agent-runtime/native-client");
     const filename = createRequire(pluginEntry).resolve("@deepseek-ai/dsh-client-web");
     const source = ts.createSourceFile(filename, readFileSync(filename, "utf8"), ts.ScriptTarget.Latest, true);
     const platform = new Set<string>();

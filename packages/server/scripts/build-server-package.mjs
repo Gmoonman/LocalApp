@@ -33,7 +33,7 @@ export async function buildServerPackage(options = {}) {
   await fs.copyFile(path.join(serverDirectory, "THIRD_PARTY_NOTICES.txt"), path.join(outputDirectory, "THIRD_PARTY_NOTICES.txt"));
   await fs.cp(webOutput, webDirectory, { recursive: true });
   await buildNativeClient(path.join(outputDirectory, "native-client"));
-  await fs.cp(path.join(projectDirectory, "packages/dsh-document-tools/skills"), path.join(outputDirectory, "skills"), { recursive: true });
+  await fs.cp(path.join(projectDirectory, "packages/dsh-execution-environment/skills"), path.join(outputDirectory, "skills"), { recursive: true });
   await fs.mkdir(runnerDirectory, { recursive: true, mode: 0o755 });
   await fs.cp(path.join(serverDirectory, "runner/localapp-runner.mjs"), path.join(runnerDirectory, "localapp-runner.mjs"));
   await fs.cp(path.join(serverDirectory, "runner/task-supervisor.mjs"), path.join(runnerDirectory, "task-supervisor.mjs"));
@@ -42,6 +42,8 @@ export async function buildServerPackage(options = {}) {
     alias: {
       "@localapp/dsh-multiuser/native-server": path.join(projectDirectory, "packages/dsh-multiuser/src/native-server.mts"),
       "@localapp/dsh-multiuser/native-scope": path.join(projectDirectory, "packages/dsh-multiuser/src/native-scope.cts"),
+      "@localapp/dsh-multiuser/native-client-assets": path.join(projectDirectory, "packages/dsh-multiuser/src/native-client-assets.mts"),
+      "@localapp/dsh-multiuser/native-connection": path.join(projectDirectory, "packages/dsh-multiuser/src/native-connection.mts"),
       "@localapp/dsh-multiuser/native-session": path.join(projectDirectory, "packages/dsh-multiuser/src/native-session.mts"),
       "@localapp/dsh-multiuser": path.join(projectDirectory, "packages/dsh-multiuser/src/index.mts"),
       "@localapp/dsh-multiuser/auth-cookies": path.join(projectDirectory, "packages/dsh-multiuser/src/auth-cookies.cts"),
@@ -88,7 +90,7 @@ export async function buildServerPackage(options = {}) {
     target: "node24",
     sourcemap: false,
     legalComments: "none",
-    external: ["@localapp/dsh-agent-ui", "@localapp/dsh-agent-ui/*", "sql.js", "@deepseek-ai/*", "@localapp/dsh-multiuser/native-server", "@localapp/dsh-document-tools", "@localapp/dsh-document-tools/*", "@localapp/dsh-app-platform", "@localapp/dsh-app-platform/*", "@localapp/dsh-app-development", "@localapp/dsh-app-development/*"],
+    external: ["@localapp/app-foundation/*", "@localapp/dsh-app-sync", "@localapp/dsh-app-sync/*","@localapp/dsh-collaboration", "@localapp/dsh-collaboration/*","@localapp/dsh-device-services", "@localapp/dsh-device-services/*", "@localapp/dsh-agent-runtime", "@localapp/dsh-agent-runtime/*","@localapp/dsh-agent-settings", "@localapp/dsh-agent-settings/*","@localapp/dsh-execution-environment", "@localapp/dsh-execution-environment/*", "@localapp/dsh-multiuser/native-client-assets", "@localapp/dsh-multiuser/native-connection", "@localapp/dsh-model-settings", "@localapp/dsh-model-settings/*", "@localapp/dsh-agent-ui", "@localapp/dsh-agent-ui/*", "sql.js", "@deepseek-ai/*", "@localapp/dsh-multiuser/native-server", "@localapp/dsh-document-tools", "@localapp/dsh-document-tools/*", "@localapp/dsh-app-platform", "@localapp/dsh-app-platform/*", "@localapp/dsh-app-development", "@localapp/dsh-app-development/*"],
     define: { "process.env.LOCALAPP_PACKAGE_ENTRY": '"1"' },
     absWorkingDir: projectDirectory,
     logLevel: "warning",

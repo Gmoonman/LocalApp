@@ -10,6 +10,7 @@ vi.mock("./dsh-view", () => ({
   DshTerminal: () => null,
   DshRunningStatus: () => <div role="status">正在处理…</div>,
 }));
+vi.mock("./page-context",async importOriginal=>({...await importOriginal<typeof import("./page-context")>(),activatePageContext:vi.fn(async()=>{})}));
 beforeEach(() => {
   HTMLElement.prototype.scrollTo = vi.fn();
 });
@@ -335,9 +336,9 @@ it("mounts the native developer client and retains it while collapsed or minimiz
   const p=props();
   render(<AppDevelopmentDock {...p} identity="developer" application={{owner:"owner",name:"my-app"}}/>);
   const frame=screen.getByTitle("原生应用开发对话");
-  expect(frame).toHaveAttribute("src","/api/development/projects/project/native/model/");
+  expect(frame).toHaveAttribute("src","/api/development/projects/project/native/model/?localappCompact=1");
   fireEvent.click(screen.getByRole("button",{name:"展开开发对话"}));
-  expect(screen.getByLabelText("应用修改需求")).not.toBeVisible();
+  expect(screen.getByLabelText("应用修改需求")).toBeVisible();
   fireEvent.click(screen.getByRole("button",{name:"收起开发对话"}));
   expect(screen.getByTitle("原生应用开发对话")).toBe(frame);
   fireEvent.click(screen.getByRole("button",{name:"最小化开发对话"}));
@@ -358,12 +359,13 @@ it("updates the outer history menu from the current native client's catalog",asy
 });
 
 it("cancels the selected native session and surfaces native refusal without using legacy stop",async()=>{
- const p=props();render(<AppDevelopmentDock {...p} application={{owner:"owner",name:"my-app"}} />);
+ const p=props();p.prompt="";render(<AppDevelopmentDock {...p} application={{owner:"owner",name:"my-app"}} />);
  const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
  fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"native-one",title:"当前开发",running:true}}}));
  const post=vi.spyOn(frame.contentWindow!,"postMessage");
  fireEvent.click(screen.getByLabelText("停止开发"));
  expect(p.actions.stop).not.toHaveBeenCalled();
+ await waitFor(()=>expect(post).toHaveBeenCalled());
  const request=post.mock.calls.at(-1)![0];expect(request).toMatchObject({type:"localapp:native-composer",sessionId:"native-one",action:"cancel"});
  fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-composer-result",requestId:request.requestId,error:"取消失败，请重试"}}));
  await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("取消失败，请重试"));
@@ -376,6 +378,7 @@ it("submits a collapsed draft to the selected native conversation and keeps it o
  const post=vi.spyOn(frame.contentWindow!,"postMessage");
  fireEvent.click(screen.getByLabelText("发送修改需求"));
  expect(p.actions.run).not.toHaveBeenCalled();
+ await waitFor(()=>expect(post).toHaveBeenCalled());
  const request=post.mock.calls.at(-1)![0];expect(request).toMatchObject({type:"localapp:native-composer",sessionId:"native-one",action:"submit",prompt:p.prompt});
  fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-composer-result",requestId:request.requestId,error:"会话已切换"}}));
  await waitFor(()=>expect(screen.getByRole("alert")).toHaveTextContent("会话已切换"));
@@ -388,6 +391,7 @@ it("continues workspace attachment receipts through the native composer",async()
  const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
  fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"native-one",title:"当前开发",running:false}}}));
  const post=vi.spyOn(frame.contentWindow!,"postMessage");fireEvent.click(screen.getByLabelText("发送修改需求"));
+ await waitFor(()=>expect(post).toHaveBeenCalled());
  const request=post.mock.calls.at(-1)![0];expect(request.prompt).toContain(JSON.stringify(attachment.path));expect(p.actions.run).not.toHaveBeenCalled();expect(remove).not.toHaveBeenCalled();
  fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-composer-result",requestId:request.requestId}}));
  await waitFor(()=>expect(remove).toHaveBeenCalledWith(attachment.id));
@@ -427,4 +431,39 @@ it("reports default visibility and synchronizes minimize and reveal with the pla
   expect(onVisibilityChange).toHaveBeenLastCalledWith(false);
   fireEvent.click(screen.getByLabelText("恢复开发对话"));
   expect(onVisibilityChange).toHaveBeenLastCalledWith(true);
+});
+
+it("allows queued messages during a native run and removes the full DSH entry",async()=>{
+ const p=props();render(<AppDevelopmentDock {...p} application={{owner:"owner",name:"my-app"}} />);
+ const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"native-one",title:"当前开发",running:true}}}));
+ expect(screen.getByLabelText("应用修改需求")).toBeEnabled();expect(screen.queryByLabelText("打开完整开发页")).toBeNull();
+ const post=vi.spyOn(frame.contentWindow!,"postMessage");fireEvent.click(screen.getByLabelText("发送修改需求"));
+ await waitFor(()=>expect(post).toHaveBeenCalled());
+ const request=post.mock.calls.at(-1)![0];expect(request).toMatchObject({type:"localapp:native-composer",sessionId:"native-one",action:"submit",prompt:p.prompt});
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-composer-result",requestId:request.requestId}}));
+ await waitFor(()=>expect(p.actions.setPrompt).toHaveBeenCalledWith(""));
+});
+it("places the shared composer at the live transcript status seat",async()=>{
+ const p=props();render(<AppDevelopmentDock {...p} application={{owner:"owner",name:"my-app"}} />);
+ const frame=screen.getByTitle("原生应用开发对话") as HTMLIFrameElement;
+ const doc=document.implementation.createHTMLDocument('native');doc.body.innerHTML='<div data-chat-running>深度求索中</div>';
+ Object.defineProperty(frame,'contentDocument',{configurable:true,value:doc});fireEvent.load(frame);
+ fireEvent(window,new MessageEvent("message",{origin:window.location.origin,source:frame.contentWindow,data:{type:"localapp:native-selection",state:{sessionId:"native-one",title:"当前开发",running:true}}}));
+ fireEvent.click(screen.getByLabelText("展开开发对话"));
+ await waitFor(()=>expect(doc.querySelector('[data-localapp-running-composer] textarea')).toBeTruthy());
+ expect(doc.querySelector<HTMLElement>('[data-chat-running]')!.style.display).toBe('none');
+ expect(document.querySelector('.app-development-dock > .development-dock-composer')).toBeNull();
+});
+it("keeps page annotations out of the draft and presents a removable summary",async()=>{
+ const p=props();p.actions.setPrompt=vi.fn();
+ render(<AppDevelopmentDock {...p} />);
+ const root=document.createElement('main');root.setAttribute('data-localapp-app-root','');root.innerHTML='<h1 id="annotated-title">A short page title</h1>';document.body.append(root);
+ fireEvent.click(screen.getByLabelText('标记页面问题'));fireEvent.click(root.querySelector('h1')!);
+ await waitFor(()=>expect(screen.getByLabelText('待发送页面标记')).toBeVisible());
+ expect(screen.getByLabelText('应用修改需求')).toHaveValue('Make a todo app');expect(p.actions.setPrompt).not.toHaveBeenCalled();
+ expect(screen.getByLabelText('待发送页面标记')).toHaveTextContent('h1 · A short page title');
+ expect(screen.getByLabelText('待发送页面标记')).not.toHaveTextContent('selector');
+ fireEvent.click(screen.getByLabelText('移除页面标记'));
+ await waitFor(()=>expect(screen.queryByLabelText('待发送页面标记')).toBeNull());root.remove();
 });

@@ -46,7 +46,7 @@ it("defaults to the complete combination", async () => {
 });
 it("reuses and disposes the Context carrying the shared HTTP listener", async () => {
   const { Context } = await import("@deepseek-ai/cordis");
-  const { default: EmbeddedWebServer } = await import("@localapp/dsh-multiuser/native-server");
+  const { default: EmbeddedWebServer } = await import("@localapp/dsh-agent-runtime/native-server");
   const rootContext = new Context();
   await rootContext.plugin(EmbeddedWebServer, { host: "127.0.0.1", port: 0 });
   const carrier = rootContext.webServer as InstanceType<typeof EmbeddedWebServer>;

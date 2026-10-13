@@ -207,7 +207,14 @@
     "@deepseek-ai/dsh-client-ui-layout": "0.2.1-alpha.2",
     "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-alpha.2",
     "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-alpha.2",
-    "@localapp/dsh-agent-ui": "workspace:*"
+    "@localapp/dsh-agent-ui": "workspace:*",
+    "@localapp/dsh-agent-settings": "workspace:*",
+    "@localapp/dsh-execution-environment": "workspace:*",
+    "@localapp/dsh-agent-runtime": "workspace:*",
+    "@localapp/dsh-app-sync": "workspace:*",
+    "@localapp/dsh-collaboration": "workspace:*",
+    "@localapp/dsh-device-services": "workspace:*",
+    "@localapp/ui": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
@@ -227,7 +234,7 @@
       "inject": [
         "@deepseek-ai/dsh-client-ui-renderer",
         "@deepseek-ai/dsh-client-ui-layout",
-        "@localapp/dsh-multiuser",
+        "@localapp/dsh-agent-settings",
         "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }

@@ -40,7 +40,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type {} from "@localapp/dsh-agent-ui";
 import { Context, Service } from "@deepseek-ai/cordis";
 import { registerOwnApplicationPages } from "./own-pages-routes.cjs";
-import { AGENT_CAPABILITIES, type AgentCapability } from "@localapp/dsh-multiuser/settings";
+import { AGENT_CAPABILITIES, type AgentCapability } from "@localapp/dsh-agent-settings/settings";
 import * as database from "./app-db.cjs";
 import * as backend from "./backend-contract.cjs";
 import * as appRuntime from "./app-runtime.cjs";
@@ -200,15 +200,15 @@ export class ApplicationPlatform extends Service {
   registerApplicationInteractionRoutes(app: FastifyInstance, host: {
     issues: Parameters<typeof registerIssues>[1];
     favorites: Parameters<typeof registerApplicationFavorites>[1];
-    subscriptions: Parameters<typeof registerApplicationSubscriptions>[1];
-    inbox: Parameters<typeof registerApplicationInbox>[1];
+    subscriptions?: Parameters<typeof registerApplicationSubscriptions>[1];
+    inbox?: Parameters<typeof registerApplicationInbox>[1];
     websocket: WebSocketRoutesHost;
   }) {
     this.assertActive();
     app.register(async scope => this.registerIssues(scope, host.issues));
     app.register(async scope => this.registerFavorites(scope, host.favorites));
-    app.register(async scope => this.registerSubscriptions(scope, host.subscriptions));
-    app.register(async scope => this.registerInbox(scope, host.inbox));
+    if(host.subscriptions) app.register(async scope => this.registerSubscriptions(scope, host.subscriptions!));
+    if(host.inbox) app.register(async scope => this.registerInbox(scope, host.inbox!));
     app.register(async scope => this.registerWebSocket(scope, host.websocket));
   }
   registerApplicationDataRoutes(app:FastifyInstance,host:{

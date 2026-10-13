@@ -10,7 +10,7 @@ import { promisify } from "node:util";
 // those plugins into a CJS file loses import.meta.url and their worker paths.
 export async function copyHarnessDependencies(serverDirectory, outputDirectory) {
   const source = JSON.parse(await fs.readFile(path.join(serverDirectory, "package.json"), "utf8"));
-  const internalPlugins = new Set(["@localapp/dsh-document-tools", "@localapp/dsh-agent-ui", "@localapp/dsh-multiuser", "@localapp/dsh-app-platform", "@localapp/dsh-app-development"]);
+  const internalPlugins = new Set(["@localapp/app-foundation", "@localapp/dsh-app-sync","@localapp/dsh-collaboration","@localapp/dsh-device-services", "@localapp/dsh-agent-runtime","@localapp/dsh-agent-settings","@localapp/dsh-execution-environment", "@localapp/dsh-model-settings", "@localapp/dsh-document-tools", "@localapp/dsh-agent-ui", "@localapp/dsh-multiuser", "@localapp/dsh-app-platform", "@localapp/dsh-app-development"]);
   const roots = [...Object.keys(source.dependencies).filter((name) => name.startsWith("@deepseek-ai/") || internalPlugins.has(name)), ...Object.keys(source.devDependencies ?? {}).filter(name => name.startsWith("@types/"))];
   const canonical = new Map();
   const copies = new Set();
@@ -45,7 +45,7 @@ export async function copyHarnessDependencies(serverDirectory, outputDirectory) 
     if (internalPlugins.has(name)) {
       await fs.mkdir(destination, { recursive: true });
       await fs.copyFile(path.join(sourceDirectory, "package.json"), path.join(destination, "package.json"));
-      if (name === "@localapp/dsh-document-tools") await fs.cp(path.join(sourceDirectory, "skills"), path.join(destination, "skills"), { recursive: true });
+      if (name === "@localapp/dsh-execution-environment") await fs.cp(path.join(sourceDirectory, "skills"), path.join(destination, "skills"), { recursive: true });
       // Include private runtime modules as well as public package entries.
       // Unbundled ESM entries keep relative imports; exports alone cannot
       // enumerate everything required to boot the plugin.
@@ -76,7 +76,7 @@ export async function copyHarnessDependencies(serverDirectory, outputDirectory) 
         // AWS's dependency graph contains many overlapping versions. Keep its
         // runtime in this entry, as the former Server bundle did, rather than
         // duplicating the graph under each parent package.
-        const bundledStorage = name === "@localapp/dsh-app-platform" && source === "src/content-storage.cts";
+        const bundledStorage = name === "@localapp/app-foundation" && source === "src/content-storage.cts";
         await build({ entryPoints: [path.join(sourceDirectory, source)], outfile: path.join(destination, target), platform: "node", format: commonjs ? "cjs" : "esm", target: "node24", bundle: bundledStorage, logLevel: "silent" });
       }
       const compiler = createRequire(path.join(serverDirectory, "package.json")).resolve("typescript/bin/tsc");
@@ -90,7 +90,7 @@ export async function copyHarnessDependencies(serverDirectory, outputDirectory) 
         && !relative.endsWith(".map");
     } });
     for (const dependency of new Set([...Object.keys(metadata.dependencies ?? {}), ...Object.keys(metadata.peerDependencies ?? {}), ...Object.keys(metadata.optionalDependencies ?? {})])) {
-      if (name === "@localapp/dsh-app-platform" && dependency === "@aws-sdk/client-s3") continue;
+      if (name === "@localapp/app-foundation" && dependency === "@aws-sdk/client-s3") continue;
       let resolved;
       try { resolved = await locate(dependency, sourceDirectory); }
       catch (error) {

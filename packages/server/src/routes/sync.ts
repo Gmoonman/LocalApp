@@ -1,5 +1,5 @@
-import { registerSyncSource } from "@localapp/dsh-app-platform/sync-source-routes";
-import { registerSyncTarget } from "@localapp/dsh-app-platform/sync-target-routes";
+import { registerSyncSource } from "@localapp/dsh-app-sync/sync-source-routes";
+import { registerSyncTarget } from "@localapp/dsh-app-sync/sync-target-routes";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { AppSyncSource } from "../lib/app-sync-source.js";
 import type { AppSyncTarget } from "../lib/app-sync-target.js";

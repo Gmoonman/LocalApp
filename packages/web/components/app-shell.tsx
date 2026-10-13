@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   House,
+  Store,
   LayoutDashboard,
   BarChart3,
   Users,
@@ -39,6 +40,7 @@ interface UserData {
   role?: string | null;
 }
 
+const marketNavItem = { href: "/market", label: "应用市场", icon: Store };
 const homeNavItem = { href: "/", label: "首页", icon: House };
 
 const profileNavItems = [
@@ -66,13 +68,15 @@ const adminNavItems = [
   { href: "/my/peers", label: "对端连接", icon: Cable },
 ];
 
-interface PluginFeatures { applications: boolean; development: boolean; }
+interface PluginFeatures { applications: boolean; development: boolean; synchronization?:boolean;deviceServices?:boolean; }
 const applicationNavigation = new Set([
-  "/my/device-actions", "/my/device-notifications", "/my/apps", "/my/favorites", "/my/recent",
+  "/market", "/my/device-actions", "/my/device-notifications", "/my/apps", "/my/favorites", "/my/recent",
   "/my/dashboard", "/my/analytics", "/my/pages", "/my/peers", "/my/subscriptions", "/inbox",
 ]);
 const developmentNavigation = new Set(["/my/development", "/my/tasks", "/my/studio"]);
 function availableNavigation(href: string, plugins: PluginFeatures | null) {
+  if(href==="/my/peers" && plugins?.synchronization===false)return false;
+  if(["/my/device-actions","/my/device-notifications","/my/subscriptions","/inbox"].includes(href)&&plugins?.deviceServices===false)return false;
   if ([...developmentNavigation].some(route => href === route || href.startsWith(route + "/"))) return plugins?.development === true;
   if ([...applicationNavigation].some(route => href === route || href.startsWith(route + "/"))) return plugins?.applications === true;
   return true;
@@ -211,6 +215,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Home — always visible */}
         <NavItem item={homeNavItem} pathname={pathname} collapsed={collapsed} onClose={closeMobile} />
 
+        {availableNavigation("/market", plugins) && <NavItem item={marketNavItem} pathname={pathname} collapsed={collapsed} onClose={closeMobile} />}
+
         {/* Personal section */}
         <div className="mt-2 space-y-1">
           {!collapsed && <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">个人</p>}
@@ -268,7 +274,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Mobile top bar */}
         <div className="flex h-12 items-center gap-3 border-b bg-card px-4 lg:hidden">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileOpen(true)}>
@@ -277,8 +283,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <span className="text-sm font-semibold">LocalApp</span>
         </div>
 
-        <div className="flex-1 overflow-auto">
-          <div className="mx-auto max-w-[1600px] p-4 md:p-6">{children}</div>
+        <div className={`flex-1 overflow-auto ${isPublicHome ? "home-shell-scroll" : ""}`}>
+          <div className={`mx-auto max-w-[1600px] p-4 md:p-6 ${isPublicHome ? "home-shell-page" : ""}`}>{children}</div>
         </div>
       </main>
     </div>

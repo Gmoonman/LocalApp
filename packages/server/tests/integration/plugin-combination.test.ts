@@ -14,7 +14,7 @@ it.each(["platform", "multiuser"] as const)("boots the unified Server without de
   try {
     await app.ready();
     expect((await app.inject({ url: "/health" })).statusCode).toBe(200);
-    expect((await app.inject({ url: "/api/system/plugins" })).json().data).toEqual({ combination, multiuser: true, applications: combination === "platform", development: false });
+    expect((await app.inject({ url: "/api/system/plugins" })).json().data).toMatchObject({ combination, multiuser: true, applications: combination === "platform", development: false });
     for (const url of ["/api/config", "/api/development/creations", "/api/workspaces", "/api/tasks", "/api/system/development-environment"]) {
       expect((await app.inject({ url })).statusCode).toBe(404);
     }

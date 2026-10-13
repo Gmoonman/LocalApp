@@ -122,7 +122,7 @@ describe("application-only peer synchronization", () => {
     const hidden = await targetRequest(`/api/peer/sync-sessions/${id}/package`, otherApiKey, {
       method: "PUT", headers: binaryHeaders(packageBytes.length), body: packageBytes,
     });
-    expect(hidden.response.status).toBe(404);
+    expect(hidden.response.status, JSON.stringify(hidden.body)).toBe(404);
 
     const mismatch = await targetRequest(`/api/peer/sync-sessions/${id}/package`, targetApiKey, {
       method: "PUT", headers: binaryHeaders(packageBytes.length), body: Buffer.from("wrong-package"),

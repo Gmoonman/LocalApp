@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Button } from "@localapp/dsh-multiuser/ui/shadcn/button";
-import { Input } from "@localapp/dsh-multiuser/ui/shadcn/input";
-import { Label } from "@localapp/dsh-multiuser/ui/shadcn/label";
+import { Button } from "@localapp/ui/button";
+import { Input } from "@localapp/ui/input";
+import { Label } from "@localapp/ui/label";
 export function SystemDevelopmentEnvironment() {
   const [report, setReport] = useState<any>(null),
     [directory, setDirectory] = useState(""),
@@ -79,8 +79,9 @@ export function SystemDevelopmentEnvironment() {
           onChange={(e) => setOrigin(e.target.value)}
         />
         <p className="text-xs text-muted-foreground">
-          远程部署需通配 DNS 与 TLS，并指向同一
-          Server。本机留空使用每次预览独立的 .localhost 地址。
+          可使用 HTTPS 的独立域名，或同一域名的不同端口，并指向同一
+          Server。域名中可用 {"{previewId}"} 区分预览；固定地址下各预览共享浏览器来源。
+          本机留空使用每次预览独立的 .localhost 地址。
         </p>
       </div>
       <div className="flex gap-2">

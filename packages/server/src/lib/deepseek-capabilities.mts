@@ -3,8 +3,8 @@ import type {} from "@deepseek-ai/dsh-bash-sandbox";
 import type {} from "@deepseek-ai/dsh-user-questions";
 import type {} from "@deepseek-ai/dsh-commands";
 import type {} from "@deepseek-ai/dsh-plan-mode";
-import { mountHarnessCapabilities as mount } from "@localapp/dsh-multiuser/harness-capabilities";
-export { mountApplicationFileSystem } from "@localapp/dsh-multiuser/harness-capabilities";
+import { mountHarnessCapabilities as mount } from "@localapp/dsh-agent-runtime/harness-capabilities";
+export { mountApplicationFileSystem } from "@localapp/dsh-agent-runtime/harness-capabilities";
 export async function mountHarnessCapabilities(...args: Parameters<typeof mount>) {
   const [ctx, root, capabilities, mcpServers, skills, python, development] = args;
   return mount(ctx, root, capabilities, mcpServers, skills, python, {

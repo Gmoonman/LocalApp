@@ -1,7 +1,9 @@
-﻿"use client";
+"use client";
 
+import {installPreviewPageContext} from "../development/page-context";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import {DevelopmentPreviewBar} from "./development-preview-bar";
 import { Navbar, type PlatformEditSession, type PresenceSnapshot } from "./navbar";
 import { IssuesModal } from "./issues-modal";
 import { AppConversationDock } from "../development/app-conversation-dock";
@@ -53,7 +55,7 @@ function isPlatformRequestMessage(v: unknown) {
 }
 
 interface UserData { id: string; name: string; displayName?: string | null; avatarUrl?: string | null; }
-interface PageMeta { developmentPreview?: boolean; name: string; userId: string; description?: string; shell?: { navbar?: boolean }; notify?: { enabled?: boolean }; lifecycleStatus?: "online" | "offline"; }
+interface PageMeta { developmentVerification?:boolean; developmentPreview?: boolean; developmentParentOrigin?:string; name: string; userId: string; description?: string; shell?: { navbar?: boolean }; notify?: { enabled?: boolean }; lifecycleStatus?: "online" | "offline"; }
 type PresenceSnapshotEvent = {
   type?: "presence:snapshot";
   data?: Partial<PresenceSnapshot> & {
@@ -148,6 +150,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
   const [ready, setReady] = useState(false);
   const [developmentEnabled, setDevelopmentEnabled] = useState<boolean | null>(null);
   const [meta, setMeta] = useState<PageMeta | null>(null);
+  useEffect(() => installPreviewPageContext(meta?.developmentParentOrigin,meta?.developmentVerification===true), [meta?.developmentParentOrigin,meta?.developmentVerification]);
   const [favCount, setFavCount] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(() => typeof window === "undefined" ? null : readIssueDeepLinkId(new URL(window.location.href)));
@@ -730,6 +733,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
     >
       <div hidden={!!meta?.developmentPreview && window.self !== window.top} data-localapp-shell-nav-background data-testid="shell-nav-background" inert={showIssues ? ("true" as unknown as boolean) : undefined} aria-hidden={showIssues ? true : undefined} className="shrink-0">
         <Navbar
+          previewControls={developmentPreviewUrl && isOwner ? <DevelopmentPreviewBar key={new URL(developmentPreviewUrl,window.location.origin).searchParams.get("previewId") ?? developmentPreviewUrl} url={developmentPreviewUrl} onPreview={setDevelopmentPreviewUrl} onClose={()=>setDevelopmentPreviewUrl(null)}/> : undefined}
           pageName={name}
           user={user}
           favCount={favCount}
@@ -780,7 +784,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
             ) : appOnline ? (
               <>
                 <div id="root" data-localapp-app-root className="min-h-full" hidden={!!developmentPreviewUrl} />
-                {developmentPreviewUrl && isOwner && <div className="flex h-full flex-col"><div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2 text-xs text-muted-foreground"><span>开发预览 · 尚未上线</span><Button variant="ghost" size="sm" onClick={() => setDevelopmentPreviewUrl(null)}>查看已上线版本</Button></div><iframe title="应用开发预览" src={developmentPreviewUrl} className="min-h-0 flex-1 border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"/></div>}
+                {developmentPreviewUrl && isOwner && <div className="flex h-full flex-col"><iframe title="应用开发预览" src={developmentPreviewUrl} className="min-h-0 flex-1 border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"/></div>}
                 {appLoadError && <div className="p-4 text-sm text-destructive">{appLoadError}</div>}
               </>
             ) : (
@@ -811,7 +815,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
         {showIssues && (
           <IssuesModal
             pagePath={pagePath}
-            pageName={name}
+          pageName={name}
             user={user}
             onIssuesChanged={refreshOpenIssueCount}
             selectedIssueId={selectedIssueId}

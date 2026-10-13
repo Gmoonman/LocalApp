@@ -4,8 +4,8 @@ import Fastify from "fastify";
 import { Context } from "@deepseek-ai/cordis";
 import DocumentTools from "@localapp/dsh-document-tools";
 import Multiuser from "@localapp/dsh-multiuser";
-import { AgentSettingsStore } from "@localapp/dsh-multiuser/settings";
-import { registerAgentRoutes } from "@localapp/dsh-multiuser/agent-routes";
+import { AgentSettingsStore } from "@localapp/dsh-agent-settings/settings";
+import { registerAgentRoutes } from "@localapp/dsh-agent-runtime/agent-routes";
 import { expect, it } from "vitest";
 
 it.each([false, true])("stops document consumers including pending initialization=%s while preserving other workspaces", async pendingInitialization => {

@@ -486,7 +486,11 @@
     "react": "^18.3.0",
     "lucide-react": "^0.556.0",
     "@deepseek-ai/dsh-client-ui-conversation": "0.2.1-alpha.2",
-    "@localapp/dsh-agent-ui": "workspace:*"
+    "@localapp/dsh-agent-ui": "workspace:*",
+    "@localapp/dsh-agent-settings": "workspace:*",
+    "@localapp/dsh-execution-environment": "workspace:*",
+    "@localapp/dsh-agent-runtime": "workspace:*",
+    "@localapp/app-foundation": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
@@ -511,10 +515,26 @@
         "@deepseek-ai/dsh-api-session-controller",
         "@deepseek-ai/dsh-client-ui-workspace",
         "@deepseek-ai/dsh-api-workspace-controller",
-        "@localapp/dsh-multiuser",
+        "@localapp/dsh-agent-settings",
         "@deepseek-ai/dsh-client-ui-conversation",
         "@localapp/dsh-agent-ui"
       ]
+    }
+  },
+  "peerDependencies": {
+    "@localapp/dsh-app-sync": "workspace:*",
+    "@localapp/dsh-collaboration": "workspace:*",
+    "@localapp/dsh-device-services": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@localapp/dsh-app-sync": {
+      "optional": true
+    },
+    "@localapp/dsh-collaboration": {
+      "optional": true
+    },
+    "@localapp/dsh-device-services": {
+      "optional": true
     }
   }
 }

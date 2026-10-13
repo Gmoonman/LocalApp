@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/notify-referer";
+export * from "@localapp/dsh-device-services/notify-referer";

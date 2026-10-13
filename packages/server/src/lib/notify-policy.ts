@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/notify-policy";
+export * from "@localapp/dsh-device-services/notify-policy";

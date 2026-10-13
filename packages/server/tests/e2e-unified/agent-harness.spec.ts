@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { buildServer } from "../../src/server.js";
 import { SetupTokenStore } from "../../src/lib/setup-token-store.js";
+import {AgentSettingsStore} from "../../src/lib/agent-settings.js";
 import { closeMetaDb, createApiKey, createUser, findUserByName, getDb, flushMetaDb } from "../../src/lib/meta-sqlite.js";
 const dataDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../tmp/deepseek-test-harness-http-e2e", String(process.pid));
 const adminKey = "test-harness-e2e-admin-key";
@@ -33,7 +34,7 @@ describe("unified Server DeepSeek Harness HTTP", () => {
         res.once("close",()=>cancelledModelStreams++);
         return;
       }
-      const hasResult = request.messages.at(-1)?.role === "tool";
+      const hasResult = request.messages.some((message: any) => message.role === "tool");
       if (request.messages.some((message: any) => message.content === "standalone native read")) {
         const delta = hasResult ? { content: "Standalone browser completed" } : { tool_calls: [{ index: 0, id: "standalone-browser-read", function: { name: "read", arguments: JSON.stringify({ file_path: "private.txt" }) } }] };
         res.writeHead(200, { "Content-Type": "text/event-stream" });
@@ -299,15 +300,16 @@ describe("unified Server DeepSeek Harness HTTP", () => {
       method: "POST", headers: { "X-API-Key": key, "Content-Type": "application/json" },
       body: JSON.stringify({ type: "client-request", rpcId: `native-${method}`, method: `session/${method}`, payload: { args } }),
     });
+    expect((await send("create",{request:{sessionId:"model-catalog-session"}})).status).toBe(200);
     const catalog = await send("modelCatalog", {});
     expect(catalog.status).toBe(200);
     const value = (await catalog.json()).result.value;
-    expect(value.groups).toEqual([{ id: "localapp", name: "localapp", models: [{ id: "mock-model", name: "mock-model" }] }]);
+    expect(value.groups).toMatchObject([{ id: "mock", name: "Mock", models: [{ id: "mock-model", name: "mock-model" }] }]);
     expect(value.failures).toEqual([]);
-    const selection = await send("selectModel", { request: { sessionId: "http-e2e-session", provider: "localapp", model: "mock-model" } });
+    const selection = await send("selectModel", { request: { sessionId: "model-catalog-session", provider: "mock", model: "mock-model" } });
     expect(selection.status).toBe(200);
-    expect((await selection.json()).result.value.selected).toMatchObject({ provider: "localapp", model: "mock-model" });
-    const foreign = await send("selectModel", { request: { sessionId: "http-e2e-session", provider: "other", model: "mock-model" } });
+    expect((await selection.json()).result.value.selected).toMatchObject({ provider: "mock", model: "mock-model" });
+    const foreign = await send("selectModel", { request: { sessionId: "model-catalog-session", provider: "other", model: "mock-model" } });
     expect(await foreign.text()).toContain("session/model-unavailable");
     expect((await send("modelCatalog", {}, outsiderKey)).status).toBe(400);
   });
@@ -751,11 +753,9 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     expect(events.every((event:any) => Number.isFinite(event.time))).toBe(true);
     expect(events.map((event:any) => event.seq)).toEqual([...events.map((event:any) => event.seq)].sort((a:number,b:number) => a-b));
 
-    await expect.poll(async()=>{
-      const response=await fetch(`${baseUrl}/api/development/projects/${project.id}/builds`,{headers:{"X-API-Key":adminKey}});
-      const builds=(await response.json()).data;
-      return builds.length>0&&!builds.some((build:any)=>["queued","running"].includes(build.status));
-    },{timeout:20000}).toBe(true);
+    // A read-only turn must not schedule a build or change the application source.
+    const builds=await fetch(`${baseUrl}/api/development/projects/${project.id}/builds`,{headers:{"X-API-Key":adminKey}});
+    expect((await builds.json()).data).toEqual([]);
     const repeated=await send("prompt",{request:{sessionId,requestId:"developer-file-read",mode:"queue",content:[{type:"text",text:"native developer read"}]}});
     expect((await repeated.json()).result.value).toEqual({accepted:true});
     const saveAfterRetry=await fetch(`${baseUrl}/api/development/projects/${project.id}/file`,{method:"PUT",headers:{"X-API-Key":adminKey,"Content-Type":"application/json"},body:JSON.stringify({path:"native-retry-marker.txt",content:"No stale mutation lock",hash:null})});
@@ -1882,6 +1882,13 @@ describe("unified Server DeepSeek Harness HTTP", () => {
     const sessions: Array<{key: string; sessionId: string; marker: string}> = [];
     for (const [key, marker] of [[adminKey, "configured-owner-private-marker"], [outsiderKey, "configured-outsider-private-marker"]]) {
       expect((await app.inject({ method: "PUT", url: "/api/agent/settings", headers: { "X-API-Key": key }, payload: settings })).statusCode).toBe(200);
+      // The image fixture explicitly declares a multimodal model in dsh configuration.
+      const userId=key===adminKey?findUserByName("harness-http-admin")!.id:"harness-outsider";
+      const models=new AgentSettingsStore(dataDir).models;
+      const configuration=models.read(userId);
+      configuration.providers.isolation.models=[{id:"isolation-model",input:["text","image"]}];
+      configuration.revision++;
+      models.save(userId,configuration);
       const created = await rpc(key, "create", { request: {} });
       const sessionId = created.result.value.sessionId;
       await rpc(key, "rename", { request: { sessionId, title: marker } });

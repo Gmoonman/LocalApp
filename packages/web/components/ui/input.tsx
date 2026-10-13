@@ -1,2 +1,2 @@
 "use client";
-export * from "@localapp/dsh-multiuser/ui/shadcn/input";
+export * from "@localapp/ui/input";

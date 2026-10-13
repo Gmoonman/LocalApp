@@ -1,4 +1,7 @@
 "use client";
+import {DevelopmentDelivery} from "./development-delivery";
+import {createPortal} from "react-dom";
+import {currentApplicationContext,activatePageContext} from "./page-context";
 import { createConversationDock } from "@localapp/dsh-agent-ui/ui/conversation-dock";
 export type { DockIdentityProps } from "@localapp/dsh-agent-ui/ui/conversation-dock";
 import { Button } from "@/components/ui/button";
@@ -11,6 +14,11 @@ import { lazy, Suspense } from "react";
 const LazyDevelopmentAgentSettings = lazy(() => import("./development-agent-settings").then(module => ({ default: module.DevelopmentAgentSettings })));
 const DevelopmentAgentSettings = (props: {projectId: string}) => <Suspense fallback={null}><LazyDevelopmentAgentSettings {...props} /></Suspense>;
 export const AppDevelopmentDock = createConversationDock({
+  DevelopmentDelivery,
+  renderPortal:createPortal,
+  markPage:()=>currentApplicationContext(true),
+  clearPage:()=>currentApplicationContext(false,true),
+  activatePage:activatePageContext,
   Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuItem,
   DshDiff, DshMarkdown, DshTerminal, NativeConversationFrame, DevelopmentAgentSettings,

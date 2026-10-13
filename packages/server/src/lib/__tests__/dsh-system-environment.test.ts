@@ -1,7 +1,7 @@
 import { it, expect, vi } from "vitest";
 import path from "node:path";
-import { SystemEnvironment } from "@localapp/dsh-multiuser/system-environment";
-import type { AgentEnvironment } from "@localapp/dsh-multiuser/agent-environment";
+import { SystemEnvironment } from "@localapp/dsh-execution-environment/system-environment";
+import type { AgentEnvironment } from "@localapp/dsh-execution-environment/agent-environment";
 
 it("shares concurrent probes, retries failed initialization and closes every harness", async () => {
   const root = path.resolve(process.cwd(), "../../tmp/system-environment-cache-test");

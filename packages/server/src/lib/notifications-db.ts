@@ -1,6 +1,6 @@
 import { notificationServices } from "./notification-state.js";
 const notifications = notificationServices.notifications;
-export type { NotificationRecord, PersistedNotification, InboxItem, InboxPage } from "@localapp/dsh-app-platform/notifications";
+export type { NotificationRecord, PersistedNotification, InboxItem, InboxPage } from "@localapp/dsh-device-services/notifications";
 export const listSubscribers = notifications.listSubscribers.bind(notifications);
 export const persistNotifications = notifications.persistNotifications.bind(notifications);
 export const resolveRecipients = notifications.resolveRecipients.bind(notifications);

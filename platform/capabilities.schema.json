@@ -28,7 +28,7 @@
     "content": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["upload", "read", "types"],
+      "required": ["upload", "read", "types", "bundles"],
       "properties": {
         "upload": {
           "type": "object",
@@ -48,6 +48,19 @@
             "enabled": { "type": "boolean" },
             "rangeRequests": { "type": "boolean" },
             "delete": { "type": "boolean" }
+          }
+        },
+        "bundles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "maxFiles", "maxBytes", "maxConcurrent", "maxPending", "retentionSeconds"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "maxFiles": { "type": "integer", "minimum": 1 },
+            "maxBytes": { "type": "integer", "minimum": 1 },
+            "maxConcurrent": { "type": "integer", "minimum": 1 },
+            "maxPending": { "type": "integer", "minimum": 1 },
+            "retentionSeconds": { "type": "integer", "minimum": 1 }
           }
         },
         "types": {

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { registerDeviceControl, type DeviceControlHost } from "@localapp/dsh-app-platform/device-control-routes";
+import { registerDeviceControl, type DeviceControlHost } from "@localapp/dsh-device-services/device-control-routes";
 import { executeDeviceAction } from "../lib/device-action-executor.js";
 import { getUserRole } from "../lib/meta-sqlite.js";
 import { requireRequestUser } from "../plugins/auth.js";

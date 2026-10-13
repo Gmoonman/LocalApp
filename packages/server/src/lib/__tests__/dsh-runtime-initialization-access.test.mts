@@ -3,8 +3,8 @@ import path from "node:path";
 import Fastify from "fastify";
 import { Context } from "@deepseek-ai/cordis";
 import Multiuser from "@localapp/dsh-multiuser";
-import { AgentSettingsStore } from "@localapp/dsh-multiuser/settings";
-import { registerAgentRoutes } from "@localapp/dsh-multiuser/agent-routes";
+import { AgentSettingsStore } from "@localapp/dsh-agent-settings/settings";
+import { registerAgentRoutes } from "@localapp/dsh-agent-runtime/agent-routes";
 import { expect, it, vi } from "vitest";
 
 it.each(["application", "capabilities", "python", "provider", "mcp", "tools", "credentials-run", "credentials-context", "credentials-native"] as const)("rejects a runtime when %s access changes during initialization", async reason => {

@@ -1,0 +1,40 @@
+{
+  "name": "@localapp/dsh-collaboration",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./collaboration-handler": {
+      "types": "./dist/collaboration-handler.d.cts",
+      "default": "./dist/collaboration-handler.cjs"
+    },
+    "./crdt-handler": {
+      "types": "./dist/crdt-handler.d.cts",
+      "default": "./dist/crdt-handler.cjs"
+    },
+    "./crdt-store": {
+      "types": "./dist/crdt-store.d.cts",
+      "default": "./dist/crdt-store.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "yjs": "^13.6.32",
+    "@localapp/app-foundation": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "typescript": "5.6.3",
+    "fastify": "^4.26.0",
+    "@types/ws": "^8.18.1",
+    "@fastify/websocket": "^8.3.1"
+  }
+}

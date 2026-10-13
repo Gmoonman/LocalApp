@@ -1,6 +1,6 @@
 {
   "name": "@patodo/localapp",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "LocalApp command-line interface",
   "license": "MIT",
   "repository": {
@@ -42,6 +42,34 @@
     "./plugins/agent-ui": {
       "types": "./plugins/agent-ui.d.mts",
       "default": "./plugins/agent-ui.mjs"
+    },
+    "./plugins/model-settings": {
+      "types": "./plugins/model-settings.d.mts",
+      "default": "./plugins/model-settings.mjs"
+    },
+    "./plugins/agent-runtime": {
+      "types": "./plugins/agent-runtime.d.mts",
+      "default": "./plugins/agent-runtime.mjs"
+    },
+    "./plugins/agent-settings": {
+      "types": "./plugins/agent-settings.d.mts",
+      "default": "./plugins/agent-settings.mjs"
+    },
+    "./plugins/execution-environment": {
+      "types": "./plugins/execution-environment.d.mts",
+      "default": "./plugins/execution-environment.mjs"
+    },
+    "./plugins/app-sync": {
+      "types": "./plugins/app-sync.d.mts",
+      "default": "./plugins/app-sync.mjs"
+    },
+    "./plugins/collaboration": {
+      "types": "./plugins/collaboration.d.mts",
+      "default": "./plugins/collaboration.mjs"
+    },
+    "./plugins/device-services": {
+      "types": "./plugins/device-services.d.mts",
+      "default": "./plugins/device-services.mjs"
     }
   },
   "engines": {

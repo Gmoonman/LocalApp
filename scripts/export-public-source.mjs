@@ -199,10 +199,12 @@ export function snapshotVerificationCommands() {
     ["pnpm", ["test:release-workflow"]],
     ["pnpm", ["-C", "packages/server-core", "build"]],
     ["pnpm", ["-C", "packages/server-core", "test"]],
+    ["node", ["scripts/build-plugin-packages.mjs"]],
     ["pnpm", ["-C", "packages/web", "build"]],
     ["pnpm", ["-C", "packages/web", "test"]],
     // Exercise release packaging before Server/dist can hide missing source aliases.
     ["pnpm", ["package:localapp"]],
+    ["pnpm", ["-C", "packages/dsh-model-settings", "build"]],
     ["pnpm", ["-C", "packages/dsh-multiuser", "build"]],
     ["pnpm", ["-C", "packages/server", "build"]],
     ["pnpm", ["-C", "packages/server", "test"]],

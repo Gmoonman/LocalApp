@@ -1,4 +1,4 @@
-import { createApplicationCrdt } from "@localapp/dsh-app-platform/crdt-handler";
+import { createApplicationCrdt } from "@localapp/dsh-collaboration/crdt-handler";
 import { findUserById, validateApiKey } from "../lib/meta-sqlite.js";
 
 export function createCrdtHandlers() {

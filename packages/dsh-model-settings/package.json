@@ -1,0 +1,67 @@
+{
+  "name": "@localapp/dsh-model-settings",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.mts",
+      "default": "./dist/runtime.mjs"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.cts",
+      "default": "./dist/storage.cjs"
+    },
+    "./client": {
+      "default": "./dist/client.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc && node scripts/build-client.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@deepseek-ai/dsh-api-gateway": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-remotes": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-api-settings-controller": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-connection": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-modules": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-resources": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-theme": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-typert-registry": "0.2.1-alpha.2",
+    "react": "18.3.1",
+    "fastify": "^4.26.0",
+    "@deepseek-ai/dsh-llm": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-llm-pi-ai": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings-models": "0.2.1-alpha.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "rimraf": "^5.0.0",
+    "typescript": "5.6.3",
+    "esbuild": "^0.25.12",
+    "@types/react": "18.3.29",
+    "@tailwindcss/postcss": "^4.1.18",
+    "tailwindcss": "^4.1.18",
+    "postcss": "^8.5.10"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings-models"
+      ]
+    }
+  },
+  "localapp": {
+    "clientEntry": "./ui/client.tsx"
+  },
+  "license": "MIT"
+}

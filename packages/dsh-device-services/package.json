@@ -1,0 +1,142 @@
+{
+  "name": "@localapp/dsh-device-services",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./desktop-actions-db": {
+      "types": "./dist/desktop-actions-db.d.cts",
+      "default": "./dist/desktop-actions-db.cjs"
+    },
+    "./desktop-actions-routes": {
+      "types": "./dist/desktop-actions-routes.d.cts",
+      "default": "./dist/desktop-actions-routes.cjs"
+    },
+    "./device-action-client": {
+      "types": "./dist/device-action-client.d.cts",
+      "default": "./dist/device-action-client.cjs"
+    },
+    "./device-action-executor": {
+      "types": "./dist/device-action-executor.d.cts",
+      "default": "./dist/device-action-executor.cjs"
+    },
+    "./device-action-local-store": {
+      "types": "./dist/device-action-local-store.d.cts",
+      "default": "./dist/device-action-local-store.cjs"
+    },
+    "./device-action-record": {
+      "types": "./dist/device-action-record.d.cts",
+      "default": "./dist/device-action-record.cjs"
+    },
+    "./device-action-ticket": {
+      "types": "./dist/device-action-ticket.d.cts",
+      "default": "./dist/device-action-ticket.cjs"
+    },
+    "./device-action-trust-store": {
+      "types": "./dist/device-action-trust-store.d.cts",
+      "default": "./dist/device-action-trust-store.cjs"
+    },
+    "./device-action-types": {
+      "types": "./dist/device-action-types.d.cts",
+      "default": "./dist/device-action-types.cjs"
+    },
+    "./device-actions-routes": {
+      "types": "./dist/device-actions-routes.d.cts",
+      "default": "./dist/device-actions-routes.cjs"
+    },
+    "./device-control-routes": {
+      "types": "./dist/device-control-routes.d.cts",
+      "default": "./dist/device-control-routes.cjs"
+    },
+    "./device-notification-source-store": {
+      "types": "./dist/device-notification-source-store.d.cts",
+      "default": "./dist/device-notification-source-store.cjs"
+    },
+    "./device-notifications-routes": {
+      "types": "./dist/device-notifications-routes.d.cts",
+      "default": "./dist/device-notifications-routes.cjs"
+    },
+    "./inbox-routes": {
+      "types": "./dist/inbox-routes.d.cts",
+      "default": "./dist/inbox-routes.cjs"
+    },
+    "./notification-delivery": {
+      "types": "./dist/notification-delivery.d.cts",
+      "default": "./dist/notification-delivery.cjs"
+    },
+    "./notification-services": {
+      "types": "./dist/notification-services.d.cts",
+      "default": "./dist/notification-services.cjs"
+    },
+    "./notification-types": {
+      "types": "./dist/notification-types.d.cts",
+      "default": "./dist/notification-types.cjs"
+    },
+    "./notifications": {
+      "types": "./dist/notifications.d.cts",
+      "default": "./dist/notifications.cjs"
+    },
+    "./notify-config": {
+      "types": "./dist/notify-config.d.cts",
+      "default": "./dist/notify-config.cjs"
+    },
+    "./notify-handler": {
+      "types": "./dist/notify-handler.d.cts",
+      "default": "./dist/notify-handler.cjs"
+    },
+    "./notify-payload": {
+      "types": "./dist/notify-payload.d.cts",
+      "default": "./dist/notify-payload.cjs"
+    },
+    "./notify-permission-sql": {
+      "types": "./dist/notify-permission-sql.d.cts",
+      "default": "./dist/notify-permission-sql.cjs"
+    },
+    "./notify-policy": {
+      "types": "./dist/notify-policy.d.cts",
+      "default": "./dist/notify-policy.cjs"
+    },
+    "./notify-rate-limit": {
+      "types": "./dist/notify-rate-limit.d.cts",
+      "default": "./dist/notify-rate-limit.cjs"
+    },
+    "./notify-referer": {
+      "types": "./dist/notify-referer.d.cts",
+      "default": "./dist/notify-referer.cjs"
+    },
+    "./notify-routing": {
+      "types": "./dist/notify-routing.d.cts",
+      "default": "./dist/notify-routing.cjs"
+    },
+    "./subscription-routes": {
+      "types": "./dist/subscription-routes.d.cts",
+      "default": "./dist/subscription-routes.cjs"
+    },
+    "./subscriptions": {
+      "types": "./dist/subscriptions.d.cts",
+      "default": "./dist/subscriptions.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "sql.js": "^1.14.1",
+    "@localapp/dsh-app-sync": "workspace:*",
+    "@localapp/app-foundation": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "typescript": "5.6.3",
+    "fastify": "^4.26.0",
+    "@types/ws": "^8.18.1",
+    "@fastify/websocket": "^8.3.1",
+    "@types/sql.js": "^1.4.11"
+  }
+}

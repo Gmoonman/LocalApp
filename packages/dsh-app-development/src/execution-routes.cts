@@ -52,9 +52,30 @@ export function registerDevelopmentExecution(app: FastifyInstance, host: Develop
         req.params.id,
         host.user(req),
         req.body.buildId,
-        `${req.protocol}://${req.headers.host}`,
+        `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers.host}`,
       ),
     }),
+  );
+  app.post<{ Params: { id: string; previewId: string }; Body: { mode?: "test" | "production"; readSource?: "test" | "production"; writeSource?: "test" | "production" } }>(
+    "/api/development/previews/:previewId/data-mode", async (req) => {
+      const protocol = req.headers["x-forwarded-proto"] === "https" ? "https" : req.protocol;
+      if (req.headers.origin && req.headers.origin !== `${protocol}://${req.headers.host}`)
+        throw new DevelopmentError("请从应用开发页面切换数据", 403);
+      const readSource = req.body?.readSource ?? req.body?.mode;
+      const writeSource = req.body?.writeSource ?? "test";
+      if (!readSource || !["test", "production"].includes(readSource) || !["test", "production"].includes(writeSource)) throw new DevelopmentError("数据模式无效");
+      return { success: true, data: host.previews.setDataMode(undefined, host.user(req), req.params.previewId, readSource, writeSource) };
+    },
+  );
+  app.post<{ Params: { previewId: string }; Body: { direction: "test-to-production" | "production-to-test"; confirmed: boolean } }>(
+    "/api/development/previews/:previewId/sync-data", async (req) => {
+      const protocol = req.headers["x-forwarded-proto"] === "https" ? "https" : req.protocol;
+      if (req.headers.origin && req.headers.origin !== `${protocol}://${req.headers.host}`)
+        throw new DevelopmentError("请从应用开发页面同步数据", 403);
+      if (req.body?.confirmed !== true || req.body?.direction !== "production-to-test")
+        throw new DevelopmentError("请确认同步方向及数据覆盖范围");
+      return {success: true, data: await host.previews.syncData(host.user(req), req.params.previewId, req.body.direction)};
+    },
   );
   app.get<{ Params: { id: string } }>(
     base + "/:id/release-target",

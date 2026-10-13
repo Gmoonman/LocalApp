@@ -1,6 +1,6 @@
-import { createDeviceActionStore } from "@localapp/dsh-app-platform/desktop-actions-db";
+import { createDeviceActionStore } from "@localapp/dsh-device-services/desktop-actions-db";
 import { getDb, flushMetaDb } from "./meta-sqlite.js";
-export * from "@localapp/dsh-app-platform/desktop-actions-db";
+export * from "@localapp/dsh-device-services/desktop-actions-db";
 const store = createDeviceActionStore({ database: getDb, flush: flushMetaDb });
 export const isExactSemver = store.isExactSemver;
 export const createDesktopAction = store.createDesktopAction;

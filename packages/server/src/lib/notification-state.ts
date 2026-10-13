@@ -1,4 +1,4 @@
-import { createNotificationServices } from "@localapp/dsh-app-platform/notification-services";
+import { createNotificationServices } from "@localapp/dsh-device-services/notification-services";
 import { getDb, flushMetaDb } from "./meta-sqlite.js";
 import { wsManager } from "./ws-manager.js";
 export const notificationServices = createNotificationServices({ database: getDb, flush: flushMetaDb },

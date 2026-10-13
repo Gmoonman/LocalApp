@@ -52,6 +52,14 @@ export async function buildLocalAppPackage(options = {}) {
   await fs.mkdir(pluginDirectory, { recursive: true });
   for (const [name, packageName, client] of [
     ["multiuser", "dsh-multiuser", true],
+    ["model-settings", "dsh-model-settings", false],
+    ["agent-runtime", "dsh-agent-runtime", false],
+    ["agent-settings", "dsh-agent-settings", false],
+    ["execution-environment", "dsh-execution-environment", false],
+    ["app-sync", "dsh-app-sync", false],
+    ["collaboration", "dsh-collaboration", false],
+    ["device-services", "dsh-device-services", false],
+
     ["agent-ui", "dsh-agent-ui", true],
     ["applications", "dsh-app-platform", true],
     ["development", "dsh-app-development", true],

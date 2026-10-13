@@ -1,0 +1,84 @@
+{
+  "name": "@localapp/dsh-execution-environment",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./python-environment": {
+      "types": "./dist/python-environment.d.cts",
+      "default": "./dist/python-environment.cjs"
+    },
+    "./agent-environment": {
+      "types": "./dist/agent-environment.d.cts",
+      "default": "./dist/agent-environment.cjs"
+    },
+    "./system-environment": {
+      "types": "./dist/system-environment.d.cts",
+      "default": "./dist/system-environment.cjs"
+    },
+    "./environment-routes": {
+      "types": "./dist/environment-routes.d.cts",
+      "default": "./dist/environment-routes.cjs"
+    },
+    "./public-skills": {
+      "types": "./dist/public-skills.d.cts",
+      "default": "./dist/public-skills.cjs"
+    },
+    "./catalog": {
+      "types": "./dist/catalog.d.cts",
+      "default": "./dist/catalog.cjs"
+    },
+    "./ui/python-environment-form": {
+      "types": "./ui/python-environment-form.tsx",
+      "default": "./ui/python-environment-form.tsx"
+    },
+    "./ui/system-agent-environment": {
+      "types": "./ui/system-agent-environment.tsx",
+      "default": "./ui/system-agent-environment.tsx"
+    },
+    "./ui/native-system-environment": {
+      "types": "./ui/native-system-environment.tsx",
+      "default": "./ui/native-system-environment.tsx"
+    },
+    "./client": {
+      "types": "./ui/client.tsx",
+      "default": "./dist/client.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc && node scripts/build-client.mjs",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@localapp/ui": "workspace:*",
+    "react": "18.3.1",
+    "lucide-react": "^0.556.0",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.1-alpha.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "rimraf": "^5.0.0",
+    "typescript": "5.6.3",
+    "@types/react": "18.3.29",
+    "fastify": "^4.26.0"
+  },
+  "localapp": {
+    "clientEntry": "./ui/client.tsx"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  }
+}

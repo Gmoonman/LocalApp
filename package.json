@@ -3,10 +3,10 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "pnpm -C packages/dsh-agent-ui build && pnpm -C packages/server-core build && pnpm -C packages/dsh-app-development build && concurrently -k \"pnpm -C packages/dsh-agent-ui build --watch --preserveWatchOutput\" \"pnpm -C packages/dsh-document-tools build --watch --preserveWatchOutput\" \"pnpm -C packages/dsh-multiuser build --watch --preserveWatchOutput\" \"pnpm -C packages/dsh-app-platform build --watch --preserveWatchOutput\" \"pnpm -C packages/dsh-app-development build --watch --preserveWatchOutput\" \"pnpm -C packages/server-core build --watch --preserveWatchOutput\" \"pnpm -C packages/server dev\" \"pnpm -C packages/web dev\"",
+    "dev": "concurrently -k \"pnpm -C packages/server dev\" \"pnpm -C packages/web dev\"",
     "dev:build": "pnpm -C packages/web build && pnpm -C packages/server dev",
     "dev:web": "pnpm -C packages/web build",
-    "dev:server": "pnpm -C packages/dsh-agent-ui build && pnpm -C packages/server-core build && pnpm -C packages/dsh-app-development build && concurrently -k \"pnpm -C packages/dsh-agent-ui build --watch --preserveWatchOutput\" \"pnpm -C packages/dsh-document-tools build --watch --preserveWatchOutput\" \"pnpm -C packages/dsh-multiuser build --watch --preserveWatchOutput\" \"pnpm -C packages/dsh-app-platform build --watch --preserveWatchOutput\" \"pnpm -C packages/dsh-app-development build --watch --preserveWatchOutput\" \"pnpm -C packages/server-core build --watch --preserveWatchOutput\" \"pnpm -C packages/server dev\"",
+    "dev:server": "concurrently -k \"pnpm -C packages/server dev\" \"pnpm -C packages/web dev\"",
     "package:localapp": "node scripts/package-localapp.mjs",
     "release:npm:check": "node scripts/check-npm-release.mjs",
     "test:localapp-package": "node --test --test-concurrency=1 packages/localapp/scripts/pack-package.node-test.mjs packages/localapp/scripts/build-package.node-test.mjs packages/localapp/scripts/merge-native-adapters.node-test.mjs scripts/single-package-cutover.node-test.mjs",
@@ -26,7 +26,8 @@
     "test:real-apps": "pnpm run build:real-apps && pnpm -C packages/server exec vitest run tests/e2e-unified/real-apps.spec.ts",
     "acceptance:local:start": "node scripts/single-package-acceptance.mjs start",
     "acceptance:local:stop": "node scripts/single-package-acceptance.mjs stop",
-    "test:e2e-ui": "npx playwright test"
+    "test:e2e-ui": "npx playwright test",
+    "build:plugins": "node scripts/build-plugin-packages.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

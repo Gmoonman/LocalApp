@@ -5,13 +5,14 @@ import type { FastifyInstance } from "fastify";
 import { createAgentSettingsOptions, AGENT_CAPABILITIES } from "../lib/agent-settings.js";
 import { systemAgentEnvironment } from "../lib/system-agent-environment.js";
 import { findUserById } from "../lib/meta-sqlite.js";
-import type { AgentRoutesHost } from "@localapp/dsh-multiuser/agent-routes" with { "resolution-mode": "import" };
+import type { AgentRoutesHost } from "@localapp/dsh-agent-runtime/agent-routes" with { "resolution-mode": "import" };
 
 export async function createAgentRoutesHost(app: FastifyInstance, context: DshContext): Promise<AgentRoutesHost> {
   const { DeepSeekHarness } = await import("../lib/deepseek-harness.mjs");
-  const settings = context.localappMultiuser.createSettings(...createAgentSettingsOptions(app.config.dataDir));
+  const settings = context.localappAgentSettings.createStore(...createAgentSettingsOptions(app.config.dataDir));
   return {
-    dataDir: app.config.dataDir, publicUrl: app.config.publicUrl, settings, runtimes: context.localappMultiuser,
+    dataDir: app.config.dataDir, publicUrl: app.config.publicUrl, settings, runtimes: context.localappAgentRuntime,
+    registerSettings:context.localappAgentSettings.registerRoutes.bind(context.localappAgentSettings),
     userId: request => request.userId,
     isAuthenticated: isRequestUserAuthenticated,
     documents: () => context.get("localappDocuments"),

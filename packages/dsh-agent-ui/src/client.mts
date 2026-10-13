@@ -1,3 +1,4 @@
+import {installCompactConversation} from "./compact-conversation.js";
 import type {Context} from "@deepseek-ai/cordis";
 import type {ISessions} from "@deepseek-ai/dsh-api-session-controller/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
@@ -7,8 +8,9 @@ import {installNativeComposerBridge} from "./native-composer-bridge.js";
 import {installNativeAttachmentObserver} from "./native-attachment-observer.js";
 import {registerNativeAttachments,removeNativeAttachment} from "./native-attachment-intake.js";
 import {installNativeNavigationBridge} from "./native-navigation-bridge.js";
-export const inject=["sessions","conversation","uiWorkspace","workspaces"];
+export const inject=["sessions","conversation","uiWorkspace","workspaces","slots"];
 export function apply(ctx: Omit<Context,"sessions"> & {sessions:ISessions}):void {
+  try { installCompactConversation(ctx); } catch(error) { console.error("LocalApp conversation initialization failed", error); throw error; }
   ctx.effect(() => installNativeComposerBridge(ctx.sessions, context => {
     const conversation = context.get("conversation");
     if (!conversation) throw new Error("原生对话服务不可用");

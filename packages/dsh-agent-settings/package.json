@@ -1,0 +1,91 @@
+{
+  "name": "@localapp/dsh-agent-settings",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./settings": {
+      "types": "./dist/settings.d.cts",
+      "default": "./dist/settings.cjs"
+    },
+    "./sqlite-settings": {
+      "types": "./dist/sqlite-settings.d.cts",
+      "default": "./dist/sqlite-settings.cjs"
+    },
+    "./model-settings-client": {
+      "types": "./dist/model-settings-client.d.mts",
+      "default": "./dist/model-settings-client.mjs"
+    },
+    "./capability-settings-client": {
+      "types": "./dist/capability-settings-client.d.mts",
+      "default": "./dist/capability-settings-client.mjs"
+    },
+    "./ui/model-settings": {
+      "types": "./ui/model-settings.tsx",
+      "default": "./ui/model-settings.tsx"
+    },
+    "./client": {
+      "types": "./dist/client.d.mts",
+      "default": "./dist/client.cjs"
+    },
+    "./routes": {
+      "types": "./dist/routes.d.mts",
+      "default": "./dist/routes.mjs"
+    },
+    "./ui/client": {
+      "types": "./ui/client.tsx",
+      "default": "./ui/client.tsx"
+    },
+    "./ui/agent-capability-settings": {
+      "types": "./ui/agent-capability-settings.tsx",
+      "default": "./ui/agent-capability-settings.tsx"
+    },
+    "./ui/native-model-settings": {
+      "types": "./ui/native-model-settings.tsx",
+      "default": "./ui/native-model-settings.tsx"
+    },
+    "./native-settings-ui": {
+      "types": "./dist/native-settings-ui.d.mts",
+      "default": "./dist/native-settings-ui.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc && node scripts/build-client.mjs",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@localapp/dsh-model-settings": "workspace:*",
+    "react": "18.3.1",
+    "lucide-react": "^0.556.0",
+    "@localapp/dsh-execution-environment": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.1-alpha.2",
+    "@localapp/ui": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-alpha.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "rimraf": "^5.0.0",
+    "typescript": "5.6.3",
+    "@types/react": "18.3.29",
+    "@types/sql.js": "^1.4.11",
+    "fastify": "^4.26.0"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "localapp": {
+    "clientEntry": "./ui/client.tsx"
+  }
+}

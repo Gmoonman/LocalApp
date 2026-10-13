@@ -93,3 +93,17 @@ it("restores a session after its scoped catalog arrives and cancels stale restor
   expect(navigation.openSession).toHaveBeenCalledTimes(1);
   dispose();
 });
+
+it("initializes the application workspace before the first send and coalesces creation requests", async()=>{
+ const parent={postMessage:vi.fn()}; let receive!:(event:any)=>void;
+ vi.stubGlobal("window",{parent,location:{origin:"http://localhost"},addEventListener:(_:string,handler:any)=>{receive=handler},removeEventListener:vi.fn()});
+ let resolve!:(value:any)=>void;
+ const initializeDefault=vi.fn(()=>new Promise<any>(done=>{resolve=done}));
+ const navigation={openSession:vi.fn(),startSession:vi.fn()};
+ const dispose=installNativeNavigationBridge({list:{getSnapshot:()=>({ids:[],byId:{}}),subscribe:()=>()=>{}}} as any,navigation,
+ {initializeDefault,list:{getSnapshot:()=>({items:[],archivedSessionIds:[],pinnedSessionIds:[]}),subscribe:()=>()=>{}}} as any);
+ const send=()=>receive({source:parent,origin:"http://localhost",data:{type:"localapp:native-new-session"}});
+ send();send();expect(initializeDefault).toHaveBeenCalledOnce();expect(navigation.startSession).not.toHaveBeenCalled();
+ resolve({workspaceId:"application-workspace"});await Promise.resolve();
+ expect(navigation.startSession).toHaveBeenCalledExactlyOnceWith("application-workspace");dispose();
+});

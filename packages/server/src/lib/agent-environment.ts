@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-multiuser/agent-environment";
+export * from "@localapp/dsh-execution-environment/agent-environment";

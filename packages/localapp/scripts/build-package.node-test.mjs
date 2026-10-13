@@ -47,7 +47,7 @@ test("packed product exposes one localapp binary without workspace references", 
   assert.equal(manifest.name, "@patodo/localapp");
   assert.deepEqual(manifest.bin, { localapp: "bin/localapp.mjs" });
   assert.equal(JSON.stringify(manifest).includes("workspace:"), false);
-  for (const name of ["multiuser", "agent-ui", "applications", "development", "documents"]) {
+  for (const name of ["multiuser", "agent-ui", "applications", "development", "documents", "model-settings", "agent-runtime", "agent-settings", "execution-environment", "app-sync", "collaboration", "device-services"]) {
     const entry = manifest.exports[`./plugins/${name}`];
     assert.equal(entry.default, `./plugins/${name}.mjs`);
     await fs.access(path.join(result.outputDirectory, entry.default));
@@ -117,7 +117,7 @@ test("packed product exposes one localapp binary without workspace references", 
       try {
         const modules = await mountNativeClientModules(assets, true, { contributions: [platformClient, developmentClient] });
         const entries = modules.graph().entries;
-        for (const id of ['@localapp/dsh-multiuser', '@localapp/dsh-app-platform', '@localapp/dsh-app-development', '@deepseek-ai/dsh-client-ui-trajectory']) {
+        for (const id of ['@localapp/dsh-agent-settings', '@localapp/dsh-execution-environment', '@localapp/dsh-app-platform', '@localapp/dsh-app-development', '@deepseek-ai/dsh-client-ui-trajectory']) {
           if (!entries.some(entry => entry.id === id)) throw new Error('Missing public client contribution: ' + id);
         }
         for (const entry of entries) {

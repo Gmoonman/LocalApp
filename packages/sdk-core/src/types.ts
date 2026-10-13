@@ -64,6 +64,7 @@ export interface PlatformCapabilities {
       rangeRequests: boolean;
       delete: boolean;
     };
+    bundles?: { enabled: boolean; maxFiles: number; maxBytes: number; maxConcurrent: number; maxPending: number; retentionSeconds: number };
     types: Array<{
       extension: string;
       mimeType: string;

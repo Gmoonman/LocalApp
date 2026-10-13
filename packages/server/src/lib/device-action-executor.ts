@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { executeDeviceAction as execute, DeviceActionExecutionError, type ExecuteDeviceActionInput } from "@localapp/dsh-app-platform/device-action-executor";
-export * from "@localapp/dsh-app-platform/device-action-executor";
+import { executeDeviceAction as execute, DeviceActionExecutionError, type ExecuteDeviceActionInput } from "@localapp/dsh-device-services/device-action-executor";
+export * from "@localapp/dsh-device-services/device-action-executor";
 export async function executeDeviceAction(input: ExecuteDeviceActionInput): Promise<unknown> {
   return execute({ ...input, runnerPath: input.runnerPath ?? findRunnerPath() });
 }

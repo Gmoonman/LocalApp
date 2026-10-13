@@ -1,6 +1,6 @@
 import { initializePlatformSchema } from "@localapp/dsh-app-platform/platform-schema";
 import { createSavedRepliesStore } from "@localapp/dsh-app-platform/saved-replies-store";
-import { PeerRecords } from "@localapp/dsh-app-platform/peer-records";
+import { PeerRecords } from "@localapp/dsh-app-sync/peer-records";
 import { AnalyticsStore } from "@localapp/dsh-app-platform/analytics";
 import { createAccountServices } from "@localapp/dsh-multiuser/account-services";
 import { initializeAccountSchema } from "@localapp/dsh-multiuser/account-schema";
@@ -24,7 +24,7 @@ export function isProtectedUserId(id: string): boolean {
 
 export type { ApiKeyRecord } from "@localapp/dsh-multiuser/api-keys";
 
-export type { PeerRow } from "@localapp/dsh-app-platform/peer-records";
+export type { PeerRow } from "@localapp/dsh-app-sync/peer-records";
 export type { UserRecord } from "@localapp/dsh-multiuser/accounts";
 
 export type { UserRow } from "@localapp/dsh-multiuser/accounts";

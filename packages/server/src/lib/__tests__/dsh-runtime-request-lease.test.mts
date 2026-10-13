@@ -3,8 +3,8 @@ import path from "node:path";
 import Fastify from "fastify";
 import { Context } from "@deepseek-ai/cordis";
 import Multiuser from "@localapp/dsh-multiuser";
-import { AgentSettingsStore } from "@localapp/dsh-multiuser/settings";
-import { registerAgentRoutes } from "@localapp/dsh-multiuser/agent-routes";
+import { AgentSettingsStore } from "@localapp/dsh-agent-settings/settings";
+import { registerAgentRoutes } from "@localapp/dsh-agent-runtime/agent-routes";
 import { expect, it, vi } from "vitest";
 
 it.each(["native", "context", "legacy"].flatMap(endpoint => [false, true].map(failure => ({ endpoint, failure }))))("protects $endpoint admission and releases the runtime after failure=$failure", async ({ endpoint, failure }) => {

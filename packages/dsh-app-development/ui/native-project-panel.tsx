@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { DiffBlock, TerminalBlock } from "@deepseek-ai/dsh-client-ui-primitives";
-import { Button } from "@localapp/dsh-multiuser/ui/shadcn/button";
-import { Input } from "@localapp/dsh-multiuser/ui/shadcn/input";
-import { Textarea } from "@localapp/dsh-multiuser/ui/shadcn/textarea";
-import { ChoiceSelect } from "@localapp/dsh-multiuser/ui/shadcn/choice-select";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@localapp/dsh-multiuser/ui/shadcn/dialog";
+import { Button } from "@localapp/ui/button";
+import { Input } from "@localapp/ui/input";
+import { Textarea } from "@localapp/ui/textarea";
+import { ChoiceSelect } from "@localapp/ui/choice-select";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@localapp/ui/dialog";
 import { createDevelopmentPage } from "./development-page";
 import type { DevelopmentShellProps } from "./development-types";
 const folding = {

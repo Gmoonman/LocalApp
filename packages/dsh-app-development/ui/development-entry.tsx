@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
-import {Button} from "@localapp/dsh-multiuser/ui/shadcn/button";
-import {ChoiceSelect} from "@localapp/dsh-multiuser/ui/shadcn/choice-select";
+import {Button} from "@localapp/ui/button";
+import {ChoiceSelect} from "@localapp/ui/choice-select";
 type Project={id:string;name:string};
 type Provider={id:string;name:string;model:string};
 async function read(url:string){

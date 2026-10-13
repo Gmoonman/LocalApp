@@ -1,5 +1,6 @@
 /** Application platform contribution: bind page tools before native prompts. */
 export function installNativeApplicationBridge() {
+  if (new URLSearchParams(window.location.search).get("localappCompact") === "1") return () => {};
   if (window.parent === window || new URLSearchParams(window.location.search).get("localappBridge") !== "1") return () => {};
   const original = window.fetch;
   const prepared = new Set<string>();

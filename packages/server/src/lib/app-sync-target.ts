@@ -1,1 +1,1 @@
-export * from "@localapp/dsh-app-platform/app-sync-target";
+export * from "@localapp/dsh-app-sync/app-sync-target";

@@ -4,8 +4,8 @@ import path from "node:path";
 import Fastify from "fastify";
 import { Context } from "@deepseek-ai/cordis";
 import Multiuser from "@localapp/dsh-multiuser";
-import { AgentSettingsStore } from "@localapp/dsh-multiuser/settings";
-import { registerAgentRoutes } from "@localapp/dsh-multiuser/agent-routes";
+import { AgentSettingsStore } from "@localapp/dsh-agent-settings/settings";
+import { registerAgentRoutes } from "@localapp/dsh-agent-runtime/agent-routes";
 import { expect, it } from "vitest";
 it("restores one scheduled workspace using the default provider after removal of its original provider", async () => {
   const parent = path.resolve(import.meta.dirname, "../../../../../tmp/schedule-restoration");

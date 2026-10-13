@@ -195,3 +195,35 @@ it.each(["ownership", "account", "active-account", "mcp", "provider", "python", 
   expect(development.projects.read(project.id, change === "ownership" ? "bob" : "alice", "src/a").content).toBe("preserved");
  } finally { resume(); await request; await app.close(); await context.fiber.dispose(); }
 });
+
+it("keeps the current test preview for read-only native turns and builds after source changes",async()=>{
+ const {Context}=await import('@deepseek-ai/cordis');
+ const {default:Development}=await import('@localapp/dsh-app-development');
+ const {default:Multiuser}=await import('@localapp/dsh-multiuser');
+ const {default:Fastify}=await import('fastify');
+ const {AgentSettingsStore}=await import('../../agent-settings.js');
+ const context=new Context(),app=Fastify();let config:any;
+ try{
+  await context.plugin(Multiuser);await context.plugin(Development,{dataDir:dir,persistence:{database:getDb,flush:flushMetaDb}});
+  const development=context.localappDevelopment,project=development.projects.create('alice','page-read-test',{'src/a':'before'});
+  const settings=new AgentSettingsStore(dir);settings.write('alice',{providers:[{id:'own',name:'Own',protocol:'openai-completions',baseUrl:'http://localhost:1/v1',model:'own',apiKey:'own'}],defaultProviderId:'own',grants:{},mcpServers:[]});
+  const builds=development.builds(createBuildOperations()),start=vi.spyOn(builds,'start').mockReturnValue({id:'test'} as never);
+  app.register(async scope=>development.registerRoutes(scope,{builds,previews:{} as never,user:()=> 'alice',isAuthenticated:()=>true,settings,runtimeRegistry:context.localappMultiuser,pythonEnvironment:()=>undefined,createHarness:value=>{config=value;return {initialize:async()=>{},close:async()=>{},listSessions:async()=>[]} as never;}}));
+  expect((await app.inject({url:`/api/development/projects/${project.id}/agent/sessions`})).statusCode).toBe(200);
+  expect(config.applicationTools.map((tool:any)=>tool.name)).toEqual(expect.arrayContaining(['get_current_page','run_preview_check','get_preview_check_results']));
+  config.onNativePrompt('read-only');config.onNativeAgentStatus('read-only','idle');expect(start).not.toHaveBeenCalled();development.projects.assertIdle(project.id,'alice');
+  config.onNativePrompt('edit');fs.writeFileSync(path.join(development.projects.workspace(project.id,'alice'),'src/a'),'after');config.onNativeAgentStatus('edit','idle');
+  expect(start).toHaveBeenCalledExactlyOnceWith(project.id,'alice','preview');development.projects.assertIdle(project.id,'alice');
+  config.onNativePrompt('verify-after-edit');fs.writeFileSync(path.join(development.projects.workspace(project.id,'alice'),'src/a'),'third');
+  const run=await config.applicationTools.find((tool:any)=>tool.name==='run_preview_check').execute({steps:[{action:'assert',selector:'h1',visible:true}]});
+  expect(run.status).toBe('queued');expect(start).toHaveBeenCalledTimes(1);
+  const results=config.applicationTools.find((tool:any)=>tool.name==='get_preview_check_results').execute({});
+  expect(JSON.parse(JSON.stringify(results))).toEqual(results);
+  expect(results[0]).toMatchObject({status:'queued',error:null,results:[],imageError:null,screenshotUrl:null});
+  const failed={id:'checked-build',sourceVersion:run.sourceVersion,status:'failed'};
+  start.mockReturnValue(failed as never);vi.spyOn(builds,'get').mockReturnValue(failed as never);
+  config.onNativeAgentStatus('verify-after-edit','idle');
+  await vi.waitFor(()=>expect(JSON.parse(fs.readFileSync(path.join(development.projects.directory,project.id,'verification',run.id+'.json'),'utf8'))).toMatchObject({status:'failed',result:{error:expect.stringContaining('编译未通过')}}));
+
+ }finally{await app.close();await context.fiber.dispose();}
+});

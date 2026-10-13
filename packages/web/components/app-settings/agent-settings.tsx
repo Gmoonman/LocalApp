@@ -1,5 +1,5 @@
 "use client";
-import { createAgentCapabilitySettings } from "@localapp/dsh-multiuser/ui/agent-capability-settings";
+import { createAgentCapabilitySettings } from "@localapp/dsh-agent-settings/ui/agent-capability-settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
