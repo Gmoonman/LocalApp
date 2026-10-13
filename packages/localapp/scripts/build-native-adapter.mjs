@@ -127,7 +127,8 @@ async function bundleIpcClient(outfile) {
   await build({
     absWorkingDir: repositoryRoot,
     alias: {
-      "@localapp/server/device-action-ticket": path.join(repositoryRoot, "packages/dsh-app-platform/src/device-action-ticket.cts"),
+      "@localapp/server/device-action-ticket": path.join(repositoryRoot, "packages/dsh-device-services/src/device-action-ticket.cts"),
+      "@localapp/dsh-device-services/device-action-types": path.join(repositoryRoot, "packages/dsh-device-services/src/device-action-types.cts"),
       "@localapp/server/project-api": path.join(repositoryRoot, "packages/dsh-app-development/src/project-errors.cts"),
     },
     bundle: true,
