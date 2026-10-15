@@ -696,6 +696,9 @@ importers:
       '@localapp/sdk-agent':
         specifier: workspace:*
         version: link:../sdk-agent
+      '@localapp/ui':
+        specifier: workspace:*
+        version: link:../ui
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@18.3.1)

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../ui/src";
 @source "../../dsh-app-development/ui";
 @source "../../dsh-multiuser/ui";
 

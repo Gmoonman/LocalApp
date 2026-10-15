@@ -54,6 +54,13 @@ it('automates declared test controls and records failed assertions without activ
  const passed=await executePreviewCheck([{action:'click',selector:'#tab'},{action:'assert',selector:'h1',text:'Details'}]);expect(passed.status).toBe('passed');
  const failed=await executePreviewCheck([{action:'assert',selector:'h1',text:'Other'}]);expect(failed.status).toBe('failed');expect(failed.results[0]).toHaveProperty('error');
 });
+it('activates mouse-down-driven tabs before checking the next panel',async()=>{
+ const {executePreviewCheck}=await import('./page-context');
+ document.body.innerHTML='<main data-localapp-app-root><button id="tab" role="tab">Details</button><section id="panel">Before</section></main>';
+ document.querySelector('#tab')!.addEventListener('mousedown',event=>{if((event as MouseEvent).button===0)document.querySelector('#panel')!.textContent='Details';});
+ const result=await executePreviewCheck([{action:'click',selector:'#tab'},{action:'assert',selector:'#panel',text:'Details'}]);
+ expect(result.status).toBe('passed');
+});
 it('captures an offscreen preview without waiting for animation frames',async()=>{
  const {capturePageRegion}=await import('./page-context'),{toSvg}=await import('html-to-image');
  document.body.innerHTML='<main data-localapp-app-root><h1>Test</h1></main>';

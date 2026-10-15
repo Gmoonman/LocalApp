@@ -178,11 +178,12 @@ export async function registerDevelopmentRoutes(
     const digest=createHash("sha256").update(JSON.stringify(projects.sourceFiles(id,user))).digest("hex");
     if(build&&source?.digest===digest)return runVerification(id,user,args);
     if(args?.buildId)throw new DevelopmentError("指定构建不包含当前源码改动",409);
-    if(pendingChecks.has(id)||verifying.has(id))throw new DevelopmentError("应用已有验收计划",409);
+    if(pendingChecks.has(id))throw new DevelopmentError("应用已有排队验收计划。请结束当前开发轮次，平台才会编译并执行验收；不要在本轮等待、轮询或重复提交。",409);
+    if(verifying.has(id))throw new DevelopmentError("应用正在执行页面验收",409);
     const snapshot=projects.snapshot(id,user,"页面验收计划");
     const run=verification.begin(id,user,{id:"pending",sourceVersion:snapshot.id},steps,"queued");
     pendingChecks.set(id,{user,args,runId:run.id});
-    return {...run,message:"当前开发任务完成并预览编译通过后自动执行，不代表页面已通过"};
+    return {...run,message:"验收已排队。请结束当前开发轮次，平台才会启动预览编译并执行验收；不要在本轮等待或轮询，也不要重复提交。排队不代表页面已通过。"};
   }
   async function finishQueuedCheck(id:string,buildId:string,plan:{user:string;args:any;runId:string}){
     try{

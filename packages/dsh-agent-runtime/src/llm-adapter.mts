@@ -1,5 +1,39 @@
-import { LlmAdapter, ToolCallId, attributionHeaders, type GenerateOptions, type StreamChunk, type RequestMessage, type ContentBlock } from "@deepseek-ai/dsh-llm";
+import { LlmAdapter, LlmError, ProviderRequestId, ToolCallId, attributionHeaders, type GenerateOptions, type StreamChunk, type RequestMessage, type ContentBlock } from "@deepseek-ai/dsh-llm";
 export interface ModelConnection { llmApiKey: string; llmBaseUrl: string; llmModel?: string }
+
+/** Keep provider diagnostics bounded and remove credentials before session persistence. */
+async function responseError(res: Response, apiKey: string): Promise<LlmError> {
+  const sanitize = (text: string) => (apiKey ? text.split(apiKey).join("[REDACTED]") : text)
+    .replace(/Bearer\s+[^\s"<>]+/gi, "Bearer [REDACTED]")
+    .replace(/((?:api[_-]?key|access[_-]?token|authorization|password)["']?\s*[:=]\s*["']?)[^\s,"'<>}]+/gi, "$1[REDACTED]");
+  let detail = "";
+  const reader = res.body?.getReader();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    if (reader) {
+      const read = async () => {
+        const decoder = new TextDecoder();
+        let bytes = 0;
+        while (bytes < 8192) {
+          const part = await reader.read();
+          if (part.done) break;
+          const chunk = part.value.subarray(0, 8192 - bytes);
+          detail += decoder.decode(chunk, { stream: true });
+          bytes += chunk.length;
+        }
+        detail += decoder.decode();
+        if (bytes === 8192) detail += " …[truncated]";
+      };
+      await Promise.race([read(), new Promise<void>(resolve => { timer = setTimeout(resolve, 3000); })]);
+    }
+  } catch { /* HTTP status remains useful if the response body cannot be read. */ }
+  finally { if (timer) clearTimeout(timer); void reader?.cancel().catch(() => {}); }
+  const requestId = sanitize(res.headers.get("x-request-id") ?? res.headers.get("request-id") ?? res.headers.get("x-amzn-requestid") ?? "").slice(0, 256).trim();
+  const code = res.status === 429 ? "RATE_LIMIT" : res.status === 401 || res.status === 403 ? "AUTH" : res.status >= 500 ? "SERVER" : "INVALID_REQUEST";
+  return new LlmError(`LLM request failed (${res.status})${detail.trim() ? `: ${sanitize(detail.trim())}` : ""}${requestId ? `\nRequest ID: ${requestId}` : ""}`, code, {
+    status: res.status, ...(requestId ? { requestId: ProviderRequestId(requestId) } : {}),
+  });
+}
 
 export function toWireMessages(messages: RequestMessage[]): Record<string, unknown>[] {
   return messages.map((message) => {
@@ -31,7 +65,7 @@ export class LocalAppLlmAdapter extends LlmAdapter {
         ...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
       }),
     });
-    if (!res.ok) throw new Error(`LLM request failed (${res.status})`);
+    if (!res.ok) throw await responseError(res, this.config.llmApiKey);
     if (!res.body) throw new Error("LLM response body is empty");
     if (options.purpose !== "session-title") this.emit(options.sessionId, { type: "assistant_start" });
     const blocks = new Map<number, { index: number; block: ContentBlock }>();

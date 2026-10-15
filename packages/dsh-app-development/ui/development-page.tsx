@@ -430,19 +430,24 @@ return function DevelopmentPage({
     }
   }, [build?.id, build?.status, running, pending]);
   useEffect(() => {
+    if (dock?.identity === "user") {
+      previewedBuild.current = "";
+      return;
+    }
     if (
       !application ||
       !dock?.onPreview ||
       build?.status !== "succeeded" ||
-      build.purpose !== "preview" ||
       previewedBuild.current === build.id
     )
       return;
+    let active = true;
     previewedBuild.current = build.id;
     void request(base + "/previews", "POST", { buildId: build.id })
-      .then((preview) => dock.onPreview?.(preview.url))
-      .catch((error) => setError(error.message));
-  }, [build?.id, build?.status, application, base]);
+      .then((preview) => { if (active) dock.onPreview?.(preview.url); })
+      .catch((error) => { if (active) { previewedBuild.current = ""; setError(error.message); } });
+    return () => { active = false; previewedBuild.current = ""; };
+  }, [build?.id, build?.status, dock?.identity, application?.owner, application?.name, base]);
   return (
     <View
       {...(application

@@ -148,6 +148,9 @@ export async function executePreviewCheck(steps:PreviewCheckStep[]) {
    if(step.action==='scroll')target.scrollTo({left:step.x??target.scrollLeft,top:step.y??target.scrollTop,behavior:'instant'});
    else if(step.action==='click'){
     if(!target.matches('[role=tab],[data-localapp-test-action]')||target.closest('a,form')||target.matches('input,textarea,select'))throw new Error('点击仅支持页签或应用声明的 data-localapp-test-action 控件，不支持链接、表单');
+    // Radix tabs select on primary mousedown; HTMLElement.click alone leaves
+    // the previous panel active even though the verification step succeeds.
+    if(target.matches('[role=tab]'))target.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}));
     target.click();
    }else if(step.action!=='assert')throw new Error('不支持的验收动作');
    await new Promise<void>(resolve=>setTimeout(resolve,300));

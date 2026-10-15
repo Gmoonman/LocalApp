@@ -56,6 +56,7 @@
     "build": "tsc && node scripts/build-client.mjs"
   },
   "dependencies": {
+    "@localapp/ui": "workspace:*",
     "@deepseek-ai/cordis": "4.0.5-alpha.1",
     "@localapp/sdk-agent": "workspace:*",
     "react": "^18.3.0",

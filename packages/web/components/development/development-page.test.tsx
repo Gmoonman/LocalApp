@@ -174,3 +174,24 @@ it("observes a server-created preview without submitting a legacy agent turn", a
   expect(fetcher.mock.calls.some(([url, init]) => url.endsWith("/builds") && init?.method === "POST")).toBe(false);
   view.unmount();
 });
+
+it("opens a successful release build on developer entry and reopens after returning from user mode", async () => {
+  const onPreview = vi.fn();
+  const fetcher = vi.fn(async (url: string) => {
+    const data = url === "/api/agent/settings" ? {providers: []}
+      : url.includes("/source") ? {id: "entry-project", name: "existing"}
+      : url.endsWith("/builds") ? [{id: "release-build", purpose: "release", status: "succeeded"}]
+      : url.endsWith("/previews") ? {url: "http://preview.localhost/entry/"} : [];
+    return new Response(JSON.stringify({success: true, data}));
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const application = {owner: "owner", name: "existing"};
+  const view = render(<DevelopmentPage application={application} dock={{identity: "user", onPreview} as any} />);
+  await waitFor(() => expect(fetcher).toHaveBeenCalledWith("/api/development/projects/entry-project/builds", expect.anything()));
+  expect(onPreview).not.toHaveBeenCalled();
+  view.rerender(<DevelopmentPage application={application} dock={{identity: "developer", onPreview} as any} />);
+  await waitFor(() => expect(onPreview).toHaveBeenCalledTimes(1));
+  view.rerender(<DevelopmentPage application={application} dock={{identity: "user", onPreview} as any} />);
+  view.rerender(<DevelopmentPage application={application} dock={{identity: "developer", onPreview} as any} />);
+  await waitFor(() => expect(onPreview).toHaveBeenCalledTimes(2));
+});

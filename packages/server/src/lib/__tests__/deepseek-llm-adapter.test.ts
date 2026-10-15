@@ -1,6 +1,34 @@
 import { afterEach, expect, it, vi } from "vitest";
 
 afterEach(() => vi.unstubAllGlobals());
+it.each([
+  ['{"error":{"message":"No available upstream","code":"unavailable"}}', "No available upstream"],
+  ["<html>upstream unavailable</html>", "upstream unavailable"],
+  ["", "LLM request failed (503)"],
+])("retains provider failures in DSH error facts: %s", async (body, expected) => {
+  const { LocalAppLlmAdapter } = await import("../deepseek-llm-adapter.mjs");
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(body, {status:503, headers:{"x-request-id":"req-503"}})));
+  const adapter = new LocalAppLlmAdapter({llmApiKey:"secret-key", llmBaseUrl:"http://model/v1"}, () => {});
+  try {
+    for await (const _event of adapter.stream({provider:"localapp", model:"test", messages:[]})) {}
+    expect.fail("must reject the failed HTTP response");
+  } catch (error: any) {
+    expect(error.message).toContain(expected);
+    expect(error.message).toContain("req-503");
+    expect(error.failure).toMatchObject({status:503, code:"SERVER", requestId:"req-503"});
+  }
+});
+it("bounds and redacts error details before exposing them to users and history", async () => {
+  const { LocalAppLlmAdapter } = await import("../deepseek-llm-adapter.mjs");
+  const body = 'secret-key Authorization: Bearer hidden-token api_key="other-secret" ' + "x".repeat(20000);
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(body, {status:503})));
+  const adapter = new LocalAppLlmAdapter({llmApiKey:"secret-key", llmBaseUrl:"http://model/v1"}, () => {});
+  let failure: any;
+  try { for await (const _event of adapter.stream({provider:"localapp", model:"test", messages:[]})) {} } catch (error) { failure = error; }
+  expect(failure.message).not.toMatch(/secret-key|hidden-token|other-secret/);
+  expect(failure.message.length).toBeLessThan(8500);
+  expect(failure.message).toContain("[truncated]");
+});
 it("handles interleaved tool arguments, reasoning, split SSE frames and UTF-8", async () => {
   const { LocalAppLlmAdapter } = await import("../deepseek-llm-adapter.mjs");
   const chunks = [

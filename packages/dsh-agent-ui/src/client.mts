@@ -8,7 +8,7 @@ import {installNativeComposerBridge} from "./native-composer-bridge.js";
 import {installNativeAttachmentObserver} from "./native-attachment-observer.js";
 import {registerNativeAttachments,removeNativeAttachment} from "./native-attachment-intake.js";
 import {installNativeNavigationBridge} from "./native-navigation-bridge.js";
-export const inject=["sessions","conversation","uiWorkspace","workspaces","slots"];
+export const inject=["sessions","conversation","uiConversation","uiWorkspace","workspaces","slots"];
 export function apply(ctx: Omit<Context,"sessions"> & {sessions:ISessions}):void {
   try { installCompactConversation(ctx); } catch(error) { console.error("LocalApp conversation initialization failed", error); throw error; }
   ctx.effect(() => installNativeComposerBridge(ctx.sessions, context => {

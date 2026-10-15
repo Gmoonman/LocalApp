@@ -37,7 +37,7 @@ export interface BuildManifest { name: string; platformVersion: string; }
 export interface BuildExecutor {
   initialize(): Promise<void>;
   close(): Promise<void>;
-  executeDevelopmentCommand(command: string, args: string[], signal?: AbortSignal): Promise<{ exitCode: number | null; timedOut: boolean; stdout: { text: string }; stderr: { text: string } }>;
+  executeDevelopmentCommand(command: string, args: string[], signal?: AbortSignal, environment?: { NODE_ENV: "test" | "production" }): Promise<{ exitCode: number | null; timedOut: boolean; stdout: { text: string }; stderr: { text: string } }>;
 }
 export interface BuildOperations<Manifest extends BuildManifest> {
   loadAndValidateProjectManifest(directory: string): Promise<Manifest>;
@@ -343,6 +343,7 @@ export class DevelopmentBuilds<Manifest extends BuildManifest = BuildManifest> {
           path.join(path.dirname(process.execPath), "npm"),
           ["run", "build"],
           input.signal,
+          { NODE_ENV: "production" },
         );
         input.log(result.stdout.text + result.stderr.text);
         if (result.exitCode !== 0 || result.timedOut)
@@ -374,6 +375,7 @@ export class DevelopmentBuilds<Manifest extends BuildManifest = BuildManifest> {
             executable,
             invocation.args,
             input.signal,
+            { NODE_ENV: invocation.args[0] === "run" && invocation.args[1] === "test" ? "test" : "production" },
           );
           input.log(result.stdout.text + result.stderr.text);
           return {

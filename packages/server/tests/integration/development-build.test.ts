@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import { beforeAll, afterAll, it, expect } from "vitest";
+import { beforeAll, afterAll, it, expect, vi } from "vitest";
 import { createTestServer } from "./helpers.js";
 import { registerAndLogin } from "../helpers/createUser.js";
 import { templateSource } from "../../src/lib/development/template.js";
 import { ProjectStore } from "../../src/lib/development/projects.js";
 let server: Awaited<ReturnType<typeof createTestServer>>, cookie: string;
 beforeAll(async () => {
+  vi.stubEnv("NODE_ENV", "production");
   server = await createTestServer({
     dataRoot: path.resolve(
       __dirname,
@@ -15,7 +16,7 @@ beforeAll(async () => {
   });
   cookie = await registerAndLogin(server.baseUrl, "builder");
 }, 30000);
-afterAll(async () => server?.stop());
+afterAll(async () => { await server?.stop(); vi.unstubAllEnvs(); });
 it("runs real isolated build scripts and produces a portable package", async () => {
   const store = new ProjectStore(server.dataDir);
   const p = store.create("builder", "built-app", {
@@ -36,9 +37,9 @@ it("runs real isolated build scripts and produces a portable package", async () 
       name: "built-app",
       version: "0.0.1",
       scripts: {
-        test: "node -e \"if(require('fs').existsSync('../executor/application-prompt.json'))process.exit(9)\"",
+        test: "node -e \"if(process.env.NODE_ENV!=='test')throw Error('tests require NODE_ENV=test');if(require('fs').existsSync('../executor/application-prompt.json'))process.exit(9)\"",
         build:
-          "node -e \"require('fs').mkdirSync('dist',{recursive:true});require('fs').writeFileSync('dist/index.html','<h1>Development preview marker</h1>')\"",
+          "node -e \"if(process.env.NODE_ENV!=='production')throw Error('build requires NODE_ENV=production');require('fs').mkdirSync('dist',{recursive:true});require('fs').writeFileSync('dist/index.html','<h1>Development preview marker</h1>')\"",
       },
     }),
   });

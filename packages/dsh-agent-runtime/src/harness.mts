@@ -133,11 +133,11 @@ export class DeepSeekHarness {
     this.environmentCheck = { at: Date.now(), result };
     return result;
   }
-  async executeDevelopmentCommand(command: string, args: string[], signal?: AbortSignal): Promise<{ exitCode: number | null; timedOut: boolean; stdout: { text: string }; stderr: { text: string } }> {
+  async executeDevelopmentCommand(command: string, args: string[], signal?: AbortSignal, environment?: { NODE_ENV: "test" | "production" }): Promise<{ exitCode: number | null; timedOut: boolean; stdout: { text: string }; stderr: { text: string } }> {
     if (!this.config.workspaceRoot || !this.config.networkBlocked) throw new Error("Development executor is not configured");
     await this.ready;
     const quote = (value: string) => "'" + value.replaceAll("'", "'\"'\"'") + "'";
-    const spec = this.ctx.shell.resolve({ command: [command, ...args].map(quote).join(" "), workdir: this.config.workspaceRoot, env: this.config.localTestPorts?.length === 2 ? { LOCALAPP_TEST_BACKEND_PORT: String(this.config.localTestPorts[0]), LOCALAPP_TEST_APP_PORT: String(this.config.localTestPorts[1]) } : undefined, timeoutMs: 120_000, stdoutMaxBytes: 1024 * 1024, signal });
+    const spec = this.ctx.shell.resolve({ command: [command, ...args].map(quote).join(" "), workdir: this.config.workspaceRoot, env: { ...environment, ...(this.config.localTestPorts?.length === 2 ? { LOCALAPP_TEST_BACKEND_PORT: String(this.config.localTestPorts[0]), LOCALAPP_TEST_APP_PORT: String(this.config.localTestPorts[1]) } : {}) }, timeoutMs: 120_000, stdoutMaxBytes: 1024 * 1024, signal });
     const execution = await this.ctx.shell.execute(spec);
     return await execution.result();
   }
