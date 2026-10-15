@@ -78,9 +78,6 @@ jobs:
       - name: Validate OpenSpec
         run: openspec validate --all --strict
 
-      - name: Export and verify public source snapshot
-        run: pnpm export:public-source --commit "${GITHUB_SHA}" --output "${RUNNER_TEMP}/localapp-public" --verify
-
       - name: Verify builds leave tracked sources unchanged
         run: git diff --exit-code
 
@@ -92,6 +89,32 @@ jobs:
 
       - name: Smoke test packaged Server in Docker
         run: bash scripts/docker-release-smoke.sh localapp-ci:${{ github.sha }}
+
+  public-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+      - name: Install workspace and OpenSpec
+        run: |
+          pnpm install --frozen-lockfile
+          npm install --global @fission-ai/openspec@1.6.0
+      - name: Prepare isolated development executor
+        run: bash scripts/setup-ci-sandbox.sh
+      - name: Export and verify public source snapshot
+        run: pnpm export:public-source --commit "${GITHUB_SHA}" --output "${RUNNER_TEMP}/localapp-public" --verify
 
   secrets:
     runs-on: ubuntu-latest
