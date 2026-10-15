@@ -16,7 +16,8 @@ env:
 jobs:
   source-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Full snapshot tests plus both packaging paths can exceed 30 minutes.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
