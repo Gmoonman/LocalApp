@@ -32,3 +32,5 @@ allowBuilds:
   node-pty: true
   protobufjs: true
   sharp: true
+patchedDependencies:
+  '@deepseek-ai/dsh-client-ui-settings@0.2.1-alpha.2': patches/@deepseek-ai__dsh-client-ui-settings@0.2.1-alpha.2.patch

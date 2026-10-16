@@ -111,7 +111,7 @@
     {
       "path": "scripts/export-public-source.mjs",
       "rule": "PRIVATE_TEST_IDENTITY",
-      "sha256": "be8cdf6cacc00da96c23df082eeb4eb18b7e6e0334e322fb54dc0e834b40b971"
+      "sha256": "8ebe53fc430437906dd700e2aaf561c0d9ab9da457e355049e46569ef645e629"
     },
     {
       "path": "scripts/export-public-source.node-test.mjs",
@@ -239,7 +239,7 @@
     {
       "path": "packages/server/src/lib/__tests__/dsh-model-settings.test.mts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "812653f78c0dba41831844d81ac222ef43d95f2658fb0995ae655aadda65fb9f",
+      "sha256": "c01ba2cc5a045ff46bdbc406868c6c737697bb5b817805bcd59609b8e1de2cbb",
       "reason": "Synthetic credentials and environment variable references in isolated model settings tests."
     }
   ]

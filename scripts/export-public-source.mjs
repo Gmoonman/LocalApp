@@ -45,6 +45,7 @@ const ALLOWED_PREFIXES = [
   "openspec/config.yaml",
   "openspec/specs/",
   "packages/",
+  "patches/",
   "platform/",
   "scripts/",
 ];

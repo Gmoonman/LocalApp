@@ -1,0 +1,13 @@
+diff --git a/lib/client.js b/lib/client.js
+index e42bccec0c0446211938db6532c1b03701234bfc..84b0e549dab0d0ad640818afc783a819330f1cfd 100644
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -1506,7 +1506,7 @@ window.__ModuleLoader__.load({
+ 		*/
+ 		function apply(ctx) {
+ 			const schema = new SettingsSchemaService(ctx);
+-			const persistence = ctx.remote.$host.isLoopback ? "host" : "memory";
++			const persistence = ctx.remote.$host.isLoopback || globalThis.__LOCALAPP_USER_MODEL_SETTINGS__ === true ? "host" : "memory";
+ 			const mirror = new SettingsDescribeMirror(ctx, persistence);
+ 			ctx.effect(() => {
+ 				const disposers = [ctx.remote.$on("settings/document-updated", () => {

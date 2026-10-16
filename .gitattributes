@@ -1,1 +1,4 @@
 *.pdf -diff
+
+# Unified patch context prefixes precede the original indentation.
+patches/*.patch whitespace=-space-before-tab

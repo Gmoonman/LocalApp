@@ -66,5 +66,61 @@ it('requires login and same public origin, and takes identity only from authenti
  expect((await app.inject({method:'POST',url:endpoint,headers:{'x-test-user':'alice',host:'models.example:60004',origin:'https://attacker.example'}})).statusCode).toBe(403);
  const response=await app.inject({method:'POST',url:endpoint+'?userId=bob',headers:{'x-test-user':'alice',host:'models.example:60004',origin:'https://models.example:60004'}});
  expect(response.statusCode).toBe(200);expect(response.json()).toEqual({user:'alice'});
+ const aliasHeaders={'x-test-user':'alice',host:'alternate.example:60008',origin:'https://alternate.example:60008','x-forwarded-proto':'https'};
+ const alias=await app.inject({method:'POST',url:'/api/model-settings/native/api/llm/listProviders',headers:aliasHeaders});
+ expect(alias.statusCode).toBe(200);expect(alias.json()).toEqual({user:'alice'});
+ expect((await app.inject({method:'POST',url:endpoint,headers:{...aliasHeaders,origin:'https://attacker.example'}})).statusCode).toBe(403);
+ expect((await app.inject({method:'POST',url:endpoint,headers:{...aliasHeaders,'x-forwarded-proto':'https, http'}})).statusCode).toBe(403);
+ expect((await app.inject({method:'POST',url:endpoint,headers:{...aliasHeaders,origin:'https://alternate.example:60009'}})).statusCode).toBe(403);
+ expect((await app.inject({method:'POST',url:endpoint,headers:{...aliasHeaders,origin:'http://alternate.example:60008'}})).statusCode).toBe(403);
+
+ }finally{await app.close();await root.fiber.dispose();await fs.rm(directory,{recursive:true,force:true});}
+});
+it('loads the provider directory through the real dsh transport behind an alternate HTTPS proxy address',async()=>{
+ const {default:Fastify}=await import('fastify');const {default:ModelSettings}=await import('@localapp/dsh-model-settings');
+ const {default:EmbeddedWebServer}=await import('@localapp/dsh-agent-runtime/native-server');
+ const {mountNativeConnection}=await import('@localapp/dsh-agent-runtime/native-connection');
+ const {directory,store}=await fixture(),root=new Context(),app=Fastify();
+ try{
+  await root.plugin(ModelSettings);
+  await root.localappModelSettings.registerHttp(app,{store,publicUrl:'https://models.example:60008',userId:()=> 'bob',isAuthenticated:()=>true,
+   authenticate:async scope=>{scope.addHook('onRequest',async(req,reply)=>{if(req.headers['x-test-user']!=='bob')return reply.code(401).send();});},
+   create:async user=>{const ctx=new Context();await ctx.plugin(EmbeddedWebServer,{host:'127.0.0.1',port:0});return {ctx,transport:await mountNativeConnection(ctx,{userId:user,root:path.join(directory,'connections',user),trustedHosts:['models.example:60008']})};},
+   assets:{renderIndex:async html=>html,resource:async()=>false,entry:async()=>null}});
+  const url='/api/model-settings/native/api/llm/listProviders';
+  const headers={'x-test-user':'bob',host:'alternate.example:60004',origin:'https://alternate.example:60004','x-forwarded-proto':'https','sec-fetch-site':'same-origin'};
+  expect((await app.inject({method:'POST',url,headers:{...headers,origin:'https://attacker.example'},payload:{}})).statusCode).toBe(403);
+  expect((await app.inject({method:'POST',url,headers:{host:headers.host,origin:headers.origin,'x-forwarded-proto':'https'},payload:{}})).statusCode).toBe(401);
+  const page=await app.inject({url:'/api/model-settings/native/',headers});
+  expect(page.statusCode).toBe(200);
+  expect(page.body).toContain('globalThis.__LOCALAPP_USER_MODEL_SETTINGS__=true');
+  const settings=await app.inject({method:'POST',url:'/api/model-settings/native/api/settings/describe',headers,payload:{type:'client-request',rpcId:'settings-test',method:'settings/describe',payload:{args:{}} }});
+  expect(settings.statusCode,settings.body).toBe(200);
+  expect(settings.json().result.ok,settings.body).toBe(true);
+  expect(settings.body).toContain('llm-pi-ai');
+  const result=await app.inject({method:'POST',url,headers,payload:{type:'client-request',rpcId:'providers-test',method:'llm/listProviders',payload:{args:{}} }});
+  expect(result.statusCode,result.body).toBe(200);
+  expect(result.json().result.ok,result.body).toBe(true);
+  expect(result.body).not.toContain('migration-secret');
+  const rpc=async(method:string,args:Record<string,unknown>)=>{
+   const response=await app.inject({method:'POST',url:'/api/model-settings/native/api/'+method,headers,payload:{type:'client-request',rpcId:method,method,payload:{args}}});
+   expect(response.statusCode,response.body).toBe(200);expect(response.json().result.ok,response.body).toBe(true);return response;
+  };
+  const profile={api:'openai-completions',baseURL:'https://example.invalid/v1',models:[{id:'release-test'}]};
+  await rpc('settings/mutate',{ns:'llm-pi-ai',ops:[{op:'set',path:['providers','release-test'],value:profile}]});
+  expect(store.read('bob').providers['release-test'].baseURL).toBe(profile.baseURL);
+  expect(store.read('alice').providers['release-test']).toBeUndefined();
+  await rpc('credentials/set',{ref:'RELEASE_TEST_KEY',value:'test-only-no-access'});
+  const credential=await rpc('credentials/describe',{refs:['RELEASE_TEST_KEY']});
+  expect(credential.body).toContain('configured');expect(credential.body).not.toContain('test-only-no-access');
+  const reopened=new UserModelStore(directory,()=>({providers:[],defaultProviderId:''}));
+  expect(reopened.read('bob').credentials.RELEASE_TEST_KEY).toBe('test-only-no-access');
+  await rpc('settings/mutate',{ns:'llm-pi-ai',ops:[{op:'set',path:['providers','release-test','baseURL'],value:'https://example.invalid/v2'}]});
+  expect(store.read('bob').providers['release-test'].baseURL).toBe('https://example.invalid/v2');
+  await rpc('settings/mutate',{ns:'llm-pi-ai',ops:[{op:'unset',path:['providers','release-test']}]});
+  await rpc('credentials/unset',{ref:'RELEASE_TEST_KEY'});
+  expect(store.read('bob').providers['release-test']).toBeUndefined();
+  expect(store.read('bob').credentials.RELEASE_TEST_KEY).toBeUndefined();
+
  }finally{await app.close();await root.fiber.dispose();await fs.rm(directory,{recursive:true,force:true});}
 });
