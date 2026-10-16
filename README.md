@@ -275,6 +275,69 @@ docker save localapp:local -o localapp-image.tar
 docker load -i localapp-image.tar
 ```
 
+### 配置应用开发预览
+
+这里配置的是平台内“开发者模式”的构建预览；本地源码项目的 `localapp dev` 用法见前文。
+
+**本机使用**：通过 `http://localhost:3000` 或 `http://127.0.0.1:3000` 访问平台时，“独立预览地址”可以留空。Server 会生成 `http://preview<预览ID>.localhost:3000` 一类地址，浏览器需要能够访问该地址。预览与主页面共用同一个 Server，无需启动第二个服务。
+
+**远程部署**：管理员打开 **系统设置（`/my/system`）→ 应用开发环境**，填写“独立预览地址”并保存。远程预览必须使用 HTTPS，且域名或端口至少有一项与主页面不同。地址只填协议、域名和可选端口，不带应用路径、查询参数或片段。
+
+| 方式 | 主页面示例 | 独立预览地址示例 | 部署要求 |
+| --- | --- | --- | --- |
+| 同域名、不同端口 | `https://app.example.com:60004` | `https://app.example.com:60014` | 开放预览端口，配置有效 TLS 证书 |
+| 独立域名 | `https://app.example.com` | `https://preview.example.com` | 配置 DNS、有效 TLS 证书 |
+| 每次预览独立子域名 | `https://app.example.com` | `https://{previewId}.preview.example.com` | 配置泛域名 DNS、泛域名 TLS 证书与代理 |
+
+三个方案都将预览请求转发到**同一个 LocalApp Server**。`{previewId}` 会被替换为本次预览 ID；固定地址下的多个预览共享浏览器来源，使用不同预览子域名则可以进一步隔离浏览器存储。
+
+前面的 Compose 将 Server 映射到宿主机的 `30666` 端口。如果 Nginx 在宿主机运行，可为预览增加以下配置（`map` 放在 `http` 配置块内；证书路径替换为实际路径）：
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 60014 ssl;
+    server_name app.example.com;
+
+    ssl_certificate     /etc/nginx/certs/app.example.com/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/app.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:30666;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 3600s;
+    }
+}
+```
+
+这个示例假设 Nginx 在宿主机运行；若 Nginx 也在 Compose 网络中，应将上游改为 `http://server:3000`。防火墙、云安全组或上层端口转发也必须放行预览端口。代理需要保留浏览器请求的 Host **及端口**，完整转发路径，并支持 WebSocket；不要把预览代理到另一个 Server 实例。
+
+保存后的配置位于 `<DATA_DIR>/development/settings.json`，Docker 示例对应宿主机 `deploy/production/data/development/settings.json`。需要直接编辑时，将以下字段合并到现有 JSON，保留其他设置：
+
+```json
+{
+  "previewOrigin": "https://app.example.com:60014"
+}
+```
+
+完成配置后，从正式应用地址 `/{owner}/{app}/` 进入开发者模式。成功构建后会自动打开预览，也可以点击“预览”。预览默认读写测试数据；顶部可分别选择读取、写入的数据来源。应用尚未上线时不能使用生产数据；“从生产刷新测试数据”会复制生产数据到测试环境。
+
+常见问题：
+
+- **“请管理员配置独立预览域名和 TLS”**：远程访问时没有配置独立预览地址。
+- **“预览必须使用不同的域名或端口”**：预览地址与主页面来源相同，修改域名或端口。
+- **连接失败、证书报错或 HTTPS 页面阻止加载**：检查端口转发、防火墙、DNS 和 TLS 证书，远程预览不要填写 HTTP 地址。
+- **“预览已结束 / 已过期 / 预览凭证已失效”**：回到平台重新点击“预览”，不要复用旧链接。预览有效期为一小时，首次打开的票据有效期为一分钟；Server 重启后需重新创建预览。
+- **预览显示“已结束”，但刚刚才创建**：检查预览代理是否保留了外部 Host 和端口，以及是否指向创建该预览的同一个 Server 实例。
+
 ## Native adapter 与 Windows 发行
 
 旧 Tauri Desktop 已移除，不再是源码中的产品、构建目标或发行产物。LocalApp 没有
