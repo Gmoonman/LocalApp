@@ -177,7 +177,7 @@ class ApplicationSandbox extends LocalSandboxProvider {
     throw new Error("This Server has no runner that isolates application file reads; terminal and workflow execution are unavailable");
   }
 }
-export async function mountHarnessCapabilities(ctx: Context, root: string, capabilities: AgentCapability[], mcpServers: AgentSettings["mcpServers"], skills: string[] = [], pythonEnvironment?: PythonEnvironment, development?: { workspaceRoot?: string; dataRoot?: string; networkBlocked?: boolean; localTestPorts?: number[]; readDirectories?: string[]; publicSkillsRoot?: string }) {
+export async function mountHarnessCapabilities(ctx: Context, root: string, capabilities: AgentCapability[], mcpServers: AgentSettings["mcpServers"], skills: string[] = [], pythonEnvironment?: PythonEnvironment, development?: { llmModel?: string; dshRoute?: string; workspaceRoot?: string; dataRoot?: string; networkBlocked?: boolean; localTestPorts?: number[]; readDirectories?: string[]; publicSkillsRoot?: string }) {
   const workspace = development?.workspaceRoot ?? path.join(root, "workspace");
   fs.mkdirSync(workspace, { recursive: true, mode: 0o700 });
   const mount = async (name: string, config: unknown = {}) => {
@@ -190,7 +190,10 @@ export async function mountHarnessCapabilities(ctx: Context, root: string, capab
   await ctx.plugin(resolveDeepSeekPlugin(PlanMode.default), { section: "处于计划模式。先阅读和说明实现步骤，不修改文件或应用数据。准备执行时使用退出计划模式工具，让用户确认方案。" });
   await mount("commands");
   await mount("token-meter");
-  await mount("compaction-basic");
+  const selectedModel = development?.llmModel ? await ctx.llm.resolveModelInfo(development.dshRoute ?? "localapp", development.llmModel) : undefined;
+  // The upstream 64K summary default can exceed a smaller model's configured output cap.
+  const summaryTokens = Math.min(8192, selectedModel?.defaultMaxTokens ?? 8192);
+  await mount("compaction-basic", { maxTokens: summaryTokens });
   await mount("command-compact");
   await mount("tool-todo", { allowParallelInProgress: true });
   await mount("goal");

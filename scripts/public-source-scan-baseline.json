@@ -221,7 +221,7 @@
     {
       "path": "packages/dsh-agent-runtime/src/harness.mts",
       "rule": "POSSIBLE_CREDENTIAL",
-      "sha256": "2a0c0d54e1df23115afa1de3bc392094844d2f4156dca4953a9575c3996780ff",
+      "sha256": "783a4948e7995b2a21d055761dc9b85e1458de14699693def94321cac8e2fc84",
       "reason": "Model credential environment variable name; no credential value."
     },
     {

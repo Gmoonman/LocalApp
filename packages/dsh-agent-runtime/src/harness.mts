@@ -1,3 +1,4 @@
+import { mountContextBudget } from "./context-budget.mjs";
 import { resolveDeepSeekPlugin } from "./deepseek-plugin.mjs";
 import path from "node:path";
 import type { PythonEnvironment } from "@localapp/dsh-execution-environment/python-environment";
@@ -162,6 +163,7 @@ export class DeepSeekHarness {
       } else {
         this.ctx.llm.registerAdapter(["localapp"], new LocalAppLlmAdapter(config, (id, event) => id && this.publish(id, event)));
       }
+      mountContextBudget(this.ctx, typeof config.dshProfile?.defaultMaxTokens === "number" ? config.dshProfile.defaultMaxTokens : 32768);
       if(config.dshProfile || config.protocol && config.protocol !== "openai-completions") this.ctx.on("agent/assistant-stream", ({agent,frame})=>{
         if(frame.type==="start")this.publish(agent.session.id,{type:"assistant_start"});
         if(frame.type==="chunk"&&frame.chunk.type==="text-delta")this.publish(agent.session.id,{type:"text_delta",text:frame.chunk.text});
