@@ -52,6 +52,7 @@ interface ToolCallPending {
 }
 
 interface UsePlatformAgentOptions {
+  enabled?: boolean;
   appName: string;
   userName: string | undefined;
   pagePath: string;
@@ -61,7 +62,7 @@ interface UsePlatformAgentOptions {
 }
 
 export function usePlatformAgent({
-  appName, userName, pagePath, postToolCall, registeredToolsRef, systemHintRef,
+  enabled = true, appName, userName, pagePath, postToolCall, registeredToolsRef, systemHintRef,
 }: UsePlatformAgentOptions) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -139,6 +140,12 @@ export function usePlatformAgent({
   }, [appName, pagePath]);
 
   useEffect(() => {
+    if (!enabled) {
+      agentRef.current = null;
+      setHarness(null);
+      setIsRunning(false);
+      return;
+    }
     const agent = new HarnessAgent({ initialState: { systemPrompt: "" }, appId: pagePath });
     agentRef.current = agent;
     setHarness(agent);
@@ -150,8 +157,12 @@ export function usePlatformAgent({
       setAiError(agent.state.errorMessage ?? null);
       setChatMessages(toChatMessages(agent.state.messages));
     });
-    return () => { unsubscribe(); agent.dispose(); };
-  }, [pagePath, userName]);
+    return () => {
+      unsubscribe();
+      agent.dispose();
+      if (agentRef.current === agent) agentRef.current = null;
+    };
+  }, [enabled, pagePath, userName]);
 
   const synchronizeContext = useCallback((agent: HarnessAgent | null = agentRef.current) => {
     if (!agent) return;
@@ -176,6 +187,7 @@ export function usePlatformAgent({
   useEffect(() => { synchronizeContext(); }, [harness, synchronizeContext]);
 
   const agentSend = useCallback(async (text: string) => {
+    if (!enabled) throw new Error("此应用已关闭 Agent 对话框");
     if (!text.trim() || agentRef.current?.state.isStreaming) return;
     let agent = agentRef.current;
     if (!agent) {
@@ -191,7 +203,7 @@ export function usePlatformAgent({
     }
     synchronizeContext(agent);
     await agent.prompt(text);
-  }, [pagePath, synchronizeContext]);
+  }, [enabled, pagePath, synchronizeContext]);
 
   return { synchronizeContext, harness, chatMessages, setChatMessages, isRunning, aiError, agentSend, handleToolResult };
 }

@@ -95,6 +95,43 @@ describe("AppSettingsPage", () => {
     expect(screen.getByRole("button", { name: "应用自带配置" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("saves the Agent conversation switch and keeps source configuration read-only", async () => {
+    render(<AppSettingsPage name="demo" />);
+    await screen.findByRole("heading", { name: "demo 设置" });
+    fireEvent.click(screen.getByRole("tab", { name: "基础设置" }));
+    expect(screen.getByRole("switch", { name: "启用 Agent 对话框" })).not.toBeChecked();
+    fireEvent.click(screen.getByRole("switch", { name: "启用 Agent 对话框" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存配置" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/me/pages/demo/settings/manifest-platform", expect.objectContaining({
+      method: "PUT", body: expect.any(String),
+    })));
+    const call = vi.mocked(fetch).mock.calls.find(([url, options]) => String(url).endsWith("/manifest-platform") && options?.method === "PUT");
+    expect(JSON.parse(String(call?.[1]?.body)).shell).toEqual({ navbar: false, agentConversation: true });
+    fireEvent.click(screen.getByRole("button", { name: "应用自带配置" }));
+    expect(screen.getByRole("switch", { name: "启用 Agent 对话框" })).toBeDisabled();
+  });
+
+  it("inherits an enabled source setting until the owner explicitly overrides it", async () => {
+    const currentFetch = fetch;
+    vi.stubGlobal("fetch", vi.fn(async (...args: Parameters<typeof fetch>) => {
+      const response = await currentFetch(...args);
+      const body = await response.json();
+      body.data.sourceManifest.shell.agentConversation = true;
+      return new Response(JSON.stringify(body));
+    }));
+    render(<AppSettingsPage name="demo" />);
+    await screen.findByRole("heading", { name: "demo 设置" });
+    fireEvent.click(screen.getByRole("tab", { name: "基础设置" }));
+    expect(screen.getByRole("switch", { name: "启用 Agent 对话框" })).toBeChecked();
+    fireEvent.click(screen.getByRole("switch", { name: "启用 Agent 对话框" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存配置" }));
+    await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([, options]) => options?.method === "PUT")).toBe(true));
+    const call = vi.mocked(fetch).mock.calls.find(([, options]) => options?.method === "PUT");
+    expect(JSON.parse(String(call?.[1]?.body)).shell.agentConversation).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "应用自带配置" }));
+    expect(screen.getByRole("switch", { name: "启用 Agent 对话框" })).toBeChecked();
+  });
+
   it("keeps the configuration source switcher in the header across all tabs", async () => {
     render(React.createElement(AppSettingsPage, { name: "demo" }));
     await screen.findByRole("heading", { name: "demo 设置" });

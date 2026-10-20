@@ -20,6 +20,8 @@ LocalApp 默认采用 **Named SQL first**。稳定后端能力由 migration、�
 
 ## Agent 核心
 
+应用所有者可在“我的应用 → 应用设置 → 基础设置”切换“启用 Agent 对话框”，保存后重新打开应用生效。关闭会隐藏应用页的 Agent 入口和悬浮对话框，开发管理仍可从“应用开发”进入。应用自带的 `manifest.json` 也可设置 `"shell": { "agentConversation": true }` 开启对话框；平台配置优先，未设置时默认关闭。此开关控制平台对话界面，应用自行实现的 Agent 界面不受影响。
+
 应用 SDK、平台 Shell 和本地 Dev Shell 共用 DeepSeek Harness（固定版本 `0.2.1-alpha.1`）。Harness 的 Agent 循环、消息历史和工具调度运行在统一 Server 内；浏览器通过 `/api/agent/run` 接收流式事件，执行已注册的页面工具，再通过 `/api/agent/tool-result` 返回结果。无需安装额外的 `dsh` CLI 或启动另一个服务。
 
 每个用户在 `/my/models/` 配置自己的模型供应商、默认模型和密钥，可添加多个配置并在聊天侧栏切换。支持 OpenAI Chat Completions、Responses、Anthropic Messages 和 Google Generative AI 协议。Agent 请求使用当前用户的配置，不使用 Server 全局 LLM 密钥。密钥在 Server 数据目录加密保存，设置读取接口不返回密钥。

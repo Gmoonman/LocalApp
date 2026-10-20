@@ -55,7 +55,7 @@ function isPlatformRequestMessage(v: unknown) {
 }
 
 interface UserData { id: string; name: string; displayName?: string | null; avatarUrl?: string | null; }
-interface PageMeta { developmentVerification?:boolean; developmentPreview?: boolean; developmentParentOrigin?:string; name: string; userId: string; description?: string; shell?: { navbar?: boolean }; notify?: { enabled?: boolean }; lifecycleStatus?: "online" | "offline"; }
+interface PageMeta { developmentVerification?:boolean; developmentPreview?: boolean; developmentParentOrigin?:string; name: string; userId: string; description?: string; shell?: { navbar?: boolean; agentConversation?: boolean }; notify?: { enabled?: boolean }; lifecycleStatus?: "online" | "offline"; }
 type PresenceSnapshotEvent = {
   type?: "presence:snapshot";
   data?: Partial<PresenceSnapshot> & {
@@ -172,6 +172,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
   const nativeAppResourceBase = resolveNativeAppResourceBase(pagePath);
   const nativeAppLoadKey = `${nativeAppResourceBase}|${pagePath}`;
   const metaMatchesCurrentApp = meta?.name === name && meta?.userId === userId;
+  const agentConversationEnabled = metaMatchesCurrentApp && meta.shell?.agentConversation === true;
   const appOnline = metaMatchesCurrentApp && meta.lifecycleStatus === "online";
   const appOffline = metaMatchesCurrentApp && meta.lifecycleStatus === "offline";
   const isOwner = user?.id === userId;
@@ -192,8 +193,15 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
   const [agentReveal, setAgentReveal] = useState(0);
   const [agentMinimize, setAgentMinimize] = useState(0);
   const aiVisible = useRef(false);
-  const showAgent = () => { aiVisible.current = true; setAiOpen(true); setAgentReveal(value => value + 1); };
+  const showAgent = () => { if (!agentConversationEnabled) return; aiVisible.current = true; setAiOpen(true); setAgentReveal(value => value + 1); };
   const hideAgent = () => { aiVisible.current = false; setAiOpen(false); setAgentMinimize(value => value + 1); };
+  useEffect(() => {
+    if (!agentConversationEnabled) {
+      aiVisible.current = false;
+      setAiOpen(false);
+      setDevelopmentPreviewUrl(null);
+    }
+  }, [agentConversationEnabled]);
 
   const nativeAppLoadedRef = useRef<string | null>(null);
   const registeredToolsRef = useRef<Array<{ name: string; description: string; parameters: { type: "object"; properties: Record<string, unknown>; required?: string[] } }>>([]);
@@ -278,6 +286,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
   }, []);
 
   const { harness, agentSend, handleToolResult, synchronizeContext } = usePlatformAgent({
+    enabled: agentConversationEnabled,
     appName: name,
     userName: user?.name,
     pagePath,
@@ -643,6 +652,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
           respondToPlatformRequest(message.id, true, { success: true });
           break;
         case "ai.open":
+          if (!agentConversationEnabled) throw new Error("此应用已关闭 Agent 对话框");
           setAiMode((prev) => prev ?? "system");
           showAgent();
           respondToPlatformRequest(message.id, true, { success: true });
@@ -652,6 +662,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
           respondToPlatformRequest(message.id, true, { success: true });
           break;
         case "ai.toggle":
+          if (!agentConversationEnabled) throw new Error("此应用已关闭 Agent 对话框");
           setAiMode((prev) => prev ?? "system");
           if (aiVisible.current) hideAgent(); else showAgent();
           respondToPlatformRequest(message.id, true, { success: true });
@@ -662,7 +673,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
     } catch (e) {
       respondToPlatformRequest(message.id, false, undefined, e instanceof Error ? e.message : String(e));
     }
-  }, [openLogin, pagePath, respondToPlatformRequest, router, user]);
+  }, [agentConversationEnabled, openLogin, pagePath, respondToPlatformRequest, router, user]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -741,7 +752,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
           onToggleFavorite={toggleFavorite}
           onOpenIssues={openIssues}
           openIssueCount={openIssueCount}
-          aiMode={meta?.developmentPreview ? aiMode : "system"}
+          aiMode={agentConversationEnabled ? (meta?.developmentPreview ? aiMode : "system") : null}
           aiOpen={aiOpen}
           onToggleAI={() => { if (!user) { openLogin({ returnTo: window.location.pathname }); return; } if (aiVisible.current) hideAgent(); else showAgent(); }}
           editSession={editSession}
@@ -806,7 +817,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
             )}
           </div>
         </div>
-        {metaMatchesCurrentApp && !meta?.developmentPreview && !showIssues && !!user && developmentEnabled !== null && (
+        {agentConversationEnabled && !meta?.developmentPreview && !showIssues && !!user && developmentEnabled !== null && (
           <AppConversationDock key={`${pagePath}:${user?.id}:${developmentEnabled}`} application={{ owner: userId, name }} isOwner={isOwner && developmentEnabled}
             onPreview={setDevelopmentPreviewUrl} agent={harness} onSend={agentSend} reveal={agentReveal} minimize={agentMinimize}
             onVisibilityChange={visible => { aiVisible.current = visible; setAiOpen(visible); }} />

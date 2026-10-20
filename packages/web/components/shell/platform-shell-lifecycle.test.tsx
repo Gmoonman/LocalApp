@@ -156,7 +156,7 @@ it.each(["disabled", "missing", "failure", "network"])("keeps developer controls
       return json(state === "missing" ? { success: true, data: {} } : { success: true, data: { development: false } });
     }
     if (url === "/api/me") return json({ success: true, data: { id: "owner", name: "owner" } });
-    if (url.includes("/meta")) return json({ success: true, data: { name: "plugin-app", userId: "owner", lifecycleStatus: "online" } });
+    if (url.includes("/meta")) return json({ success: true, data: { name: "plugin-app", userId: "owner", lifecycleStatus: "online", shell: { agentConversation: true } } });
     if (url.includes("/api/favorites")) return json({ success: true, data: { count: 0, favorited: false } });
     if (url.startsWith("/api/issues?")) return json({ success: true, data: [], meta: { open: 0 } });
     return json({ success: true, data: [] });

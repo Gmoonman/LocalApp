@@ -150,6 +150,9 @@ function validateShell(value: unknown): asserts value is ShellConfig {
   if (value.navbar !== undefined && typeof value.navbar !== "boolean") {
     invalid("shell.navbar", "must be a boolean");
   }
+  if (value.agentConversation !== undefined && typeof value.agentConversation !== "boolean") {
+    invalid("shell.agentConversation", "must be a boolean");
+  }
 }
 
 function validateDb(value: unknown): asserts value is ManifestDb {

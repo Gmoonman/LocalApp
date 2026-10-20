@@ -154,6 +154,8 @@ export interface ManifestDb {
 /** 页面 Shell 配置 */
 export interface ShellConfig {
   navbar?: boolean;
+  /** Show the application Agent entry and conversation dock. Defaults to false. */
+  agentConversation?: boolean;
 }
 
 /** manifest.notify.permission 自定义查询配置（Level 3） */

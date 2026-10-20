@@ -106,6 +106,30 @@ describe("application owner settings API", () => {
     });
   });
 
+  it("round-trips the Agent conversation switch through settings and public page metadata", async () => {
+    const current = await (await fetch(`${baseUrl}/api/me/pages/${pageName}/settings`, { headers: { Cookie: ownerCookie } })).json();
+    for (const enabled of [false, true]) {
+      const response = await fetch(`${baseUrl}/api/me/pages/${pageName}/settings/manifest-platform`, {
+        method: "PUT", headers: { Cookie: ownerCookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ ...current.data.platformManifest, shell: { navbar: false, agentConversation: enabled } }),
+      });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ data: {
+        platformManifest: { shell: { agentConversation: enabled } },
+        effectiveManifest: { shell: { agentConversation: enabled } },
+      } });
+      const settings = await fetch(`${baseUrl}/api/me/pages/${pageName}/settings`, { headers: { Cookie: ownerCookie } });
+      expect(await settings.json()).toMatchObject({ data: { platformManifest: { shell: { agentConversation: enabled } } } });
+      const metadata = await fetch(`${baseUrl}/api/pages/${owner}/${pageName}/meta`, { headers: { Cookie: ownerCookie } });
+      expect(await metadata.json()).toMatchObject({ data: { shell: { agentConversation: enabled } } });
+    }
+    const response = await fetch(`${baseUrl}/api/me/pages/${pageName}/settings/manifest-platform`, {
+      method: "PUT", headers: { Cookie: ownerCookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ shell: { agentConversation: "false" } }),
+    });
+    expect(response.status).toBe(400);
+  });
+
   it("rejects unsafe platform fields without changing the persisted manifest", async () => {
     const pageDir = path.join(dataDir, owner, pageName);
     const before = fs.readFileSync(path.join(pageDir, "manifest.platform.json"), "utf8");

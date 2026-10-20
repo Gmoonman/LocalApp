@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 type Json = Record<string, any>;
@@ -198,7 +199,17 @@ export function AppSettingsPage({ name }: { name: string }) {
       <div><h2 className="mb-2 text-sm font-semibold">版本历史</h2><div className="divide-y border-y">{settings.app.versions.slice().reverse().map((version) => <div key={version.version} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">v{version.version}</span><span className="text-muted-foreground">{new Date(version.createdAt).toLocaleString()} · {version.fileCount} 个文件 · {formatSize(version.totalSize)}</span></div>)}</div></div>
     </section>}
 
-    {tab === "general" && <section className="max-w-2xl space-y-5"><Field label="应用描述"><Textarea id="description" aria-label="应用描述" value={manifest.description ?? ""} disabled={readonly} onChange={(e) => change(["description"], e.target.value)} /></Field><Check label="显示平台导航栏" checked={manifest.shell?.navbar ?? true} disabled={readonly} onChange={(value) => change(["shell", "navbar"], value)} /></section>}
+    {tab === "general" && <section className="max-w-2xl space-y-5">
+      <Field label="应用描述"><Textarea id="description" aria-label="应用描述" value={manifest.description ?? ""} disabled={readonly} onChange={(e) => change(["description"], e.target.value)} /></Field>
+      <Check label="显示平台导航栏" checked={manifest.shell?.navbar ?? true} disabled={readonly} onChange={(value) => change(["shell", "navbar"], value)} />
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <Switch id="agent-conversation" checked={manifest.shell?.agentConversation ?? (readonly ? false : settings.sourceManifest.shell?.agentConversation ?? false)} disabled={readonly || busy} onCheckedChange={(value) => change(["shell", "agentConversation"], value)} />
+          <Label htmlFor="agent-conversation">启用 Agent 对话框</Label>
+        </div>
+        <p className="text-sm text-muted-foreground">关闭后，应用页面不显示 Agent 入口和对话框。开发管理仍可从“应用开发”进入。保存后重新打开应用生效。</p>
+      </div>
+    </section>}
     {tab === "access" && <section className="max-w-2xl space-y-5"><Select label="页面访问级别" value={pageAccess.level} disabled={readonly} onChange={(value) => change(["pageAccess", "level"], value)} options={accessLevels}/><Field label="ACL 用户或群组"><Input value={(pageAccess.acl ?? []).join(", ")} disabled={readonly} placeholder="user-id, group:team" onChange={(e) => change(["pageAccess", "acl"], e.target.value.split(",").map((v) => v.trim()).filter(Boolean))}/></Field></section>}
     {tab === "database" && <section className="max-w-2xl space-y-5"><Select label="数据库模式" value={db.mode ?? "crud"} disabled={readonly} onChange={(value) => change(["db", "mode"], value)} options={["crud", "sql"]}/><Select label="原始 SQL 权限" value={db.sqlAccess ?? "owner"} disabled={readonly} onChange={(value) => change(["db", "sqlAccess"], value)} options={accessLevels}/><Check label="允许前端直接执行 SQL" checked={db.dangerouslyAllowFrontendSql ?? false} disabled={readonly} onChange={(value) => change(["db", "dangerouslyAllowFrontendSql"], value)}/>{["read", "create", "update", "delete"].map((action) => <Select key={action} label={`${action.toUpperCase()} 默认权限`} value={db.defaultAccess?.[action] ?? "public"} disabled={readonly} onChange={(value) => change(["db", "defaultAccess", action], value)} options={accessLevels}/>)}</section>}
     {tab === "notify" && <section className="max-w-2xl space-y-5"><Check label="启用应用通知" checked={notify.enabled ?? false} disabled={readonly} onChange={(value) => change(["notify", "enabled"], value)}/><Field label="通知权限表"><Input value={notify.permission?.table ?? ""} disabled={readonly} onChange={(e) => change(["notify", "permission", "table"], e.target.value)}/></Field><Field label="用户字段"><Input value={notify.permission?.userColumn ?? ""} disabled={readonly} onChange={(e) => change(["notify", "permission", "userColumn"], e.target.value)}/></Field><Field label="附加条件"><Input value={notify.permission?.where ?? ""} disabled={readonly} onChange={(e) => change(["notify", "permission", "where"], e.target.value)}/></Field></section>}

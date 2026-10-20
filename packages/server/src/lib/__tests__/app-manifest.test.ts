@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PageMeta } from "../../plugins/storage.js";
@@ -34,7 +33,9 @@ describe("app manifest state", () => {
   let pageDir: string;
 
   beforeEach(() => {
-    pageDir = fs.mkdtempSync(path.join(os.tmpdir(), "localapp-app-manifest-"));
+    const root = path.resolve(__dirname, "../../../../../tmp/app-manifest-tests");
+    fs.mkdirSync(root, { recursive: true });
+    pageDir = fs.mkdtempSync(path.join(root, "case-"));
   });
 
   afterEach(() => {
@@ -93,6 +94,17 @@ describe("app manifest state", () => {
     expect(readManifestState(pageDir, pageMeta()).effectiveManifest.description).toBe("source");
   });
 
+  it("persists source defaults and platform overrides for the Agent conversation", () => {
+    const meta = pageMeta();
+    writeSourceManifest(pageDir, { name: "demo", shell: { agentConversation: false } });
+    expect(materializeManifest(meta, readManifestState(pageDir, meta).effectiveManifest).shell?.agentConversation).toBe(false);
+    writePlatformManifest(pageDir, { shell: { agentConversation: true } });
+    expect(readManifestState(pageDir, meta).effectiveManifest.shell).toMatchObject({ agentConversation: true });
+    expect(materializeManifest(meta, readManifestState(pageDir, meta).effectiveManifest).shell?.agentConversation).toBe(true);
+    removePlatformManifest(pageDir);
+    expect(readManifestState(pageDir, meta).effectiveManifest.shell).toMatchObject({ agentConversation: false });
+  });
+
   it("rejects platform fields that depend on source artifacts", () => {
     expect(() => validatePlatformManifest({ backend: { root: "backend" } })).toThrowError(
       /backend/,
@@ -103,6 +115,7 @@ describe("app manifest state", () => {
   it("rejects malformed editable fields", () => {
     expect(() => validatePlatformManifest({ description: 42 })).toThrowError(/description/);
     expect(() => validatePlatformManifest({ shell: { navbar: "yes" } })).toThrowError(/shell\.navbar/);
+    expect(() => validatePlatformManifest({ shell: { agentConversation: "false" } })).toThrowError(/shell\.agentConversation/);
     expect(() => validatePlatformManifest({ pageAccess: { level: "root" } })).toThrowError(/pageAccess\.level/);
     expect(() => validatePlatformManifest({ db: { mode: "document" } })).toThrowError(/db\.mode/);
     expect(() => validatePlatformManifest({ notify: { enabled: "yes" } })).toThrowError(/notify\.enabled/);
