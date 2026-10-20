@@ -7,7 +7,9 @@ import { AppDevelopmentDock } from "./app-development-dock";
 import type { DevelopmentShellProps } from "@localapp/dsh-agent-ui/ui/conversation-types";
 
 /** Both identities retain their own transport, messages, draft and history. */
-export function AppConversationDock({ application, isOwner, agent, onSend, reveal = 0, minimize = 0, onVisibilityChange, onPreview }: {
+export function AppConversationDock({ application, isOwner, agent, onSend, reveal = 0, minimize = 0, onVisibilityChange, onPreview, userConversationEnabled = true, developerReveal = 0 }: {
+  userConversationEnabled?: boolean;
+  developerReveal?: number;
   onPreview?: (url: string | null) => void;
   application: { owner: string; name: string };
   isOwner: boolean;
@@ -36,7 +38,7 @@ export function AppConversationDock({ application, isOwner, agent, onSend, revea
   const [error, setError] = useState("");
   const [, update] = useState(0);
   useEffect(() => {
-    if (!agent) return;
+    if (!agent || !userConversationEnabled) return;
     let active = true;
     const refresh = async () => {
       try {
@@ -57,9 +59,11 @@ export function AppConversationDock({ application, isOwner, agent, onSend, revea
       if (event.type === "agent_end" || event.type === "session_title") void refresh();
     });
     return () => { active = false; unsubscribe(); };
-  }, [agent]);
+  }, [agent, userConversationEnabled]);
   useEffect(() => {if (identity === "user") onPreview?.(null);}, [identity]);
-  useEffect(() => { if (reveal) setIdentity("user"); }, [reveal]);
+  useEffect(() => { if (reveal && userConversationEnabled) setIdentity("user"); }, [reveal, userConversationEnabled]);
+  useEffect(() => { if (developerReveal) setIdentity("developer"); }, [developerReveal]);
+  useEffect(() => { if (!userConversationEnabled) setIdentity("developer"); }, [userConversationEnabled]);
   const act = async (operation: () => Promise<void>) => {
     setPending(true); setError("");
     try { await operation(); } catch (error) { setError((error as Error).message); }
@@ -85,14 +89,14 @@ export function AppConversationDock({ application, isOwner, agent, onSend, revea
       setAnswer: noop, respond: noop,
     },
   };
-  const dock = { identity: canDevelop ? identity : "user" as const, userConversation: conversation, nativeUserAgent:agent??undefined,
-    onIdentityChange: canDevelop ? setIdentity : undefined, reveal, minimize, onVisibilityChange, onPreview,
+  const dock = { identity: canDevelop ? identity : "user" as const, userConversation: conversation, nativeUserAgent:userConversationEnabled ? agent??undefined : undefined, userConversationEnabled,
+    onIdentityChange: canDevelop ? setIdentity : undefined, reveal: reveal + developerReveal, minimize, onVisibilityChange, onPreview,
     userInteractions: agent?.state.interactions.map(interaction => <AgentInteractionCard key={interaction.token} interaction={interaction} pending={answering === interaction.token}
       answer={result => {
         setAnswering(interaction.token);
         void act(() => agent.answerInteraction(interaction.token, result)).finally(() => setAnswering(null));
       }} />) };
-  if(!ui?.enabled) return null;
+  if(!ui?.enabled || (!canDevelop && !userConversationEnabled)) return null;
   return canDevelop
     ? <Suspense fallback={<p role="status">正在打开开发工作区…</p>}><DevelopmentPage application={application} dock={dock} /></Suspense>
     : <AppDevelopmentDock {...conversation} {...dock} application={application} />;

@@ -417,3 +417,11 @@
 .dock-page-selection > img { width:112px; height:80px; object-fit:contain; border-radius:6px; background:white; }
 .dock-page-selection > span { display:flex; flex-direction:column; min-width:0; gap:4px; font-size:12px; }
 .dock-page-selection > span > span { max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--muted-foreground,#737373); }
+
+/* Keep mode switching alongside the composer controls, including on narrow screens. */
+.development-dock-composer .dock-identity { order:3; flex-shrink:0; padding:6px 10px; border:1px solid var(--border,#e5e5e5); border-radius:8px; font-size:13px; }
+.dock-user-preview-note { order:3; color:var(--muted-foreground,#737373); font-size:12px; }
+.app-development-dock.is-user-preview .development-dock-composer { padding:10px 16px; }
+@media (max-width:600px) {
+  .development-dock-composer .dock-model-trigger { max-width:45%; }
+}

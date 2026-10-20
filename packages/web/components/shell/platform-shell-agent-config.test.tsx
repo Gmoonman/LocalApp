@@ -23,11 +23,12 @@ describe("application Agent conversation configuration", () => {
     { value: true, user: "visitor", enabled: true },
     { value: false, user: "owner", enabled: false },
     { value: false, user: "visitor", enabled: false },
-  ])("value=$value user=$user enables=$enabled", async ({ value, user, enabled }) => {
+    { value: false, user: "owner", enabled: false, development: false },
+  ])("value=$value user=$user enables=$enabled", async ({ value, user, enabled, development = true }) => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/me") return json({ success: true, data: { id: user, name: user } });
-      if (url === "/api/system/plugins") return json({ success: true, data: { development: true } });
+      if (url === "/api/system/plugins") return json({ success: true, data: { development } });
       if (url.endsWith("/meta")) return json({ success: true, data: { name: "demo", userId: "owner", lifecycleStatus: "online", shell: { agentConversation: value } } });
       if (url.includes("/api/favorites")) return json({ success: true, data: { count: 0, favorited: false } });
       if (url.startsWith("/api/issues?")) return json({ success: true, data: [], meta: { open: 0 } });
@@ -40,7 +41,13 @@ describe("application Agent conversation configuration", () => {
       expect(await screen.findByTestId("agent-dock")).toBeInTheDocument();
       expect(screen.getByTitle("AI 助手")).toBeInTheDocument();
     } else {
-      expect(screen.queryByTestId("agent-dock")).not.toBeInTheDocument();
+      if (user === "owner" && development) {
+        expect(await screen.findByTestId("agent-dock")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "开发应用" })).toBeInTheDocument();
+      } else {
+        expect(screen.queryByTestId("agent-dock")).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "开发应用" })).toBeNull();
+      }
       expect(screen.queryByTitle("AI 助手")).not.toBeInTheDocument();
       const responses: unknown[] = [];
       const listener = (event: MessageEvent) => { if (event.data?.type === "localapp:platform_response") responses.push(event.data); };

@@ -58,3 +58,16 @@ it("does not render an entry when the Agent UI plugin is disabled", async () => 
   expect(screen.queryByLabelText("应用对话消息")).toBeNull();
   expect(developerMount).not.toHaveBeenCalled();
 });
+
+it("keeps creation development available with user AI disabled and supports explicit developer reveal", async () => {
+  developerMount.mockClear();
+  const view = render(<AppConversationDock application={{owner:"owner",name:"app"}} isOwner agent={null} onSend={vi.fn()} userConversationEnabled={false}/>);
+  await waitFor(() => expect(developerMount).toHaveBeenCalled());
+  let props = developerMount.mock.calls.at(-1)![0];
+  expect(props.dock.identity).toBe("developer");
+  expect(props.dock.userConversationEnabled).toBe(false);
+  props.dock.onIdentityChange("user");
+  await waitFor(() => expect(developerMount.mock.calls.at(-1)![0].dock.identity).toBe("user"));
+  view.rerender(<AppConversationDock application={{owner:"owner",name:"app"}} isOwner agent={null} onSend={vi.fn()} userConversationEnabled={false} developerReveal={1}/>);
+  await waitFor(() => expect(developerMount.mock.calls.at(-1)![0].dock.identity).toBe("developer"));
+});

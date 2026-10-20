@@ -207,7 +207,7 @@ export function AppSettingsPage({ name }: { name: string }) {
           <Switch id="agent-conversation" checked={manifest.shell?.agentConversation ?? (readonly ? false : settings.sourceManifest.shell?.agentConversation ?? false)} disabled={readonly || busy} onCheckedChange={(value) => change(["shell", "agentConversation"], value)} />
           <Label htmlFor="agent-conversation">启用 Agent 对话框</Label>
         </div>
-        <p className="text-sm text-muted-foreground">关闭后，应用页面不显示 Agent 入口和对话框。开发管理仍可从“应用开发”进入。保存后重新打开应用生效。</p>
+        <p className="text-sm text-muted-foreground">关闭后，普通用户不显示 Agent 入口和对话框。应用所有者仍可使用开发工作区，并在输入框底部切换开发者与用户模式。保存后重新打开应用生效。</p>
       </div>
     </section>}
     {tab === "access" && <section className="max-w-2xl space-y-5"><Select label="页面访问级别" value={pageAccess.level} disabled={readonly} onChange={(value) => change(["pageAccess", "level"], value)} options={accessLevels}/><Field label="ACL 用户或群组"><Input value={(pageAccess.acl ?? []).join(", ")} disabled={readonly} placeholder="user-id, group:team" onChange={(e) => change(["pageAccess", "acl"], e.target.value.split(",").map((v) => v.trim()).filter(Boolean))}/></Field></section>}

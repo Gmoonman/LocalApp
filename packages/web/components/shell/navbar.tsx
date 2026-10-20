@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { CircleDot, Star, LogIn, Sparkles, Save, Undo2, Redo2, Users } from "lucide-react";
+import { CircleDot, Star, LogIn, Sparkles, Save, Undo2, Redo2, Users, Code2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthModals } from "@/components/auth-modals/auth-provider";
 
@@ -26,6 +26,7 @@ export interface PlatformEditSession {
 interface NavbarProps {
   pageName: string;
   previewControls?: React.ReactNode;
+  onOpenDevelopment?: () => void;
   user: UserData | null;
   favCount: number;
   isFavorited: boolean;
@@ -41,7 +42,7 @@ interface NavbarProps {
   presenceSnapshot?: PresenceSnapshot | null;
 }
 
-export function Navbar({ previewControls, pageName, user, favCount, isFavorited, onToggleFavorite, onOpenIssues, openIssueCount, aiMode, aiOpen, onToggleAI, bell, editSession, presenceCount, presenceSnapshot }: NavbarProps) {
+export function Navbar({ onOpenDevelopment, previewControls, pageName, user, favCount, isFavorited, onToggleFavorite, onOpenIssues, openIssueCount, aiMode, aiOpen, onToggleAI, bell, editSession, presenceCount, presenceSnapshot }: NavbarProps) {
   const { openLogin } = useAuthModals();
   const initial = user ? (user.displayName || user.name).charAt(0).toUpperCase() : "?";
   const editBusy = editSession?.busy ?? false;
@@ -73,6 +74,7 @@ export function Navbar({ previewControls, pageName, user, favCount, isFavorited,
       <div className="flex min-w-0 items-center gap-2" data-testid="localapp-platform-nav-left">
         <strong className="max-w-[200px] truncate">{pageName}</strong>
         {previewControls}
+        {onOpenDevelopment && <Button variant="ghost" size="sm" className="h-7 shrink-0 gap-1.5 px-2" onClick={onOpenDevelopment}><Code2 className="h-4 w-4" />开发应用</Button>}
         <Button
           variant="ghost"
           size="sm"

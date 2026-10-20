@@ -1022,7 +1022,7 @@ describe("unified Server DeepSeek Harness HTTP", () => {
       await page.keyboard.press("Enter");
       await page.keyboard.press("Escape");
       await dialog.waitFor({ state: "hidden" });
-      expect(await trigger.evaluate(element => element === document.activeElement)).toBe(true);
+      await expect.poll(() => trigger.evaluate(element => element === document.activeElement)).toBe(true);
       await trigger.click();
       let creationRequests = 0;
       let legacyCreationRuns=0;
@@ -1064,7 +1064,9 @@ describe("unified Server DeepSeek Harness HTTP", () => {
       await restored.getByText("native creation proposed", { exact: true }).first().waitFor({ timeout: 20000 });
       const frameBounds = await page.locator('iframe[title="原生应用开发对话"]').boundingBox();
       expect(frameBounds!.height).toBeGreaterThan(300);
-      await restored.getByText("轨迹", { exact: true }).first().click();
+      await page.screenshot({path: path.join(artifacts, "creation-restored-before-trajectory.png")});
+      await fs.writeFile(path.join(artifacts,"creation-restored-text.txt"), await restored.locator("body").innerText());
+      await restored.getByText("运行轨迹", { exact: true }).first().click();
       await restored.getByText("propose_application", { exact: false }).first().waitFor({ timeout: 10000 });
       await page.screenshot({ path: path.join(artifacts, "creation-native-trajectory.png") });
       await restored.getByText("对话", { exact: true }).first().click();
@@ -1072,6 +1074,30 @@ describe("unified Server DeepSeek Harness HTTP", () => {
       await page.frameLocator('iframe[title="应用开发预览"]').getByRole("heading",{name:"工作项",exact:true}).waitFor({timeout:30000});
       expect(legacyCreationRuns).toBe(0);
       await page.screenshot({ path: path.join(artifacts, "creation-native-handoff.png") });
+      const mode = page.getByRole("button", {name: "切换对话身份", exact: true});
+      expect(await mode.innerText()).toContain("开发者模式");
+      expect(await mode.locator("xpath=..").getAttribute("class")).toContain("development-dock-composer");
+      // The new application's default-off user AI must not block its creation handoff.
+      const meta = (await (await page.request.get(baseUrl + new URL(page.url()).pathname.replace(/\/$/, "").replace("/harness-http-admin/", "/api/pages/harness-http-admin/") + "/meta")).json()).data;
+      expect(meta.shell?.agentConversation).not.toBe(true);
+      await expect.poll(() => mode.isEnabled(), {timeout: 10000}).toBe(true);
+      await mode.click();
+      await page.getByLabel("应用用户模式", {exact: true}).waitFor();
+      expect(await page.getByLabel("应用对话消息", {exact: true}).count()).toBe(0);
+      expect(await page.locator('iframe[title="原生应用用户对话"]').count()).toBe(0);
+      await page.screenshot({path: path.join(artifacts, "creation-user-preview-default-off.png")});
+      await mode.click();
+      await page.getByLabel("应用修改需求", {exact: true}).waitFor();
+      await page.getByLabel("最小化开发对话", {exact: true}).click();
+      await page.getByRole("button", {name: "开发应用", exact: true}).click();
+      await page.getByLabel("开发对话记录", {exact: true}).waitFor();
+      await page.reload();
+      await page.getByLabel("开发对话记录", {exact: true}).waitFor();
+      await page.setViewportSize({width: 390, height: 844});
+      const modeBounds = await mode.boundingBox();
+      expect(modeBounds!.x).toBeGreaterThanOrEqual(0);
+      expect(modeBounds!.x + modeBounds!.width).toBeLessThanOrEqual(390);
+      await page.screenshot({path: path.join(artifacts, "creation-mobile-mode-switch.png")});
     } finally { await browser.close(); }
   }, 60000);
   it.runIf(process.env.LOCALAPP_NATIVE_BROWSER_VERIFY === "1")("executes application browser tools from an embedded native conversation",async()=>{

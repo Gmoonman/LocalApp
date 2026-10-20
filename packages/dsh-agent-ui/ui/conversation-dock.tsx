@@ -67,6 +67,7 @@ export interface DockComponents {
 }
 export interface DockIdentityProps {
   nativeUserAgent?: HarnessAgent;
+  userConversationEnabled?: boolean;
   identity?: "developer" | "user";
   onPreview?: (url: string | null) => void;
   onIdentityChange?: (identity: "developer" | "user") => void;
@@ -157,12 +158,12 @@ return function AppDevelopmentDock(
   useEffect(() => { if (input.minimize) setMinimized(true); }, [input.minimize]);
   useEffect(() => { setPanel("chat"); }, [input.identity]);
   const switchIdentity = input.onIdentityChange ? (
-    <Button variant="unstyled" size="none" type="button" className="dock-identity"
+    <Button variant="outline" size="sm" type="button" className="dock-identity"
       disabled={running || p.pending || !!input.userConversation?.running || !!input.running || ["queued", "running"].includes(input.build?.status)}
-      aria-label="切换对话身份" title={userMode ? "切换为开发者" : "切换为用户"}
+      aria-label="切换对话身份" title={userMode ? "切换为开发者模式" : "切换为用户模式"}
       onClick={() => input.onIdentityChange?.(userMode ? "developer" : "user")}>
       {userMode ? <UserRound size={15} /> : <Code2 size={15} />}
-      {userMode ? "用户" : "开发者"}<ArrowLeftRight size={13} />
+      {userMode ? "用户模式" : "开发者模式"}<ArrowLeftRight size={13} />
     </Button>
   ) : null;
   const building = ["queued", "running"].includes(p.build?.status);
@@ -371,6 +372,7 @@ return function AppDevelopmentDock(
             }
           }}
         />
+        {switchIdentity}
         <Select value={p.provider || undefined} disabled={running || nativeSubmitting || p.pending || !p.providers.length} onValueChange={p.actions.setProvider}>
           <SelectTrigger className="dock-model-trigger" aria-label={userMode ? "对话模型" : "开发模型"}>
             <SelectValue placeholder="先配置模型" />
@@ -415,6 +417,13 @@ return function AppDevelopmentDock(
         )}
       </div>
   );
+  if (userMode && input.userConversationEnabled === false) return (
+    <section className="app-development-dock dsh-development is-user-preview" aria-label="应用用户模式">
+      <div className="development-dock-composer">
+        {switchIdentity}<span className="dock-user-preview-note">正在预览用户界面 · 此应用未启用 AI 对话</span>
+      </div>
+    </section>
+  );
   return (<>
     {minimized && mini}
     <section style={minimized?{display:"none"}:undefined}
@@ -454,7 +463,6 @@ return function AppDevelopmentDock(
               align="start"
               aria-label={userMode ? "应用历史对话" : "开发历史对话"}
             >
-              {switchIdentity && <DropdownMenuItem asChild onSelect={(event: Event) => event.preventDefault()}>{switchIdentity}</DropdownMenuItem>}
               <DropdownMenuRadioGroup value={selectedSession || "new"}>
               <DropdownMenuRadioItem asChild value="new"><Button variant="unstyled" size="none"
                 onClick={() => {

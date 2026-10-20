@@ -176,6 +176,8 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
   const appOnline = metaMatchesCurrentApp && meta.lifecycleStatus === "online";
   const appOffline = metaMatchesCurrentApp && meta.lifecycleStatus === "offline";
   const isOwner = user?.id === userId;
+  const developerConversationEnabled = metaMatchesCurrentApp && isOwner && developmentEnabled === true;
+  const conversationDockEnabled = agentConversationEnabled || developerConversationEnabled;
   useEffect(() => {
     let active = true;
     fetch("/api/system/plugins").then(response => {
@@ -192,16 +194,17 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
   const [aiOpen, setAiOpen] = useState(false);
   const [agentReveal, setAgentReveal] = useState(0);
   const [agentMinimize, setAgentMinimize] = useState(0);
+  const [developerReveal, setDeveloperReveal] = useState(0);
   const aiVisible = useRef(false);
   const showAgent = () => { if (!agentConversationEnabled) return; aiVisible.current = true; setAiOpen(true); setAgentReveal(value => value + 1); };
   const hideAgent = () => { aiVisible.current = false; setAiOpen(false); setAgentMinimize(value => value + 1); };
   useEffect(() => {
-    if (!agentConversationEnabled) {
+    if (!conversationDockEnabled) {
       aiVisible.current = false;
       setAiOpen(false);
       setDevelopmentPreviewUrl(null);
     }
-  }, [agentConversationEnabled]);
+  }, [conversationDockEnabled]);
 
   const nativeAppLoadedRef = useRef<string | null>(null);
   const registeredToolsRef = useRef<Array<{ name: string; description: string; parameters: { type: "object"; properties: Record<string, unknown>; required?: string[] } }>>([]);
@@ -746,6 +749,7 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
         <Navbar
           previewControls={developmentPreviewUrl && isOwner ? <DevelopmentPreviewBar key={new URL(developmentPreviewUrl,window.location.origin).searchParams.get("previewId") ?? developmentPreviewUrl} url={developmentPreviewUrl} onPreview={setDevelopmentPreviewUrl} onClose={()=>setDevelopmentPreviewUrl(null)}/> : undefined}
           pageName={name}
+          onOpenDevelopment={developerConversationEnabled && !meta?.developmentPreview ? () => { aiVisible.current = true; setAiOpen(true); setDeveloperReveal(value => value + 1); } : undefined}
           user={user}
           favCount={favCount}
           isFavorited={isFavorited}
@@ -817,8 +821,9 @@ export function PlatformShell({ userId, name }: { userId: string; name: string }
             )}
           </div>
         </div>
-        {agentConversationEnabled && !meta?.developmentPreview && !showIssues && !!user && developmentEnabled !== null && (
+        {conversationDockEnabled && !meta?.developmentPreview && !showIssues && !!user && developmentEnabled !== null && (
           <AppConversationDock key={`${pagePath}:${user?.id}:${developmentEnabled}`} application={{ owner: userId, name }} isOwner={isOwner && developmentEnabled}
+            userConversationEnabled={agentConversationEnabled} developerReveal={developerReveal}
             onPreview={setDevelopmentPreviewUrl} agent={harness} onSend={agentSend} reveal={agentReveal} minimize={agentMinimize}
             onVisibilityChange={visible => { aiVisible.current = visible; setAiOpen(visible); }} />
         )}

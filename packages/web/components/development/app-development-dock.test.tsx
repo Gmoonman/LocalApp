@@ -291,7 +291,7 @@ it("shows the selected conversation title in the header, history and minimized p
   expect(screen.getByRole("tooltip").textContent).toContain("添加工作项筛选");
 });
 
-it("switches identity above history and hides developer actions in user mode", () => {
+it("switches identity beside the composer and hides developer actions in user mode", () => {
   const developer = props(), user = props();
   developer.sessions = [{ id: "developer-session", createdAt: "2026-10-09", title: "修改应用样式" }];
   developer.selectedSession = "developer-session";
@@ -311,7 +311,7 @@ it("switches identity above history and hides developer actions in user mode", (
   expect(screen.getByRole("menuitemradio", { name: /创建工作项/ })).toBeInTheDocument();
   expect(screen.queryByRole("menuitemradio", { name: /修改应用样式/ })).toBeNull();
   fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
-  expect(screen.queryByLabelText("切换对话身份")).toBeNull();
+  expect(screen.getByLabelText("切换对话身份")).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("展开应用对话"));
   expect(screen.queryByLabelText("开发操作")).toBeNull();
   expect(screen.queryByLabelText("打开完整开发页")).toBeNull();
@@ -466,4 +466,23 @@ it("keeps page annotations out of the draft and presents a removable summary",as
  expect(screen.getByLabelText('待发送页面标记')).not.toHaveTextContent('selector');
  fireEvent.click(screen.getByLabelText('移除页面标记'));
  await waitFor(()=>expect(screen.queryByLabelText('待发送页面标记')).toBeNull());root.remove();
+});
+
+
+it("keeps the mode switch in the composer without opening history", () => {
+  render(<AppDevelopmentDock {...props()} identity="developer" onIdentityChange={vi.fn()} />);
+  const mode = screen.getByLabelText("切换对话身份");
+  expect(mode).toHaveTextContent("开发者模式");
+  expect(mode.closest(".development-dock-composer")).not.toBeNull();
+  expect(screen.queryByRole("menu")).toBeNull();
+});
+
+it("previews the user interface without mounting disabled user AI and can return to development", () => {
+  const onIdentityChange = vi.fn();
+  render(<AppDevelopmentDock {...props()} identity="user" userConversationEnabled={false} onIdentityChange={onIdentityChange} />);
+  expect(screen.getByLabelText("应用用户模式")).toBeInTheDocument();
+  expect(screen.queryByLabelText("应用对话消息")).toBeNull();
+  expect(screen.queryByTitle("原生应用用户对话")).toBeNull();
+  fireEvent.click(screen.getByLabelText("切换对话身份"));
+  expect(onIdentityChange).toHaveBeenCalledWith("developer");
 });

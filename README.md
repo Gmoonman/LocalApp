@@ -20,7 +20,7 @@ LocalApp 默认采用 **Named SQL first**。稳定后端能力由 migration、�
 
 ## Agent 核心
 
-应用所有者可在“我的应用 → 应用设置 → 基础设置”切换“启用 Agent 对话框”，保存后重新打开应用生效。关闭会隐藏应用页的 Agent 入口和悬浮对话框，开发管理仍可从“应用开发”进入。应用自带的 `manifest.json` 也可设置 `"shell": { "agentConversation": true }` 开启对话框；平台配置优先，未设置时默认关闭。此开关控制平台对话界面，应用自行实现的 Agent 界面不受影响。
+应用所有者可在“我的应用 → 应用设置 → 基础设置”切换“启用 Agent 对话框”，保存后重新打开应用生效。关闭后，普通用户不显示 Agent 入口和悬浮对话框；应用所有者仍可查看开发对话、工作过程与预览，并通过输入框底部的“开发者模式／用户模式”切换。用户 AI 关闭时，用户模式只预览应用，不启动用户对话。最小化后可点击应用导航栏的“开发应用”返回。应用自带的 `manifest.json` 也可设置 `"shell": { "agentConversation": true }` 开启对话框；平台配置优先，未设置时默认关闭。此开关控制平台对话界面，应用自行实现的 Agent 界面不受影响。
 
 应用 SDK、平台 Shell 和本地 Dev Shell 共用 DeepSeek Harness（固定版本 `0.2.1-alpha.1`）。Harness 的 Agent 循环、消息历史和工具调度运行在统一 Server 内；浏览器通过 `/api/agent/run` 接收流式事件，执行已注册的页面工具，再通过 `/api/agent/tool-result` 返回结果。无需安装额外的 `dsh` CLI 或启动另一个服务。
 
