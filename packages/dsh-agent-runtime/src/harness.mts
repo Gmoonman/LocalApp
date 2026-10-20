@@ -73,7 +73,7 @@ export class DeepSeekHarness {
       const workspaceRoot = this.config.workspaceRoot ?? path.join(this.config.root!, "workspace");
       if (!this.ctx.get("fs")) await mountApplicationFileSystem(this.ctx, workspaceRoot);
       const { mountNativeSessions } = await import("./native-session.mjs");
-      return mountNativeSessions(this.ctx, { userId: this.config.ownerId!, root: this.config.root!, workspaceRoot, model: this.config.llmModel, provider:this.config.dshRoute, fileReferences: this.config.capabilities?.includes("files") ?? false,
+      return mountNativeSessions(this.ctx, { userId: this.config.ownerId!, root: this.config.root!, workspaceRoot, trustedHosts: this.config.publicUrl ? [new URL(this.config.publicUrl).host] : [], model: this.config.llmModel, provider:this.config.dshRoute, fileReferences: this.config.capabilities?.includes("files") ?? false,
         onPrompt:sessionId=>{
           if(this.conversations.get(sessionId)?.busy)throw new Error("Agent session is already running through the application transport");
           const release = this.config.onNativePrompt?.(sessionId);
@@ -143,7 +143,7 @@ export class DeepSeekHarness {
   }
   toolCatalog() { return this.ctx.tools.schemas().map(({ name, description }) => ({ name, description })); }
 
-  constructor(private readonly config: { llmApiKey: string; llmBaseUrl: string; llmModel: string } & { root?: string; capabilities?: AgentCapability[]; mcpServers?: AgentSettings["mcpServers"]; protocol?: AgentProvider["protocol"]; dshRoute?: string; dshProfile?: Record<string,unknown>; ownerId?: string; skills?: string[]; disabledTools?: string[]; pythonEnvironment?: PythonEnvironment; workspaceRoot?: string; autoSessionTitles?: boolean; dataRoot?: string; networkBlocked?: boolean; localTestPorts?: number[]; readDirectories?: string[]; publicSkillsRoot?: string; applicationPrompt?: string; applicationTools?: ApplicationTool[]; onNativeAgentDisposed?: (sessionId: string) => void; onNativePrompt?: (sessionId: string) => (() => void); onNativeAgentStatus?: (sessionId: string, status: "idle" | "running") => void }) {
+  constructor(private readonly config: { llmApiKey: string; llmBaseUrl: string; llmModel: string } & { root?: string; publicUrl?: string; capabilities?: AgentCapability[]; mcpServers?: AgentSettings["mcpServers"]; protocol?: AgentProvider["protocol"]; dshRoute?: string; dshProfile?: Record<string,unknown>; ownerId?: string; skills?: string[]; disabledTools?: string[]; pythonEnvironment?: PythonEnvironment; workspaceRoot?: string; autoSessionTitles?: boolean; dataRoot?: string; networkBlocked?: boolean; localTestPorts?: number[]; readDirectories?: string[]; publicSkillsRoot?: string; applicationPrompt?: string; applicationTools?: ApplicationTool[]; onNativeAgentDisposed?: (sessionId: string) => void; onNativePrompt?: (sessionId: string) => (() => void); onNativeAgentStatus?: (sessionId: string, status: "idle" | "running") => void }) {
     this.ready = (async () => {
       await this.ctx.plugin(resolveDeepSeekPlugin(LlmRuntime));
       await this.ctx.plugin(resolveDeepSeekPlugin(SessionRegistry));

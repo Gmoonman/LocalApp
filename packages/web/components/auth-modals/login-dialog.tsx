@@ -3,7 +3,7 @@
 import { type FormEvent, useState } from "react";
 import { LogIn } from "lucide-react";
 import { useAuthModals } from "./auth-provider";
-import { resolveAuthReturnTo } from "./auth-return";
+import { navigateAfterLogin } from "./auth-return";
 
 import {
   Dialog,
@@ -55,7 +55,8 @@ export function LoginDialog() {
         setError(body.error || "登录失败");
         return;
       }
-      window.location.href = resolveAuthReturnTo(loginReturnTo);
+      closeLogin();
+      navigateAfterLogin(loginReturnTo);
     } catch {
       setError("网络错误，请重试。");
     } finally {

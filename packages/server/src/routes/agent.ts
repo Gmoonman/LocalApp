@@ -25,6 +25,6 @@ export async function createAgentRoutesHost(app: FastifyInstance, context: DshCo
     },
     environment: () => systemAgentEnvironment(app.config.dataDir),
     clientAssets: () => nativeClientAssets(context),
-    createHarness: config => new DeepSeekHarness(config),
+    createHarness: config => new DeepSeekHarness({ ...config, publicUrl: app.config.publicUrl }),
   };
 }

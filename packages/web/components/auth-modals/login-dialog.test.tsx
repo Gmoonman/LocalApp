@@ -19,6 +19,8 @@ describe("LoginDialog return target", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
     authState.loginReturnTo = "/test-owner/outer-ai-usage/?tab=records#latest";
     delete (window as any).location;
     (window as any).location = originalLocation;
@@ -38,6 +40,39 @@ describe("LoginDialog return target", () => {
     fireEvent.submit(screen.getByRole("button", { name: "登录" }).closest("form")!);
 
     await waitFor(() => expect(mockLocation.href).toBe("/test-owner/outer-ai-usage/?tab=records#latest"));
+  });
+
+  it.each([
+    ["http://localhost/app/", "/app/"],
+    ["http://localhost/app/#records", "/app/#records"],
+    ["http://localhost/app/#old", "/app/#records"],
+  ])("reloads the authenticated document when returning from %s to %s", async (current, target) => {
+    const reload = vi.fn();
+    const mockLocation = { href: current, origin: "http://localhost", reload };
+    delete (window as any).location;
+    (window as any).location = mockLocation;
+    const replace = vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
+    authState.loginReturnTo = target;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
+    })));
+
+    render(<LoginDialog />);
+    fireEvent.change(screen.getByLabelText("用户名或邮箱"), { target: { value: "test-owner" } });
+    fireEvent.change(screen.getByLabelText("密码"), { target: { value: "123456" } });
+    fireEvent.submit(screen.getByRole("button", { name: "登录" }).closest("form")!);
+
+    await waitFor(() => expect(reload).toHaveBeenCalledOnce());
+    expect(replace).toHaveBeenCalledWith(window.history.state, "", target);
+    expect(authState.closeLogin).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the dialog open and shows a rejected login", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ success: false, error: "Invalid credentials" }), { status: 401 })));
+    render(<LoginDialog />);
+    fireEvent.submit(screen.getByRole("button", { name: "登录" }).closest("form")!);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Invalid credentials");
+    expect(authState.closeLogin).not.toHaveBeenCalled();
   });
 
   it("rejects cross-origin return targets", () => {

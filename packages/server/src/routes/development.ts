@@ -18,6 +18,6 @@ export async function createDevelopmentRoutesHost(app: FastifyInstance, options:
     settings: multiuser.createStore(...createAgentSettingsOptions(app.config.dataDir)),
     pythonEnvironment: () => readPythonEnvironment(app.config.dataDir),
     environment: () => systemAgentEnvironment(app.config.dataDir),
-    createHarness: config => new DeepSeekHarness(config),
+    createHarness: config => new DeepSeekHarness({ ...config, publicUrl: app.config.publicUrl }),
   };
 }
