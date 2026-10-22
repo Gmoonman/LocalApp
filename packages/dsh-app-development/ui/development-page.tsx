@@ -443,9 +443,25 @@ return function DevelopmentPage({
       return;
     let active = true;
     previewedBuild.current = build.id;
-    void request(base + "/previews", "POST", { buildId: build.id })
-      .then((preview) => { if (active) dock.onPreview?.(preview.url); })
-      .catch((error) => { if (active) { previewedBuild.current = ""; setError(error.message); } });
+    void (async () => {
+      // A build that is already the live release has nothing left to preview, and
+      // auto-opening it covers the published application with a development
+      // preview: the publish flow reloads the Shell, which remounts this dock and
+      // used to reopen the just-published build over the production app.
+      try {
+        const delivery = await request(base + "/delivery");
+        const releases = Array.isArray(delivery?.releases) ? delivery.releases : [];
+        if (releases.some((release: any) => release?.buildId === build.id)) return;
+      } catch {
+        // Delivery is advisory here: when it cannot be read, keep the old behavior.
+      }
+      try {
+        const preview = await request(base + "/previews", "POST", { buildId: build.id });
+        if (active) dock?.onPreview?.(preview.url);
+      } catch (error) {
+        if (active) { previewedBuild.current = ""; setError((error as Error).message); }
+      }
+    })();
     return () => { active = false; previewedBuild.current = ""; };
   }, [build?.id, build?.status, dock?.identity, application?.owner, application?.name, base]);
   return (
@@ -623,6 +639,9 @@ return function DevelopmentPage({
               idempotencyKey: build.id,
             });
             setLog((x) => x + "\n已发布：" + result.url);
+            // Close the development preview before returning to the published app,
+            // otherwise the remounting dock reopens it over the production build.
+            if (application) dock?.onPreview?.(null);
             if (application) window.location.reload();
           }),
         cancelBuild: () =>

@@ -195,3 +195,22 @@ it("opens a successful release build on developer entry and reopens after return
   view.rerender(<DevelopmentPage application={application} dock={{identity: "developer", onPreview} as any} />);
   await waitFor(() => expect(onPreview).toHaveBeenCalledTimes(2));
 });
+
+it("does not auto-open the development preview for a build that is already live", async () => {
+  const onPreview = vi.fn();
+  const fetcher = vi.fn(async (url: string) => {
+    const data = url === "/api/agent/settings" ? {providers: []}
+      : url.includes("/source") ? {id: "live-project", name: "live"}
+      : url.endsWith("/builds") ? [{id: "live-build", purpose: "release", status: "succeeded"}]
+      : url.endsWith("/delivery") ? {releases: [{buildId: "live-build", version: 3, sourceVersion: "s3"}], liveVersion: 3}
+      : url.endsWith("/previews") ? {url: "http://preview.localhost/live/"} : [];
+    return new Response(JSON.stringify({success: true, data}));
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const view = render(<DevelopmentPage application={{owner: "owner", name: "live"}} dock={{identity: "developer", onPreview} as any} />);
+  await waitFor(() => expect(fetcher.mock.calls.some(([url]) => url.endsWith("/delivery"))).toBe(true));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(onPreview).not.toHaveBeenCalled();
+  expect(fetcher.mock.calls.some(([url, init]) => url.endsWith("/previews") && init?.method === "POST")).toBe(false);
+  view.unmount();
+});
